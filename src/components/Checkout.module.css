@@ -1,0 +1,380 @@
+.page {
+  --bg: #f4f7f8;
+  --surface: #ffffff;
+  --ink: #172026;
+  --ink-soft: #60717b;
+  --line: #d7e0e3;
+  --accent: #11828a;
+  --accent-ink: #ffffff;
+  --danger: #a33a2a;
+  --warn-bg: #fff4db;
+  --warn-ink: #8f5a00;
+
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 1.6fr 1fr;
+  gap: 0;
+}
+
+@media (max-width: 900px) {
+  .page {
+    grid-template-columns: 1fr;
+  }
+}
+
+.heading {
+  font-family: "Space Grotesk", -apple-system, sans-serif;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* ---------- Left: search + product grid ---------- */
+
+.catalog {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.searchBar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  flex: 1;
+  padding: 14px 16px;
+  font-size: 17px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.productGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.productCard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.08s ease, border-color 0.15s ease;
+}
+
+.productCard:hover {
+  border-color: var(--accent);
+}
+
+.productCard:active {
+  transform: scale(0.97);
+}
+
+.productName {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.3;
+  margin-bottom: 6px;
+}
+
+.productMeta {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.stockMeta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.emptyState {
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* ---------- Right: cart / receipt panel ---------- */
+
+.cartPanel {
+  background: var(--surface);
+  border-left: 1px solid var(--line);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  position: sticky;
+  top: 0;
+}
+
+.cartHeader {
+  padding: 20px 20px 12px;
+  border-bottom: 1px dashed var(--line);
+}
+
+.cartTitle {
+  font-size: 20px;
+  margin: 0;
+}
+
+.orderNumber {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+.cartItems {
+  flex: 1;
+  overflow-y: auto;
+  padding: 12px 20px;
+}
+
+.cartRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.cartItemName {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.qtyControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.qtyBtn {
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.qtyValue {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  min-width: 28px;
+  text-align: center;
+  font-size: 14px;
+}
+
+.lineTotal {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  min-width: 70px;
+  text-align: right;
+}
+
+.removeBtn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+  margin-left: 4px;
+}
+
+.cartEmpty {
+  color: var(--ink-soft);
+  font-size: 14px;
+  padding: 30px 0;
+  text-align: center;
+}
+
+.totalsBlock {
+  padding: 16px 20px;
+  border-top: 1px dashed var(--line);
+}
+
+.totalsRow {
+  display: flex;
+  justify-content: space-between;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  font-size: 14px;
+  color: var(--ink-soft);
+  padding: 3px 0;
+}
+
+.totalsRow.grand {
+  color: var(--ink);
+  font-size: 20px;
+  font-weight: 600;
+  padding-top: 10px;
+  margin-top: 6px;
+  border-top: 1px solid var(--line);
+}
+
+.paymentSection {
+  padding: 16px 20px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.methodToggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.methodBtn {
+  flex: 1;
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  background: var(--bg);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.methodBtn.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.phoneInput {
+  width: 100%;
+  padding: 12px 14px;
+  font-size: 15px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}
+
+.cashBox {
+  margin-bottom: 12px;
+}
+
+.cashLabel {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cashChips {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.cashChip {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.changeRow {
+  padding: 8px 0 0;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.confirmBtn {
+  width: 100%;
+  padding: 16px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+
+.confirmBtn:disabled {
+  background: var(--line);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.statusBanner {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  font-size: 13px;
+  text-align: center;
+}
+
+.statusBanner.success {
+  background: #e8f4ee;
+  color: var(--accent);
+}
+
+.statusBanner.error {
+  background: #fbeae6;
+  color: var(--danger);
+}
+
+.errorText {
+  color: var(--danger);
+  font-size: 13px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+.receiptMini {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  padding: 10px 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.receiptMini div {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.receiptMini span {
+  color: var(--ink-soft);
+}
+
+.receiptMini strong {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+}

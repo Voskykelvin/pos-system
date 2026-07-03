@@ -1,0 +1,53 @@
+module.exports = (sequelize, DataTypes) => {
+  const Payment = sequelize.define('Payment', {
+    id: {
+      type: DataTypes.UUID,
+      defaultValue: DataTypes.UUIDV4,
+      primaryKey: true
+    },
+    orderId: {
+      type: DataTypes.UUID,
+      allowNull: false
+    },
+    method: {
+      type: DataTypes.ENUM('cash', 'mpesa', 'card'),
+      allowNull: false
+    },
+    amount: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false
+    },
+    status: {
+      type: DataTypes.ENUM('pending', 'confirmed', 'failed', 'reversed'),
+      allowNull: false,
+      defaultValue: 'pending'
+    },
+    // M-Pesa specific fields, null for cash/card
+    mpesaCheckoutRequestId: {
+      // returned when you initiate an STK push, used to match the callback
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    mpesaReceiptNumber: {
+      // e.g. QGR7XXXXX, only set once Safaricom confirms via callback
+      type: DataTypes.STRING,
+      allowNull: true
+    },
+    mpesaPhone: {
+      type: DataTypes.STRING,
+      allowNull: true
+    }
+  }, {
+    tableName: 'payments',
+    timestamps: true,
+    indexes: [
+      { fields: ['mpesaCheckoutRequestId'] }
+    ]
+  });
+
+  Payment.associate = (models) => {
+    Payment.belongsTo(models.Order, { foreignKey: 'orderId' });
+  };
+
+  return Payment;
+};
