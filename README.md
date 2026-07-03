@@ -53,4 +53,18 @@ See [docs/SITE_MAP.md](docs/SITE_MAP.md).
 
 ## Production
 
-See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md), [docs/POS_BUILD_ROADMAP.md](docs/POS_BUILD_ROADMAP.md), and [docs/LAUNCH_BATCHES.md](docs/LAUNCH_BATCHES.md).
+See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md), [docs/POS_BUILD_ROADMAP.md](docs/POS_BUILD_ROADMAP.md), [docs/LAUNCH_BATCHES.md](docs/LAUNCH_BATCHES.md), and [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md).
+
+### Database Migrations
+
+For a real PostgreSQL database, run migrations instead of `DB_SYNC=true`:
+
+```bash
+npm run db:migrate
+```
+
+Preview pending migrations without applying them:
+
+```bash
+npm run db:migrate:dry
+```

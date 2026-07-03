@@ -169,4 +169,53 @@ async function list(req, res) {
   }
 }
 
-module.exports = { closeShift, current, list, openShift };
+/**
+ * GET /api/shifts/summary?date=2026-07-04
+ * Manager/admin view: all shifts for a given business date across all cashiers.
+ * Aggregates cash variance and sales totals.
+ */
+async function summary(req, res) {
+  try {
+    const dateStr = req.query.date || new Date().toISOString().slice(0, 10);
+    const start = new Date(dateStr + 'T00:00:00.000Z');
+    const end   = new Date(dateStr + 'T23:59:59.999Z');
+
+    if (isNaN(start.getTime())) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' });
+    }
+
+    const shifts = await Shift.findAll({
+      where: {
+        openedAt: { [Op.between]: [start, end] }
+      },
+      include: [{ model: User, as: 'cashier', attributes: ['id', 'name'] }],
+      order: [['openedAt', 'ASC']]
+    });
+
+    // Compute expected cash for each open shift live
+    const enriched = await Promise.all(shifts.map(async (shift) => {
+      const expectedCash = shift.status === 'open'
+        ? await expectedCashForShift(shift)
+        : Number(shift.cashSalesExpected);
+      return mapShift(shift, expectedCash);
+    }));
+
+    const totals = enriched.reduce((acc, s) => ({
+      totalFloats:        acc.totalFloats        + (s.openingFloat || 0),
+      totalExpectedCash:  acc.totalExpectedCash  + (s.cashSalesExpected || s.currentCashSalesExpected || 0),
+      totalCashCounted:   acc.totalCashCounted   + (s.cashCounted || 0),
+      totalVariance:      acc.totalVariance      + (s.cashVariance || 0)
+    }), { totalFloats: 0, totalExpectedCash: 0, totalCashCounted: 0, totalVariance: 0 });
+
+    return res.json({ date: dateStr, shifts: enriched, totals: {
+      totalFloats:       money(totals.totalFloats),
+      totalExpectedCash: money(totals.totalExpectedCash),
+      totalCashCounted:  money(totals.totalCashCounted),
+      totalVariance:     money(totals.totalVariance)
+    }});
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { closeShift, current, list, openShift, summary };

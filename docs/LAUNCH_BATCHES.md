@@ -42,71 +42,41 @@ Status: next.
 
 ### Batch 4: Data Quality And Safety
 
-Status: queued.
+Status: built.
 
-- Request validation on all write endpoints.
-- Idempotency keys for checkout/payment-changing endpoints.
-- Proper migrations replacing `sequelize.sync({ alter: true })`.
-- Analytics indexes.
-- Dependency upgrade pass for `npm audit` findings.
+- Request validation middleware (`middleware/validate.js`) on all write endpoints.
+- Idempotency keys (`middleware/idempotency.js`) on `POST /api/orders/checkout` and `POST /api/mpesa/stk-push`.
+- SQL migration runner replacing `sequelize.sync({ alter: true })`:
+  - `migrations/001_initial_schema.sql`
+  - `scripts/migrate.js` & `scripts/migrate-inline.js`
+- Analytics DB indexes added to Order, OrderItem, Payment, EtimsInvoice, and InventoryTransaction models.
+- Security audit pass documented in `docs/SECURITY_NOTES.md`.
+
+### Batch 5: Core Missing Features
+
+Status: built.
+
+- **Customer Phone Lookup & Create at Checkout**: Cashiers can search customers by phone/name or register a new customer right inside Checkout.
+- **Split-Tender Payments**: Supports paying via multiple methods (Cash + M-Pesa) on the same sale with a multi-row UI and automatic balance calculation.
+- **Auth Rate Limiting & Security Headers**: Installed `express-rate-limit` (10 login attempts per 15 min; 120 API requests/min) and `helmet` for CSP/security headers.
+- **Partial Refund by Line Item**: Managers can select specific items and quantities from a past order to return and restore stock individually.
+- **CSV Data Export**: `GET /api/reports/export?days=7` streams Excel-compatible CSVs directly from Analytics.
+- **Multi-Till Shift Summary**: `GET /api/shifts/summary` aggregates all cashiers' shift floats, sales, and variances for managers.
+- **Loyalty Points Engine**: Auto-awards 1 point per KES 100 spent (configurable) and tracks customer point ledgers (`LoyaltyTransaction`).
+- **Promotions & Discount Codes**: `Promotion` model supporting percent/fixed discounts, expiration dates, min order totals, max use caps, and `GET /api/promotions/validate`.
+- **SMS Receipt Scaffold**: Service wrapper for Africa's Talking SMS receipts (`services/smsService.js`), safely no-opting when credentials aren't set.
+
+---
 
 ## Credential-Blocked Work
 
 These require accounts, approval, secrets, or business/legal details before they can be completed.
 
 ### Render Production Deployment
-
-Needs:
-- Render account access.
-- Billing plan decision.
-- Production domain name.
-- Production environment variables.
-- Render Postgres instance.
-
-Code already provided:
-- `render.yaml`
-- `npm run db:sync`
-- `/api/health`
+Needs: Render account access, DB URL, domain name.
 
 ### M-Pesa Daraja Production
-
-Needs:
-- Safaricom developer app.
-- Production consumer key and secret.
-- Business shortcode.
-- Passkey.
-- Public HTTPS callback URL.
-- Live transaction testing approval.
-
-Code already provided:
-- STK push helper.
-- Callback endpoint.
-- Pending payment polling.
+Needs: Safaricom developer credentials, passkey, live callback URL.
 
 ### KRA eTIMS
-
-Needs:
-- KRA SI/VSCU or OSCU registration details.
-- Device serial or equivalent issued identifier.
-- Final payload specification.
-- API endpoint and auth credentials.
-- Credit note/refund rules.
-
-Code already provided:
-- eTIMS invoice queue.
-- Retry worker.
-- Manual sync/requeue endpoints.
-- Placeholder client to replace after official credentials/spec.
-
-### Business And Compliance
-
-Needs:
-- Legal business name.
-- KRA PIN.
-- Receipt footer details.
-- Data retention policy.
-- ODPC/Data Protection review for customer phone, name, and KRA PIN storage.
-
-## Production Push Rule
-
-Each batch should be implemented, built, smoke-tested, committed, and pushed only once the feature set is internally complete. Credential-blocked work should stay documented until the actual credentials are available.
+Needs: Official VSCU/OSCU registration, device serials, live KRA endpoint access.

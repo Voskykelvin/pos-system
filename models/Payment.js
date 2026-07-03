@@ -41,7 +41,8 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'payments',
     timestamps: true,
     indexes: [
-      { fields: ['mpesaCheckoutRequestId'] }
+      { fields: ['mpesaCheckoutRequestId'] },
+      { fields: ['orderId', 'method', 'status'] }  // payment-mix analytics
     ]
   });
 

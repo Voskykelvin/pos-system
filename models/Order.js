@@ -37,8 +37,9 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      // voided orders keep the record but reverse stock
-      type: DataTypes.ENUM('completed', 'voided', 'refunded'),
+      // voided orders keep the record but reverse all stock
+      // partial_refund = some items returned, order still has active items
+      type: DataTypes.ENUM('completed', 'voided', 'refunded', 'partial_refund'),
       allowNull: false,
       defaultValue: 'completed'
     },
@@ -52,7 +53,9 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     indexes: [
       { fields: ['orderNumber'] },
-      { fields: ['createdAt'] }
+      { fields: ['createdAt'] },
+      { fields: ['cashierId', 'createdAt'] },   // shift-scoped queries
+      { fields: ['status', 'createdAt'] }        // completed/voided filter in analytics
     ]
   });
 

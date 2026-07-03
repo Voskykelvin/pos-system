@@ -9,29 +9,267 @@ function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
 }
 
+// ─── Customer search panel ────────────────────────────────────────────────────
+function CustomerPanel({ authToken, customer, onSelect, onClear }) {
+  const [query, setQuery] = useState('');
+  const [results, setResults] = useState([]);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newPhone, setNewPhone] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 3) { setResults([]); return; }
+    const h = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/customers/search?q=${encodeURIComponent(query.trim())}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        setResults(Array.isArray(data) ? data : []);
+      } catch { setResults([]); }
+    }, 300);
+    return () => clearTimeout(h);
+  }, [authToken, query]);
+
+  async function handleCreate() {
+    if (!newPhone && !newName) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ name: newName, phone: newPhone })
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      onSelect(data);
+      setCreating(false);
+      setQuery('');
+      setResults([]);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (customer) {
+    return (
+      <div className={styles.customerChip}>
+        <span className={styles.customerIcon}>👤</span>
+        <div className={styles.customerInfo}>
+          <span className={styles.customerName}>{customer.name || customer.phone}</span>
+          {customer.loyaltyPoints > 0 && (
+            <span className={styles.loyaltyBadge}>⭐ {customer.loyaltyPoints} pts</span>
+          )}
+        </div>
+        <button className={styles.customerClear} onClick={onClear} type="button">✕</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className={styles.customerPanel}>
+      {!creating ? (
+        <>
+          <input
+            className={styles.customerSearch}
+            type="text"
+            placeholder="Search customer by phone or name…"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+          {results.length > 0 && (
+            <div className={styles.customerResults}>
+              {results.map((c) => (
+                <button
+                  key={c.id}
+                  className={styles.customerResult}
+                  onClick={() => { onSelect(c); setQuery(''); setResults([]); }}
+                  type="button"
+                >
+                  <span>{c.name || '—'}</span>
+                  <span className={styles.customerPhone}>{c.phone}</span>
+                  {c.loyaltyPoints > 0 && <span className={styles.loyaltySmall}>⭐ {c.loyaltyPoints}</span>}
+                </button>
+              ))}
+              <button className={styles.customerNewBtn} onClick={() => setCreating(true)} type="button">
+                + Add as new customer
+              </button>
+            </div>
+          )}
+          {query.trim().length >= 3 && results.length === 0 && (
+            <div className={styles.customerResults}>
+              <button className={styles.customerNewBtn} onClick={() => { setCreating(true); setNewPhone(query.trim()); }} type="button">
+                + No match — add as new customer
+              </button>
+            </div>
+          )}
+        </>
+      ) : (
+        <div className={styles.customerCreate}>
+          <input className={styles.customerSearch} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <input className={styles.customerSearch} placeholder="Phone (07XX…)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+          <div className={styles.customerCreateActions}>
+            <button className={styles.customerSaveBtn} onClick={handleCreate} disabled={saving} type="button">
+              {saving ? 'Saving…' : 'Save customer'}
+            </button>
+            <button className={styles.customerCancelBtn} onClick={() => setCreating(false)} type="button">Cancel</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Split-tender payments panel ──────────────────────────────────────────────
+function PaymentsPanel({ total, payments, onChange }) {
+  function addRow(method) {
+    const existingSum = payments.filter((p) => p.method !== method).reduce((s, p) => s + Number(p.amount || 0), 0);
+    const remaining = Math.max(total - existingSum, 0);
+    onChange([...payments, { method, amount: remaining.toFixed(2), mpesaPhone: '' }]);
+  }
+
+  function removeRow(idx) {
+    onChange(payments.filter((_, i) => i !== idx));
+  }
+
+  function updateRow(idx, field, value) {
+    onChange(payments.map((p, i) => i === idx ? { ...p, [field]: value } : p));
+  }
+
+  function distributeEvenly() {
+    const share = (total / payments.length).toFixed(2);
+    onChange(payments.map((p) => ({ ...p, amount: share })));
+  }
+
+  const paymentSum = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const remaining = Number((total - paymentSum).toFixed(2));
+
+  const canAddCash  = !payments.find((p) => p.method === 'cash');
+  const canAddMpesa = !payments.find((p) => p.method === 'mpesa');
+
+  return (
+    <div className={styles.paymentsPanel}>
+      <div className={styles.paymentsPanelHeader}>
+        <span className={styles.paymentsPanelTitle}>Payment</span>
+        {payments.length > 1 && (
+          <button className={styles.splitEvenBtn} onClick={distributeEvenly} type="button">Split evenly</button>
+        )}
+      </div>
+
+      {payments.map((p, idx) => (
+        <div key={idx} className={styles.paymentRow}>
+          <span className={`${styles.paymentMethodBadge} ${styles[p.method]}`}>
+            {p.method === 'cash' ? '💵 Cash' : '📱 M-Pesa'}
+          </span>
+          <input
+            className={styles.paymentAmountInput}
+            type="number"
+            min="0"
+            step="0.01"
+            value={p.amount}
+            onChange={(e) => updateRow(idx, 'amount', e.target.value)}
+          />
+          {p.method === 'mpesa' && (
+            <input
+              className={styles.paymentPhoneInput}
+              type="tel"
+              placeholder="07XX XXX XXX"
+              value={p.mpesaPhone}
+              onChange={(e) => updateRow(idx, 'mpesaPhone', e.target.value)}
+            />
+          )}
+          {payments.length > 1 && (
+            <button className={styles.paymentRemoveBtn} onClick={() => removeRow(idx)} type="button">✕</button>
+          )}
+        </div>
+      ))}
+
+      <div className={styles.paymentAddRow}>
+        {canAddCash  && <button className={styles.paymentAddBtn} onClick={() => addRow('cash')}  type="button">+ Cash</button>}
+        {canAddMpesa && <button className={styles.paymentAddBtn} onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
+      </div>
+
+      {Math.abs(remaining) > 0.01 && (
+        <div className={`${styles.paymentBalance} ${remaining > 0 ? styles.short : styles.over}`}>
+          {remaining > 0
+            ? `Short KES ${remaining.toFixed(2)}`
+            : `Over by KES ${Math.abs(remaining).toFixed(2)}`}
+        </div>
+      )}
+
+      {/* Cash-specific: cash chips + change */}
+      {payments.length === 1 && payments[0].method === 'cash' && (
+        <div className={styles.cashBox}>
+          <label className={styles.cashLabel} htmlFor="cashReceived">Cash received</label>
+          <input
+            id="cashReceived"
+            className={styles.phoneInput}
+            type="number"
+            min="0"
+            step="1"
+            value={payments[0].amount}
+            onChange={(e) => updateRow(0, 'amount', e.target.value)}
+            placeholder="0.00"
+          />
+          <div className={styles.cashChips}>
+            {[total, 500, 1000, 2000].map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                className={styles.cashChip}
+                onClick={() => updateRow(0, 'amount', String(Math.ceil(amt)))}
+              >
+                {formatKes(Math.ceil(amt))}
+              </button>
+            ))}
+          </div>
+          {(() => {
+            const cashVal = Number(payments[0].amount || 0);
+            const change = cashVal - total;
+            return (
+              <div className={`${styles.totalsRow} ${styles.changeRow}`}>
+                <span>{change < 0 ? 'Short' : 'Change'}</span>
+                <span>{formatKes(Math.abs(change))}</span>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── Main Checkout component ──────────────────────────────────────────────────
 export default function Checkout({ authToken, cashierId, user }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
-  const [cart, setCart] = useState([]); // [{ productId, name, unitPrice, quantity, taxCategory }]
-  const [method, setMethod] = useState('cash');
-  const [phone, setPhone] = useState('');
-  const [cashReceived, setCashReceived] = useState('');
+  const [cart, setCart] = useState([]);
+  const [customer, setCustomer] = useState(null);
+
+  // Payments: array of { method, amount, mpesaPhone }
+  const [payments, setPayments] = useState([{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+
   const [discountTotal, setDiscountTotal] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState(null); // { discountAmount, code, description } | null
+  const [promoError, setPromoError] = useState(null);
+  const [promoChecking, setPromoChecking] = useState(false);
+
   const [managerIdentifier, setManagerIdentifier] = useState('');
   const [managerPassword, setManagerPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
-  const [orderStatus, setOrderStatus] = useState(null); // 'waiting' | 'paid' | 'failed'
+  const [orderStatus, setOrderStatus] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
   const pollRef = useRef(null);
 
   // Debounced product search
   useEffect(() => {
-    if (query.trim().length < 2) {
-      setResults([]);
-      return;
-    }
-    const handle = setTimeout(async () => {
+    if (query.trim().length < 2) { setResults([]); return; }
+    const h = setTimeout(async () => {
       try {
         const term = query.trim();
         const searchParams = /^\d{6,}$/.test(term)
@@ -42,37 +280,41 @@ export default function Checkout({ authToken, cashierId, user }) {
         });
         const data = await res.json();
         setResults(data);
-      } catch {
-        setResults([]);
-      }
+      } catch { setResults([]); }
     }, 250);
-    return () => clearTimeout(handle);
+    return () => clearTimeout(h);
   }, [authToken, query]);
 
+  useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
+
+  // Sync payment total with cart total whenever total changes
+  const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
+  const taxTotal = cart.reduce((sum, i) => {
+    const rate = VAT_RATES[i.taxCategory] ?? 0.16;
+    return sum + i.unitPrice * i.quantity * rate;
+  }, 0);
+  const discountValue = Number(discountTotal || 0);
+  const promoDiscount = promoResult ? Number(promoResult.discountAmount) : 0;
+  const total = Math.max(subtotal + taxTotal - discountValue - promoDiscount, 0);
+
+  // When total changes and there's a single payment row, auto-update its amount
   useEffect(() => {
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
-  }, []);
+    if (payments.length === 1) {
+      setPayments((prev) => [{ ...prev[0], amount: total.toFixed(2) }]);
+    }
+  }, [total]);
 
   function addToCart(product) {
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      }
-      return [
-        ...prev,
-        {
-          productId: product.id,
-          name: product.name,
-          unitPrice: Number(product.sellingPrice),
-          quantity: 1,
-          taxCategory: product.Category?.taxCategory || 'standard'
-        }
-      ];
+      if (existing) return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      return [...prev, {
+        productId: product.id,
+        name: product.name,
+        unitPrice: Number(product.sellingPrice),
+        quantity: 1,
+        taxCategory: product.Category?.taxCategory || 'standard'
+      }];
     });
     setQuery('');
     setResults([]);
@@ -81,118 +323,118 @@ export default function Checkout({ authToken, cashierId, user }) {
   }
 
   function changeQty(productId, delta) {
-    setCart((prev) =>
-      prev
-        .map((i) =>
-          i.productId === productId ? { ...i, quantity: i.quantity + delta } : i
-        )
-        .filter((i) => i.quantity > 0)
-    );
+    setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
   }
 
   function removeItem(productId) {
     setCart((prev) => prev.filter((i) => i.productId !== productId));
   }
 
-  const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const taxTotal = cart.reduce((sum, i) => {
-    const rate = VAT_RATES[i.taxCategory] ?? 0.16;
-    return sum + i.unitPrice * i.quantity * rate;
-  }, 0);
-  const discountValue = Number(discountTotal || 0);
-  const total = Math.max(subtotal + taxTotal - discountValue, 0);
-  const cashValue = Number(cashReceived || 0);
-  const changeDue = method === 'cash' ? Math.max(cashValue - total, 0) : 0;
-  const cashShort = method === 'cash' && cashValue < total;
+  async function checkPromo() {
+    if (!promoCode.trim()) return;
+    setPromoChecking(true);
+    setPromoError(null);
+    setPromoResult(null);
+    try {
+      const res = await fetch(
+        `/api/promotions/validate?code=${encodeURIComponent(promoCode.trim())}&orderTotal=${total.toFixed(2)}`,
+        { headers: { Authorization: `Bearer ${authToken}` } }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setPromoResult(data);
+    } catch (err) {
+      setPromoError(err.message);
+    } finally {
+      setPromoChecking(false);
+    }
+  }
+
   const discountNeedsApproval = discountValue > 0 && user?.role === 'cashier';
 
   const pollOrderStatus = useCallback((orderId) => {
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}/status`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        });
+        const res = await fetch(`/api/orders/${orderId}/status`, { headers: { Authorization: `Bearer ${authToken}` } });
         const data = await res.json();
         if (data.paymentStatus === 'paid') {
           clearInterval(pollRef.current);
           setOrderStatus('paid');
-          setCart([]);
+          resetSale();
         } else if (data.payments?.some((p) => p.status === 'failed')) {
           clearInterval(pollRef.current);
           setOrderStatus('failed');
         }
-      } catch {
-        // transient network hiccup, keep polling
-      }
+      } catch { /* keep polling on transient errors */ }
     }, 3000);
-
-    // give up after 2 minutes so the cashier isn't stuck waiting forever
     setTimeout(() => {
       if (pollRef.current) clearInterval(pollRef.current);
-      setOrderStatus((s) => (s === 'waiting' ? 'failed' : s));
+      setOrderStatus((s) => s === 'waiting' ? 'failed' : s);
     }, 120000);
   }, [authToken]);
+
+  function resetSale() {
+    setCart([]);
+    setPayments([{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+    setDiscountTotal('');
+    setPromoCode('');
+    setPromoResult(null);
+    setPromoError(null);
+    setManagerIdentifier('');
+    setManagerPassword('');
+    setCustomer(null);
+  }
 
   async function handleConfirm() {
     if (cart.length === 0) return;
     setError(null);
     setSubmitting(true);
 
-    const paymentPayload =
-      method === 'cash'
-        ? [{ method: 'cash', amount: total.toFixed(2) }]
-        : [{ method: 'mpesa', amount: total.toFixed(2), mpesaPhone: phone }];
+    const paymentPayload = payments.map((p) => ({
+      method: p.method,
+      amount: Number(Number(p.amount).toFixed(2)),
+      ...(p.method === 'mpesa' ? { mpesaPhone: p.mpesaPhone } : {})
+    }));
 
     try {
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
         body: JSON.stringify({
           cashierId,
+          customerId: customer?.id || undefined,
           items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
           payments: paymentPayload,
           discountTotal: discountValue,
-          managerApproval: discountNeedsApproval
-            ? { identifier: managerIdentifier, password: managerPassword }
-            : undefined
+          promotionCode: promoResult ? promoCode.trim() : undefined,
+          managerApproval: discountNeedsApproval ? { identifier: managerIdentifier, password: managerPassword } : undefined
         })
       });
       const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Checkout failed');
 
-      if (!res.ok) {
-        throw new Error(data.error || 'Checkout failed');
-      }
+      const hasMpesa = payments.some((p) => p.method === 'mpesa');
 
-      if (method === 'cash') {
+      if (!hasMpesa) {
+        // All cash
+        const cashPayment = payments.find((p) => p.method === 'cash');
+        const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
-        setLastReceipt({
-          orderNumber: data.orderNumber,
-          total: data.total,
-          changeDue
-        });
-        setCart([]);
-        setCashReceived('');
-        setDiscountTotal('');
-        setManagerIdentifier('');
-        setManagerPassword('');
+        setLastReceipt({ orderNumber: data.orderNumber, total: data.total, changeDue });
+        resetSale();
         setSubmitting(false);
         return;
       }
 
-      // M-Pesa: trigger the STK push, then poll for confirmation
-      const mpesaPayment = data.payments.find((p) => p.method === 'mpesa');
+      // Has M-Pesa payment(s) — trigger STK push
       setOrderStatus('waiting');
+      const mpesaPayment = data.payments.find((p) => p.method === 'mpesa');
+      const mpesaPhone = payments.find((p) => p.method === 'mpesa')?.mpesaPhone;
 
       const stkRes = await fetch('/api/mpesa/stk-push', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${authToken}`
-        },
-        body: JSON.stringify({ paymentId: mpesaPayment.id, phone })
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ paymentId: mpesaPayment.id, phone: mpesaPhone })
       });
       const stkData = await stkRes.json();
 
@@ -211,14 +453,20 @@ export default function Checkout({ authToken, cashierId, user }) {
     }
   }
 
+  const paymentSum = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const mpesaRows = payments.filter((p) => p.method === 'mpesa');
+  const mpesaComplete = mpesaRows.every((p) => p.mpesaPhone?.trim().length >= 9);
+  const paymentsBalanced = Math.abs(paymentSum - total) <= 0.01;
+
   const canConfirm =
     cart.length > 0 &&
     cashierId &&
     !submitting &&
     orderStatus !== 'waiting' &&
     total > 0 &&
-    (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim())) &&
-    ((method === 'cash' && !cashShort) || phone.trim().length >= 9);
+    paymentsBalanced &&
+    mpesaComplete &&
+    (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim()));
 
   return (
     <div className={styles.page}>
@@ -228,7 +476,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           <input
             className={styles.searchInput}
             type="text"
-            placeholder="Scan barcode or search a product..."
+            placeholder="Scan barcode or search a product…"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -242,18 +490,10 @@ export default function Checkout({ authToken, cashierId, user }) {
         ) : (
           <div className={styles.productGrid}>
             {results.map((product) => (
-              <button
-                key={product.id}
-                className={styles.productCard}
-                onClick={() => addToCart(product)}
-              >
+              <button key={product.id} className={styles.productCard} onClick={() => addToCart(product)}>
                 <div className={styles.productName}>{product.name}</div>
-                <div className={styles.productMeta}>
-                  {formatKes(product.sellingPrice)} / {product.unit}
-                </div>
-                <div className={styles.stockMeta}>
-                  Stock: {Number(product.stockQuantity)} {product.unit}
-                </div>
+                <div className={styles.productMeta}>{formatKes(product.sellingPrice)} / {product.unit}</div>
+                <div className={styles.stockMeta}>Stock: {Number(product.stockQuantity)} {product.unit}</div>
               </button>
             ))}
           </div>
@@ -262,6 +502,16 @@ export default function Checkout({ authToken, cashierId, user }) {
 
       {/* Cart / receipt panel */}
       <div className={styles.cartPanel}>
+        {/* Customer lookup */}
+        <div className={styles.customerSection}>
+          <CustomerPanel
+            authToken={authToken}
+            customer={customer}
+            onSelect={setCustomer}
+            onClear={() => setCustomer(null)}
+          />
+        </div>
+
         <div className={styles.cartHeader}>
           <h2 className={`${styles.heading} ${styles.cartTitle}`}>Current sale</h2>
           {cart.length > 0 && (
@@ -277,172 +527,88 @@ export default function Checkout({ authToken, cashierId, user }) {
               <div className={styles.cartRow} key={item.productId}>
                 <div>
                   <div className={styles.cartItemName}>{item.name}</div>
-                  <button
-                    className={styles.removeBtn}
-                    onClick={() => removeItem(item.productId)}
-                  >
-                    Remove
-                  </button>
+                  <button className={styles.removeBtn} onClick={() => removeItem(item.productId)}>Remove</button>
                 </div>
                 <div className={styles.qtyControls}>
-                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, -1)}>
-                    -
-                  </button>
+                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, -1)}>-</button>
                   <span className={styles.qtyValue}>{item.quantity}</span>
-                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, 1)}>
-                    +
-                  </button>
+                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, 1)}>+</button>
                 </div>
-                <div className={styles.lineTotal}>
-                  {formatKes(item.unitPrice * item.quantity)}
-                </div>
+                <div className={styles.lineTotal}>{formatKes(item.unitPrice * item.quantity)}</div>
               </div>
             ))
           )}
         </div>
 
         <div className={styles.totalsBlock}>
-          <div className={styles.totalsRow}>
-            <span>Subtotal</span>
-            <span>{formatKes(subtotal)}</span>
-          </div>
-          <div className={styles.totalsRow}>
-            <span>VAT</span>
-            <span>{formatKes(taxTotal)}</span>
-          </div>
+          <div className={styles.totalsRow}><span>Subtotal</span><span>{formatKes(subtotal)}</span></div>
+          <div className={styles.totalsRow}><span>VAT</span><span>{formatKes(taxTotal)}</span></div>
+
+          {/* Manual discount */}
           <div className={styles.discountRow}>
             <span>Discount</span>
             <input
-              type="number"
-              min="0"
-              step="1"
+              type="number" min="0" step="1"
               value={discountTotal}
               onChange={(e) => setDiscountTotal(e.target.value)}
               placeholder="0.00"
             />
           </div>
-          <div className={`${styles.totalsRow} ${styles.grand}`}>
-            <span>Total</span>
-            <span>{formatKes(total)}</span>
-          </div>
-        </div>
 
-        <div className={styles.paymentSection}>
-          <div className={styles.methodToggle}>
-            <button
-              className={`${styles.methodBtn} ${method === 'cash' ? styles.active : ''}`}
-              onClick={() => setMethod('cash')}
-            >
-              Cash
-            </button>
-            <button
-              className={`${styles.methodBtn} ${method === 'mpesa' ? styles.active : ''}`}
-              onClick={() => setMethod('mpesa')}
-            >
-              M-Pesa
-            </button>
-          </div>
-
-          {method === 'mpesa' && (
+          {/* Promo code */}
+          <div className={styles.promoRow}>
             <input
-              className={styles.phoneInput}
-              type="tel"
-              placeholder="07XX XXX XXX"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
+              className={styles.promoInput}
+              type="text"
+              placeholder="Promo code"
+              value={promoCode}
+              onChange={(e) => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
             />
+            <button
+              className={styles.promoApplyBtn}
+              onClick={checkPromo}
+              disabled={promoChecking || !promoCode.trim()}
+              type="button"
+            >
+              {promoChecking ? '…' : 'Apply'}
+            </button>
+          </div>
+          {promoResult && (
+            <div className={styles.promoSuccess}>
+              🎉 {promoResult.code}: -{formatKes(promoResult.discountAmount)} {promoResult.description && `(${promoResult.description})`}
+            </div>
           )}
+          {promoError && <div className={styles.promoError}>{promoError}</div>}
 
-          {method === 'cash' && (
-            <div className={styles.cashBox}>
-              <label className={styles.cashLabel} htmlFor="cashReceived">
-                Cash received
-              </label>
-              <input
-                id="cashReceived"
-                className={styles.phoneInput}
-                type="number"
-                min="0"
-                step="1"
-                value={cashReceived}
-                onChange={(e) => setCashReceived(e.target.value)}
-                placeholder="0.00"
-              />
-              <div className={styles.cashChips}>
-                {[total, 500, 1000, 2000].map((amount) => (
-                  <button
-                    key={amount}
-                    type="button"
-                    className={styles.cashChip}
-                    onClick={() => setCashReceived(String(Math.ceil(amount)))}
-                  >
-                    {formatKes(Math.ceil(amount))}
-                  </button>
-                ))}
-              </div>
-              <div className={`${styles.totalsRow} ${styles.changeRow}`}>
-                <span>{cashShort ? 'Short' : 'Change'}</span>
-                <span>{formatKes(cashShort ? total - cashValue : changeDue)}</span>
-              </div>
-            </div>
-          )}
-
-          {discountNeedsApproval && (
-            <div className={styles.approvalBox}>
-              <label className={styles.cashLabel}>Manager approval</label>
-              <input
-                className={styles.phoneInput}
-                value={managerIdentifier}
-                onChange={(e) => setManagerIdentifier(e.target.value)}
-                placeholder="Manager email or phone"
-              />
-              <input
-                className={styles.phoneInput}
-                type="password"
-                value={managerPassword}
-                onChange={(e) => setManagerPassword(e.target.value)}
-                placeholder="Manager password"
-              />
-            </div>
-          )}
-
-          <button className={styles.confirmBtn} disabled={!canConfirm} onClick={handleConfirm}>
-            {submitting
-              ? 'Processing...'
-              : method === 'cash'
-              ? `Confirm sale - ${formatKes(total)}`
-              : `Send M-Pesa prompt - ${formatKes(total)}`}
-          </button>
-
-          {orderStatus === 'waiting' && (
-            <div className={styles.statusBanner}>
-              Waiting for customer to enter M-Pesa PIN on their phone...
-            </div>
-          )}
-          {orderStatus === 'paid' && (
-            <div className={`${styles.statusBanner} ${styles.success}`}>
-              Payment confirmed. Sale complete.
-            </div>
-          )}
-          {lastReceipt && (
-            <div className={styles.receiptMini}>
-              <div>
-                <span>Receipt</span>
-                <strong>{lastReceipt.orderNumber}</strong>
-              </div>
-              <div>
-                <span>Change</span>
-                <strong>{formatKes(lastReceipt.changeDue)}</strong>
-              </div>
-            </div>
-          )}
-          {orderStatus === 'failed' && (
-            <div className={`${styles.statusBanner} ${styles.error}`}>
-              Payment did not go through. Try again or use cash.
-            </div>
-          )}
-          {error && <p className={styles.errorText}>{error}</p>}
+          <div className={`${styles.totalsRow} ${styles.grand}`}><span>Total</span><span>{formatKes(total)}</span></div>
         </div>
+
+        {/* Split-tender payments */}
+        <PaymentsPanel total={total} payments={payments} onChange={setPayments} />
+
+        {/* Manager approval for discounts */}
+        {discountNeedsApproval && (
+          <div className={styles.approvalBox}>
+            <label className={styles.cashLabel}>Manager approval</label>
+            <input className={styles.phoneInput} value={managerIdentifier} onChange={(e) => setManagerIdentifier(e.target.value)} placeholder="Manager email or phone" />
+            <input className={styles.phoneInput} type="password" value={managerPassword} onChange={(e) => setManagerPassword(e.target.value)} placeholder="Manager password" />
+          </div>
+        )}
+
+        <button className={styles.confirmBtn} disabled={!canConfirm} onClick={handleConfirm}>
+          {submitting ? 'Processing…' : `Confirm sale — ${formatKes(total)}`}
+        </button>
+
+        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN…</div>}
+        {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}
+        {orderStatus === 'failed' && <div className={`${styles.statusBanner} ${styles.error}`}>Payment did not go through. Try again or use cash.</div>}
+        {lastReceipt && (
+          <div className={styles.receiptMini}>
+            <div><span>Receipt</span><strong>{lastReceipt.orderNumber}</strong></div>
+            <div><span>Change</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
+          </div>
+        )}
+        {error && <p className={styles.errorText}>{error}</p>}
       </div>
     </div>
   );

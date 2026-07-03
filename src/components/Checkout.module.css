@@ -408,3 +408,248 @@
 .receiptMini strong {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
 }
+
+/* Customer panel styles */
+.customerSection {
+  margin-bottom: 12px;
+}
+
+.customerPanel {
+  position: relative;
+}
+
+.customerSearch {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.customerResults {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 10;
+  display: grid;
+}
+
+.customerResult {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  border-bottom: 1px solid var(--line);
+}
+
+.customerResult:hover {
+  background: var(--bg);
+}
+
+.customerPhone {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.loyaltySmall {
+  font-size: 11px;
+  color: #d97706;
+  background: #fef3c7;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.customerNewBtn {
+  padding: 10px;
+  background: none;
+  border: none;
+  color: var(--accent);
+  font-weight: 500;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.customerChip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--pos-panel);
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+}
+
+.customerInfo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+}
+
+.customerName {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.loyaltyBadge {
+  font-size: 12px;
+  color: #b45309;
+  background: #fef3c7;
+  padding: 1px 6px;
+  border-radius: 10px;
+}
+
+.customerClear {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-soft);
+}
+
+/* Split-tender Payment Panel styles */
+.paymentsPanel {
+  margin-top: 12px;
+  display: grid;
+  gap: 8px;
+}
+
+.paymentsPanelHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.paymentsPanelTitle {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.splitEvenBtn {
+  font-size: 12px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.paymentRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.paymentMethodBadge {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  font-weight: 500;
+  min-width: 80px;
+  text-align: center;
+}
+
+.paymentMethodBadge.cash {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.paymentMethodBadge.mpesa {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.paymentAmountInput {
+  flex: 1;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.paymentPhoneInput {
+  flex: 1.2;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 14px;
+}
+
+.paymentRemoveBtn {
+  background: none;
+  border: none;
+  color: var(--danger);
+  cursor: pointer;
+  padding: 4px;
+}
+
+.paymentAddRow {
+  display: flex;
+  gap: 8px;
+}
+
+.paymentAddBtn {
+  padding: 6px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--ink);
+}
+
+.paymentBalance {
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
+}
+
+.paymentBalance.short { color: var(--danger); }
+.paymentBalance.over { color: #16a34a; }
+
+/* Promo styles */
+.promoRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.promoInput {
+  flex: 1;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+  text-transform: uppercase;
+}
+
+.promoApplyBtn {
+  padding: 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.promoSuccess {
+  font-size: 12px;
+  color: #16a34a;
+  margin-top: 4px;
+}
+
+.promoError {
+  font-size: 12px;
+  color: var(--danger);
+  margin-top: 4px;
+}
+

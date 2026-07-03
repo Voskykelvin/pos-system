@@ -13,21 +13,19 @@ Research points from Square, Shopify, Safaricom, KRA, and Render suggest that a 
 - Product admin and stock adjustments.
 - Daily dashboard and analytics page.
 - Demo database for local testing.
+- Role-based access control and signed JWT auth.
+- Shift management and cash reconciliation.
+- Voids, refunds, and audit logs.
+- Request validation on all write endpoints (Batch 4).
+- Idempotency protection on checkout/payments (Batch 4).
+- SQL migration system replacing unsafe `sync({ alter: true })` (Batch 4).
+- Analytics query indexes on all hot query paths (Batch 4).
 
 ## Build Next
 
 See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the current production batch plan.
 
-### 1. Core Store Operations
-
-- Staff login, roles, and PIN unlock.
-- Shift open/close and cash drawer reconciliation.
-- Discounts with manager approval.
-- Returns/refunds and exchange flows.
-- Receipt printing and receipt search.
-- Customer lookup by phone.
-
-### 2. Inventory Depth
+### Batch 3: Inventory Depth (Active)
 
 - Purchase orders and supplier receiving.
 - Stock transfer if multiple branches are added.
@@ -36,29 +34,40 @@ See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the current production batch plan
 - Reorder suggestions based on sales velocity.
 - CSV import/export.
 
-### 3. Analytics
+### Batch 5: Core Missing Features (Researched)
 
-- Best-selling products by units and revenue.
-- Category performance.
-- Slow movers and dead stock.
-- Low-stock and out-of-stock alerts.
-- Sell-through and sales velocity.
-- Cashier performance.
-- Void/refund/discount exception reports.
+The following gaps were identified by reviewing Square, Shopify POS, Lightspeed, and Loyverse (popular Kenyan retail POS). See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for full details.
 
-### 4. Payments and Reconciliation
+#### High Priority
+- Customer phone lookup at checkout (`Customer` model exists, no API route yet).
+- Split-tender UI (cash + M-Pesa on one order — data layer already supports it).
+- Rate limiting on `POST /api/auth/login` (`express-rate-limit`).
+
+#### Medium Priority
+- Partial refund by line item.
+- SMS / WhatsApp receipts (Africa's Talking or Twilio).
+- Product image upload.
+- Discount codes and time-bound promotions.
+- CSV / Excel export for daily / weekly reports.
+- Customer loyalty points.
+
+#### Low Priority
+- Barcode label PDF generation.
+- Offline mode with service worker + IndexedDB sync.
+- Multi-till shift summary for managers.
+- `helmet` security headers (CSP, HSTS, X-Frame-Options).
+
+### Payments and Reconciliation
 
 - M-Pesa reconciliation dashboard.
-- Partial payments and split tender.
 - Card payment provider integration.
-- Payment reversal/refund workflow.
-- Idempotency keys on payment-changing endpoints.
+- Idempotency keys on payment-changing endpoints (done — Batch 4).
 
-### 5. Compliance and Integrations
+### Compliance and Integrations
 
 - KRA eTIMS VSCU/OSCU production integration.
 - Credit notes for transmitted invoices.
-- Accounting export.
+- Accounting export (QuickBooks / Sage / Zoho CSV).
 - ODPC/Data Protection review for customer data.
 
 ## Research Links
@@ -67,5 +76,8 @@ See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the current production batch plan
 - Square inventory emphasizes real-time sales/stock tracking, low-stock alerts, stock-level reporting, exports, and integrations: https://squareup.com/us/en/point-of-sale/features/inventory-management
 - Shopify POS feature categories include omnichannel selling, inventory, staff, checkout, products, customers, reporting, hardware, payments, and marketing: https://www.shopify.com/pos/features
 - Shopify omnichannel POS highlights shared inventory, customer profiles, order history, returns/exchanges, gift cards/discounts, staff permissions, reporting, and integrations: https://www.shopify.com/enterprise/blog/omnichannel-pos
+- Loyverse POS (popular in East Africa) emphasizes loyalty programs, item variants, multiple store management, and offline mode: https://loyverse.com/pos-features
+- Lightspeed Retail highlights purchase orders, supplier management, inventory counts, and multi-location: https://www.lightspeedhq.com/pos/retail/
 - Safaricom Daraja is the official M-Pesa API platform: https://developer.safaricom.co.ke/
 - KRA eTIMS system-to-system integration supports VSCU and OSCU paths: https://www.kra.go.ke/business/etims-electronic-tax-invoice-management-system/learn-about-etims/etims-system-to-system-integration
+- Africa's Talking SMS API for SMS receipts: https://africastalking.com/sms

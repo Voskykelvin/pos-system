@@ -3,21 +3,54 @@ const router = express.Router();
 const { checkout } = require('../controllers/checkoutController');
 const { voidOrder } = require('../controllers/voidController');
 const { refundOrder } = require('../controllers/refundController');
+const { partialRefund } = require('../controllers/partialRefundController');
 const { searchOrders, receipt } = require('../controllers/orderLookupController');
 const { Order, Payment } = require('../models');
 const { authenticate, requireRoles } = require('../middleware/auth');
+const { validate, schemas } = require('../middleware/validate');
+const { idempotency } = require('../middleware/idempotency');
+
+const cashierAndAbove = requireRoles('admin', 'manager', 'cashier');
 
 // POST /api/orders/checkout
-router.post('/checkout', authenticate, requireRoles('admin', 'manager', 'cashier'), checkout);
+// Idempotency key prevents double-charging on network retries.
+router.post(
+  '/checkout',
+  authenticate,
+  cashierAndAbove,
+  idempotency(),
+  validate(schemas.checkout),
+  checkout
+);
 
-router.get('/search', authenticate, requireRoles('admin', 'manager', 'cashier'), searchOrders);
+router.get('/search', authenticate, cashierAndAbove, searchOrders);
 
 // POST /api/orders/:id/void
-router.post('/:id/void', authenticate, requireRoles('admin', 'manager', 'cashier'), voidOrder);
+router.post(
+  '/:id/void',
+  authenticate,
+  cashierAndAbove,
+  validate(schemas.voidOrder),
+  voidOrder
+);
 
-router.post('/:id/refund', authenticate, requireRoles('admin', 'manager', 'cashier'), refundOrder);
+router.post(
+  '/:id/refund',
+  authenticate,
+  cashierAndAbove,
+  validate(schemas.refundOrder),
+  refundOrder
+);
 
-router.get('/:id/receipt', authenticate, requireRoles('admin', 'manager', 'cashier'), receipt);
+router.post(
+  '/:id/refund/partial',
+  authenticate,
+  cashierAndAbove,
+  validate(schemas.partialRefund),
+  partialRefund
+);
+
+router.get('/:id/receipt', authenticate, cashierAndAbove, receipt);
 
 // GET /api/orders/:id/status - used by the checkout screen to poll while
 // waiting on an M-Pesa callback

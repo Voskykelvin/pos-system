@@ -5,7 +5,8 @@ const {
   Order,
   OrderItem,
   Payment,
-  EtimsInvoice
+  EtimsInvoice,
+  User
 } = require('../models');
 const { getBusinessDayRange } = require('../utils/businessTime');
 
@@ -335,4 +336,69 @@ async function analytics(req, res) {
   }
 }
 
-module.exports = { analytics, today };
+/**
+ * GET /api/reports/export?days=7&format=csv
+ * Downloads a CSV of all completed orders in the period.
+ * Columns: date, receipt, cashier, items, subtotal, VAT, discount, total, payment_methods
+ */
+async function exportCsv(req, res) {
+  try {
+    const { start, end, days } = parseAnalyticsRange(req.query);
+
+    const orders = await Order.findAll({
+      where: {
+        status: 'completed',
+        createdAt: { [Op.gte]: start, [Op.lte]: end }
+      },
+      include: [
+        { model: OrderItem, include: [{ model: Product }] },
+        { model: Payment },
+        { model: User, as: 'cashier', attributes: ['name'] }
+      ],
+      order: [['createdAt', 'ASC']]
+    });
+
+    function csvEscape(value) {
+      const str = String(value ?? '');
+      return str.includes(',') || str.includes('"') || str.includes('\n')
+        ? `"${str.replace(/"/g, '""')}"`
+        : str;
+    }
+
+    const rows = [
+      // header
+      ['date', 'receipt_number', 'cashier', 'items', 'subtotal', 'vat', 'discount', 'total', 'payment_methods'].join(',')
+    ];
+
+    for (const order of orders) {
+      const itemDesc = (order.OrderItems || [])
+        .map((i) => `${i.Product?.name || 'Unknown'} x${Number(i.quantity)}`)
+        .join(' | ');
+      const methods = (order.Payments || [])
+        .filter((p) => p.status === 'confirmed')
+        .map((p) => p.method)
+        .join('+');
+
+      rows.push([
+        csvEscape(order.createdAt.toISOString()),
+        csvEscape(order.orderNumber),
+        csvEscape(order.cashier?.name || ''),
+        csvEscape(itemDesc),
+        csvEscape(Number(order.subtotal).toFixed(2)),
+        csvEscape(Number(order.taxTotal).toFixed(2)),
+        csvEscape(Number(order.discountTotal).toFixed(2)),
+        csvEscape(Number(order.total).toFixed(2)),
+        csvEscape(methods)
+      ].join(','));
+    }
+
+    const filename = `pos_export_${days}d_${new Date().toISOString().slice(0, 10)}.csv`;
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.send('\uFEFF' + rows.join('\r\n')); // UTF-8 BOM for Excel compatibility
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { analytics, exportCsv, today };

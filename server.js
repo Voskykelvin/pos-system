@@ -2,24 +2,63 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
+const helmet = require('helmet');
+const { rateLimit } = require('express-rate-limit');
 const { sequelize, isUsingMemoryDatabase } = require('./models');
 const { startEtimsScheduler } = require('./services/etimsScheduler');
 const { seedDemoData } = require('./services/demoSeed');
 const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
 
+// Routes — require the route files after app + limiter are configured
 const authRoutes = require('./routes/auth');
-const ordersRoutes = require('./routes/orders');
+const orderRoutes = require('./routes/orders');
+const productRoutes = require('./routes/products');
+const adminProductRoutes = require('./routes/adminProducts');
+const adminCategoryRoutes = require('./routes/adminCategories');
+const reportRoutes = require('./routes/reports');
 const mpesaRoutes = require('./routes/mpesa');
+const shiftRoutes = require('./routes/shifts');
 const etimsRoutes = require('./routes/etims');
-const productsRoutes = require('./routes/products');
-const adminProductsRoutes = require('./routes/adminProducts');
-const adminCategoriesRoutes = require('./routes/adminCategories');
-const reportsRoutes = require('./routes/reports');
-const shiftsRoutes = require('./routes/shifts');
 const auditLogsRoutes = require('./routes/auditLogs');
+const customerRoutes = require('./routes/customers');
+const promotionRoutes = require('./routes/promotions');
 
 const app = express();
+
+// ── Security headers ───────────────────────────────────────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc:  ["'self'", "'unsafe-inline'"], // Vite injects inline scripts in dev
+      styleSrc:   ["'self'", "'unsafe-inline'"],
+      imgSrc:     ["'self'", 'data:'],
+      connectSrc: ["'self'"],
+      fontSrc:    ["'self'", 'data:']
+    }
+  },
+  crossOriginEmbedderPolicy: false // required when serving Vite on same origin
+}));
+
+// ── Rate limiting ───────────────────────────────────────────────────
+// Auth brute-force protection: 10 attempts per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs:         15 * 60 * 1000,
+  max:              10,
+  standardHeaders: 'draft-7',
+  legacyHeaders:    false,
+  message:          { error: 'Too many login attempts. Try again in 15 minutes.' }
+});
+
+// General API limit: 120 requests per minute per IP (generous, prevents runaway loops)
+const apiLimiter = rateLimit({
+  windowMs:         60 * 1000,
+  max:              120,
+  standardHeaders: 'draft-7',
+  legacyHeaders:    false,
+  message:          { error: 'Too many requests. Slow down.' }
+});
 app.use(express.json());
 
 app.get('/api/health', (req, res) => {
@@ -43,16 +82,19 @@ app.get('/api/bootstrap', authenticate, async (req, res) => {
   });
 });
 
-app.use('/api/auth', authRoutes);
-app.use('/api/orders', ordersRoutes);
+app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api', apiLimiter);
+app.use('/api/orders', orderRoutes);
 app.use('/api/mpesa', mpesaRoutes);
+app.use('/api/products', productRoutes);
+app.use('/api/admin/products', adminProductRoutes);
+app.use('/api/admin/categories', adminCategoryRoutes);
+app.use('/api/reports', reportRoutes);
+app.use('/api/shifts', shiftRoutes);
 app.use('/api/etims', etimsRoutes);
-app.use('/api/products', productsRoutes);
-app.use('/api/admin/products', adminProductsRoutes);
-app.use('/api/admin/categories', adminCategoriesRoutes);
-app.use('/api/reports', reportsRoutes);
-app.use('/api/shifts', shiftsRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
+app.use('/api/customers', customerRoutes);
+app.use('/api/promotions', promotionRoutes);
 
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');
@@ -75,7 +117,10 @@ async function start({ port = PORT } = {}) {
     await seedDemoData();
     console.log('Demo data loaded');
   } else if (process.env.DB_SYNC === 'true') {
-    await sequelize.sync({ alter: true });
+    // Run pending SQL migrations instead of the unsafe alter:true sync.
+    // This preserves existing data and applies only incremental changes.
+    const { runMigrations } = require('./scripts/migrate-inline');
+    await runMigrations(sequelize);
     if (process.env.SEED_DEMO_DATA === 'true') {
       await seedDemoData();
       console.log('Demo data loaded into configured database');

@@ -35,7 +35,11 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'order_items',
     timestamps: true,
-    updatedAt: false
+    updatedAt: false,
+    indexes: [
+      { fields: ['orderId'] },
+      { fields: ['productId'] }   // analytics product-sales join
+    ]
   });
 
   OrderItem.associate = (models) => {

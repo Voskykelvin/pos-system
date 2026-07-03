@@ -240,6 +240,47 @@
   width: 100%;
 }
 
+.actionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.partialRefundBox {
+  grid-column: 1 / -1;
+  background: var(--bg);
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.partialRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+}
+
+.partialInput {
+  width: 60px;
+  padding: 4px 6px;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.partialBtn {
+  margin-top: 6px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
 .auditList {
   max-height: 340px;
   overflow-y: auto;

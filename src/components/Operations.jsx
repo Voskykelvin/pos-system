@@ -277,15 +277,65 @@ export default function Operations({ authToken, user }) {
                   </div>
                 ))}
               </div>
-              {canManageOrders && receipt.status === 'completed' && (
+              {canManageOrders && ['completed', 'partial_refund'].includes(receipt.status) && (
                 <div className={styles.actionBox}>
                   <input
                     value={actionReason}
                     onChange={(event) => setActionReason(event.target.value)}
-                    placeholder="Reason"
+                    placeholder="Reason for action"
                   />
-                  <button type="button" onClick={() => orderAction('void')}>Void</button>
-                  <button type="button" onClick={() => orderAction('refund')}>Refund</button>
+                  <div className={styles.actionButtons}>
+                    <button type="button" onClick={() => orderAction('void')}>Full Void</button>
+                    <button type="button" onClick={() => orderAction('refund')}>Full Refund</button>
+                  </div>
+                  
+                  {/* Partial Refund Section */}
+                  <div className={styles.partialRefundBox}>
+                    <small>Select line items to return:</small>
+                    {receipt.items.map((item) => (
+                      <div key={item.id} className={styles.partialRow}>
+                        <span>{item.name} (Max {item.quantity})</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max={item.quantity}
+                          placeholder="0"
+                          id={`refund-qty-${item.id}`}
+                          className={styles.partialInput}
+                        />
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className={styles.partialBtn}
+                      onClick={async () => {
+                        const itemsToRefund = receipt.items.map((item) => {
+                          const val = Number(document.getElementById(`refund-qty-${item.id}`)?.value || 0);
+                          return val > 0 ? { orderItemId: item.id, quantity: val } : null;
+                        }).filter(Boolean);
+
+                        if (itemsToRefund.length === 0) {
+                          alert('Please enter a quantity for at least one item to refund');
+                          return;
+                        }
+
+                        try {
+                          await api(`/api/orders/${receipt.id}/refund/partial`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ items: itemsToRefund, reason: actionReason })
+                          });
+                          await loadReceipt(receipt.id);
+                          setActionReason('');
+                          alert('Partial refund completed successfully');
+                        } catch (err) {
+                          alert(err.message);
+                        }
+                      }}
+                    >
+                      Partial Refund Selected
+                    </button>
+                  </div>
                 </div>
               )}
               <button className={styles.printBtn} type="button" onClick={() => window.print()}>

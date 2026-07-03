@@ -47,7 +47,11 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'inventory_transactions',
     timestamps: true,
-    updatedAt: false
+    updatedAt: false,
+    indexes: [
+      { fields: ['productId'] },
+      { fields: ['productId', 'createdAt'] }  // ledger history per product
+    ]
   });
 
   InventoryTransaction.associate = (models) => {

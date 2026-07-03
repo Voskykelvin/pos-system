@@ -62,6 +62,26 @@ export default function Analytics({ authToken }) {
           </p>
         </div>
         <div className={styles.actions}>
+          <a
+            href={`/api/reports/export?days=${days}`}
+            className={styles.exportBtn}
+            onClick={(e) => {
+              e.preventDefault();
+              fetch(`/api/reports/export?days=${days}`, {
+                headers: { Authorization: `Bearer ${authToken}` }
+              })
+                .then((res) => res.blob())
+                .then((blob) => {
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `pos_export_${days}d_${new Date().toISOString().slice(0,10)}.csv`;
+                  a.click();
+                });
+            }}
+          >
+            Export CSV
+          </a>
           <div className={styles.segmented}>
             {RANGE_OPTIONS.map((option) => (
               <button

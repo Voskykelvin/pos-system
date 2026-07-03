@@ -7,12 +7,18 @@ const {
   Payment,
   InventoryTransaction,
   EtimsInvoice,
-  Customer
+  Customer,
+  LoyaltyTransaction,
+  Promotion
 } = require('../models');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const { buildEtimsPayload } = require('../utils/etimsPayload');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
+const { sendReceipt } = require('../services/smsService');
+
+// Loyalty: 1 point earned per KES 100 spent (configurable)
+const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
 
 // Set from your own business record / env config
 const BUSINESS = {
@@ -44,7 +50,8 @@ async function checkout(req, res) {
     customerId,
     items,
     payments,
-    discountTotal = 0
+    discountTotal = 0,
+    promotionCode    // optional promo code string
   } = req.body;
   const cashierId = req.user?.id || bodyCashierId;
 
@@ -64,6 +71,21 @@ async function checkout(req, res) {
     const normalizedDiscount = Number(discountTotal || 0);
     if (!Number.isFinite(normalizedDiscount) || normalizedDiscount < 0) {
       throw new Error('discountTotal must be a non-negative number');
+    }
+
+    // Resolve promotion code if supplied
+    let appliedPromotion = null;
+    let promoDiscount = 0;
+    if (promotionCode) {
+      const promo = await Promotion.findOne({
+        where: { code: String(promotionCode).trim().toUpperCase(), isActive: true }
+      });
+      if (!promo) throw Object.assign(new Error('Invalid or inactive promotion code'), { status: 400 });
+      const now = new Date();
+      if (promo.startsAt && now < new Date(promo.startsAt)) throw Object.assign(new Error('Promotion has not started'), { status: 400 });
+      if (promo.expiresAt && now > new Date(promo.expiresAt)) throw Object.assign(new Error('Promotion has expired'), { status: 400 });
+      if (promo.maxUses > 0 && promo.usedCount >= promo.maxUses) throw Object.assign(new Error('Promotion has reached max uses'), { status: 400 });
+      appliedPromotion = promo;
     }
 
     let approval = null;
@@ -132,18 +154,25 @@ async function checkout(req, res) {
       throw new Error('discountTotal cannot be equal to or greater than the sale total');
     }
 
-    const total = subtotal + taxTotal - normalizedDiscount;
+    // Apply promotion on top of any manual discount
+    if (appliedPromotion) {
+      const base = subtotal + taxTotal - normalizedDiscount;
+      promoDiscount = appliedPromotion.type === 'percent'
+        ? base * (Number(appliedPromotion.value) / 100)
+        : Math.min(Number(appliedPromotion.value), base);
+    }
+
+    const combinedDiscount = normalizedDiscount + promoDiscount;
+    const total = Math.max(subtotal + taxTotal - combinedDiscount, 0);
 
     const paymentSum = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     if (Math.abs(paymentSum - total) > 0.01) {
       throw new Error(
-        `Payment total (${paymentSum}) does not match order total (${total})`
+        `Payment total (${paymentSum.toFixed(2)}) does not match order total (${total.toFixed(2)})`
       );
     }
 
-    // 3. Create the order. Cash is confirmed instantly; mpesa/card stay
-    // pending until their callback/confirmation arrives, so the order's
-    // paymentStatus reflects whichever payment method needs the longest.
+    // 3. Create the order
     const anyPending = payments.some((p) => p.method !== 'cash');
     const orderNumber = await generateOrderNumber();
     const order = await Order.create({
@@ -152,7 +181,7 @@ async function checkout(req, res) {
       customerId: customerId || null,
       subtotal,
       taxTotal,
-      discountTotal: normalizedDiscount,
+      discountTotal: combinedDiscount,
       total,
       status: 'completed',
       paymentStatus: anyPending ? 'pending' : 'paid'
@@ -219,7 +248,8 @@ async function checkout(req, res) {
       metadata: {
         orderNumber: order.orderNumber,
         total,
-        discountTotal: normalizedDiscount,
+        discountTotal: combinedDiscount,
+        promoCode: appliedPromotion?.code || null,
         paymentMethods: payments.map((p) => p.method)
       },
       transaction: t
@@ -227,11 +257,53 @@ async function checkout(req, res) {
 
     await t.commit();
 
+    // ── Post-commit: award loyalty points (non-blocking) ─────────────────
+    if (customerId) {
+      try {
+        const customer = await Customer.findByPk(customerId);
+        if (customer) {
+          const pointsEarned = Math.floor(Number(total) / 100 * LOYALTY_POINTS_PER_100);
+          if (pointsEarned > 0) {
+            const balanceBefore = customer.loyaltyPoints || 0;
+            const balanceAfter = balanceBefore + pointsEarned;
+            await customer.update({ loyaltyPoints: balanceAfter });
+            await LoyaltyTransaction.create({
+              customerId: customer.id,
+              orderId: order.id,
+              type: 'earn',
+              points: pointsEarned,
+              balanceBefore,
+              balanceAfter,
+              note: `Earned on order ${order.orderNumber}`
+            });
+          }
+
+          // SMS receipt if customer has a phone and SMS is configured
+          if (customer.phone) {
+            sendReceipt(customer.phone, {
+              orderNumber: order.orderNumber,
+              total,
+              businessName: BUSINESS.name
+            }).catch(() => {}); // fire-and-forget
+          }
+        }
+      } catch (loyaltyErr) {
+        // Never fail the checkout response over loyalty/SMS errors
+        console.warn('[checkout] loyalty/SMS error:', loyaltyErr.message);
+      }
+    }
+
+    // Increment promotion use count (post-commit, non-blocking)
+    if (appliedPromotion) {
+      Promotion.increment('usedCount', { where: { id: appliedPromotion.id } }).catch(() => {});
+    }
+
     return res.status(201).json({
       orderId: order.id,
       orderNumber: order.orderNumber,
       total: order.total,
       paymentStatus: order.paymentStatus,
+      promoApplied: appliedPromotion ? { code: appliedPromotion.code, discount: promoDiscount } : null,
       payments: createdPayments.map((p) => ({
         id: p.id,
         method: p.method,
