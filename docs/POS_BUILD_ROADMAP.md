@@ -16,6 +16,8 @@ Research points from Square, Shopify, Safaricom, KRA, and Render suggest that a 
 
 ## Build Next
 
+See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the current production batch plan.
+
 ### 1. Core Store Operations
 
 - Staff login, roles, and PIN unlock.

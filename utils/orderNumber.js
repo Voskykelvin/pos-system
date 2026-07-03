@@ -11,13 +11,18 @@ async function generateOrderNumber() {
   const datePart = getBusinessDate(now).compact;
   const { start } = getBusinessDayRange(now);
 
-  const countToday = await Order.count({
+  const latestOrder = await Order.findOne({
     where: {
-      createdAt: { [Op.gte]: start }
-    }
+      createdAt: { [Op.gte]: start },
+      orderNumber: { [Op.like]: `SUP-${datePart}-%` }
+    },
+    order: [['orderNumber', 'DESC']]
   });
 
-  const sequence = String(countToday + 1).padStart(4, '0');
+  const latestSequence = latestOrder
+    ? Number(latestOrder.orderNumber.split('-').pop())
+    : 0;
+  const sequence = String(latestSequence + 1).padStart(4, '0');
   return `SUP-${datePart}-${sequence}`;
 }
 

@@ -2,11 +2,13 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 const express = require('express');
-const { sequelize, isUsingMemoryDatabase, User } = require('./models');
+const { sequelize, isUsingMemoryDatabase } = require('./models');
 const { startEtimsScheduler } = require('./services/etimsScheduler');
 const { seedDemoData } = require('./services/demoSeed');
 const siteMap = require('./utils/siteMap');
+const { authenticate } = require('./middleware/auth');
 
+const authRoutes = require('./routes/auth');
 const ordersRoutes = require('./routes/orders');
 const mpesaRoutes = require('./routes/mpesa');
 const etimsRoutes = require('./routes/etims');
@@ -30,17 +32,16 @@ app.get('/api/site-map', (req, res) => {
   res.json(siteMap);
 });
 
-app.get('/api/bootstrap', async (req, res) => {
-  const admin = await User.findOne({ where: { role: 'admin', isActive: true } });
-  const cashier = await User.findOne({ where: { role: 'cashier', isActive: true } });
-
+app.get('/api/bootstrap', authenticate, async (req, res) => {
   res.json({
-    userId: admin?.id || cashier?.id || null,
-    cashierId: cashier?.id || admin?.id || null,
+    userId: req.user.id,
+    cashierId: req.user.id,
+    user: req.user,
     demoMode: isUsingMemoryDatabase()
   });
 });
 
+app.use('/api/auth', authRoutes);
 app.use('/api/orders', ordersRoutes);
 app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/etims', etimsRoutes);

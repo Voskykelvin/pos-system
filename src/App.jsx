@@ -3,6 +3,7 @@ import Checkout from './components/Checkout.jsx';
 import ProductAdmin from './components/ProductAdmin.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import Analytics from './components/Analytics.jsx';
+import Login from './components/Login.jsx';
 import styles from './App.module.css';
 
 const ROUTES = {
@@ -13,10 +14,10 @@ const ROUTES = {
 };
 
 const NAV_ITEMS = [
-  { id: 'dashboard', label: 'Dashboard', path: '/' },
-  { id: 'checkout', label: 'Checkout', path: '/checkout' },
-  { id: 'inventory', label: 'Inventory', path: '/inventory' },
-  { id: 'analytics', label: 'Analytics', path: '/analytics' }
+  { id: 'dashboard', label: 'Dashboard', path: '/', roles: ['admin', 'manager'] },
+  { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
+  { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
+  { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] }
 ];
 
 function getInitialView() {
@@ -25,25 +26,39 @@ function getInitialView() {
 
 export default function App() {
   const [view, setView] = useState(getInitialView);
+  const [authToken, setAuthToken] = useState(() => localStorage.getItem('pos_auth_token'));
+  const [authReady, setAuthReady] = useState(false);
   const [bootstrap, setBootstrap] = useState({
     userId: null,
     cashierId: null,
-    demoMode: false
+    demoMode: false,
+    user: null
   });
 
   useEffect(() => {
     async function loadBootstrap() {
+      if (!authToken) {
+        setAuthReady(true);
+        return;
+      }
+
       try {
-        const res = await fetch('/api/bootstrap');
+        const res = await fetch('/api/bootstrap', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
         const data = await res.json();
+        if (!res.ok) throw new Error(data.error || 'Session expired');
         setBootstrap(data);
       } catch {
-        setBootstrap((current) => current);
+        localStorage.removeItem('pos_auth_token');
+        setAuthToken(null);
+      } finally {
+        setAuthReady(true);
       }
     }
 
     loadBootstrap();
-  }, []);
+  }, [authToken]);
 
   useEffect(() => {
     const onPop = () => setView(getInitialView());
@@ -56,11 +71,52 @@ export default function App() {
     return item?.path || '/';
   }, [view]);
 
+  const visibleNavItems = useMemo(() => {
+    const role = bootstrap.user?.role;
+    if (!role) return [];
+    return NAV_ITEMS.filter((item) => item.roles.includes(role));
+  }, [bootstrap.user]);
+
+  useEffect(() => {
+    if (!visibleNavItems.length) return;
+    const current = visibleNavItems.find((item) => item.id === view);
+    if (!current) {
+      navigate(visibleNavItems[0]);
+    }
+  }, [visibleNavItems, view]);
+
   function navigate(item) {
     setView(item.id);
     if (window.location.pathname !== item.path) {
       window.history.pushState({}, '', item.path);
     }
+  }
+
+  function handleLogin({ token, user }) {
+    localStorage.setItem('pos_auth_token', token);
+    setAuthToken(token);
+    setBootstrap({
+      userId: user.id,
+      cashierId: user.id,
+      user,
+      demoMode: window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
+    });
+  }
+
+  function handleLogout() {
+    localStorage.removeItem('pos_auth_token');
+    setAuthToken(null);
+    setBootstrap({ userId: null, cashierId: null, user: null, demoMode: false });
+    window.history.pushState({}, '', '/');
+    setView('dashboard');
+  }
+
+  if (!authReady) {
+    return <div className={styles.loading}>Loading POS...</div>;
+  }
+
+  if (!authToken || !bootstrap.user) {
+    return <Login onLogin={handleLogin} />;
   }
 
   return (
@@ -75,7 +131,7 @@ export default function App() {
         </div>
 
         <nav className={styles.nav} aria-label="Primary">
-          {NAV_ITEMS.map((item) => (
+          {visibleNavItems.map((item) => (
             <button
               key={item.id}
               className={`${styles.navButton} ${view === item.id ? styles.active : ''}`}
@@ -88,16 +144,19 @@ export default function App() {
         </nav>
 
         <div className={styles.statusBox}>
-          <div className={styles.statusLabel}>Route</div>
-          <div className={styles.statusValue}>{activePath}</div>
+          <div className={styles.statusLabel}>{bootstrap.user.role}</div>
+          <div className={styles.statusValue}>{bootstrap.user.name}</div>
+          <button className={styles.logoutBtn} type="button" onClick={handleLogout}>
+            Sign out
+          </button>
         </div>
       </aside>
 
       <main className={styles.main}>
-        {view === 'dashboard' && <Dashboard />}
-        {view === 'checkout' && <Checkout cashierId={bootstrap.cashierId} />}
-        {view === 'inventory' && <ProductAdmin userId={bootstrap.userId} />}
-        {view === 'analytics' && <Analytics />}
+        {view === 'dashboard' && <Dashboard authToken={authToken} />}
+        {view === 'checkout' && <Checkout authToken={authToken} cashierId={bootstrap.cashierId} />}
+        {view === 'inventory' && <ProductAdmin authToken={authToken} userId={bootstrap.userId} />}
+        {view === 'analytics' && <Analytics authToken={authToken} />}
       </main>
     </div>
   );

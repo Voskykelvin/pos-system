@@ -9,7 +9,7 @@ function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
 }
 
-export default function Checkout({ cashierId }) {
+export default function Checkout({ authToken, cashierId }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]); // [{ productId, name, unitPrice, quantity, taxCategory }]
@@ -34,7 +34,9 @@ export default function Checkout({ cashierId }) {
         const searchParams = /^\d{6,}$/.test(term)
           ? `barcode=${encodeURIComponent(term)}`
           : `q=${encodeURIComponent(term)}`;
-        const res = await fetch(`/api/products/search?${searchParams}`);
+        const res = await fetch(`/api/products/search?${searchParams}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
         const data = await res.json();
         setResults(data);
       } catch {
@@ -42,7 +44,7 @@ export default function Checkout({ cashierId }) {
       }
     }, 250);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [authToken, query]);
 
   useEffect(() => {
     return () => {
@@ -102,7 +104,9 @@ export default function Checkout({ cashierId }) {
   const pollOrderStatus = useCallback((orderId) => {
     pollRef.current = setInterval(async () => {
       try {
-        const res = await fetch(`/api/orders/${orderId}/status`);
+        const res = await fetch(`/api/orders/${orderId}/status`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
         const data = await res.json();
         if (data.paymentStatus === 'paid') {
           clearInterval(pollRef.current);
@@ -122,7 +126,7 @@ export default function Checkout({ cashierId }) {
       if (pollRef.current) clearInterval(pollRef.current);
       setOrderStatus((s) => (s === 'waiting' ? 'failed' : s));
     }, 120000);
-  }, []);
+  }, [authToken]);
 
   async function handleConfirm() {
     if (cart.length === 0) return;
@@ -137,7 +141,10 @@ export default function Checkout({ cashierId }) {
     try {
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
         body: JSON.stringify({
           cashierId,
           items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
@@ -169,7 +176,10 @@ export default function Checkout({ cashierId }) {
 
       const stkRes = await fetch('/api/mpesa/stk-push', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
         body: JSON.stringify({ paymentId: mpesaPayment.id, phone })
       });
       const stkData = await stkRes.json();

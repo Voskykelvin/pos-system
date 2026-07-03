@@ -19,10 +19,10 @@ Render references:
 ## Hard Launch Blockers
 
 1. Authentication and authorization
-   - Login screen.
-   - Password hashing.
-   - Session/JWT handling.
-   - Role-based permissions for admin, manager, cashier.
+   - Login screen. Built in Batch 1.
+   - Password hashing. Built in Batch 1.
+   - Session/signed-token handling. Built in Batch 1.
+   - Role-based permissions for admin, manager, cashier. Built in Batch 1.
    - Manager approval for voids, refunds, discounts, stock corrections.
 
 2. Database lifecycle
@@ -65,6 +65,12 @@ Required:
 - `BUSINESS_TIME_ZONE=Africa/Nairobi`
 - `BUSINESS_NAME`
 - `BUSINESS_KRA_PIN`
+- `AUTH_TOKEN_SECRET`
+
+Initial admin bootstrap:
+- `ADMIN_NAME`
+- `ADMIN_EMAIL` or `ADMIN_PHONE`
+- `ADMIN_PASSWORD`
 
 M-Pesa:
 - `MPESA_ENV=production` once approved
@@ -83,8 +89,8 @@ eTIMS:
 
 ## Go-Live Sequence
 
-1. Add auth and roles.
-2. Add migrations and initial admin bootstrap.
+1. Add auth and roles. Built in Batch 1.
+2. Add migrations and initial admin bootstrap. Admin bootstrap script is built; migrations are still pending.
 3. Create Render Blueprint from this repo.
 4. Set secrets in Render.
 5. Deploy staging.
@@ -93,3 +99,7 @@ eTIMS:
 8. Connect production Daraja and eTIMS credentials.
 9. Enable scheduler.
 10. Switch custom domain and go live.
+
+## Batch Plan
+
+See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the split between code-based work and credential-blocked work.

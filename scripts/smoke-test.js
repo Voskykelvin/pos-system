@@ -21,10 +21,24 @@ async function main() {
     const health = await request(baseUrl, '/api/health');
     if (!health.ok) throw new Error('Health check did not return ok');
 
-    const bootstrap = await request(baseUrl, '/api/bootstrap');
+    const login = await request(baseUrl, '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: 'admin@example.local',
+        password: 'admin12345'
+      })
+    });
+    const authHeaders = { Authorization: `Bearer ${login.token}` };
+
+    const bootstrap = await request(baseUrl, '/api/bootstrap', {
+      headers: authHeaders
+    });
     if (!bootstrap.cashierId) throw new Error('Missing cashierId from bootstrap');
 
-    const products = await request(baseUrl, '/api/products/search?q=milk');
+    const products = await request(baseUrl, '/api/products/search?q=milk', {
+      headers: authHeaders
+    });
     if (!products.length) throw new Error('Seed product search returned no products');
 
     const product = products[0];
@@ -33,7 +47,7 @@ async function main() {
 
     const checkout = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         cashierId: bootstrap.cashierId,
         items: [{ productId: product.id, quantity: 1 }],
@@ -45,7 +59,9 @@ async function main() {
       throw new Error(`Expected paid checkout, got ${checkout.paymentStatus}`);
     }
 
-    const report = await request(baseUrl, '/api/reports/today');
+    const report = await request(baseUrl, '/api/reports/today', {
+      headers: authHeaders
+    });
     if (report.orderCount < 1) throw new Error('Report did not include smoke order');
 
     console.log('Smoke test passed');

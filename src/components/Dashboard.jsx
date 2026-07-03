@@ -12,7 +12,7 @@ function formatTime(value) {
   }).format(new Date(value));
 }
 
-export default function Dashboard() {
+export default function Dashboard({ authToken }) {
   const [report, setReport] = useState(null);
   const [siteMap, setSiteMap] = useState(null);
   const [error, setError] = useState(null);
@@ -20,7 +20,9 @@ export default function Dashboard() {
   async function load() {
     try {
       const [reportRes, siteMapRes] = await Promise.all([
-        fetch('/api/reports/today'),
+        fetch('/api/reports/today', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        }),
         fetch('/api/site-map')
       ]);
       const [reportData, siteMapData] = await Promise.all([
@@ -39,7 +41,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [authToken]);
 
   if (error) {
     return (

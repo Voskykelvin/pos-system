@@ -22,6 +22,16 @@ services:
         sync: false
       - key: BUSINESS_KRA_PIN
         sync: false
+      - key: AUTH_TOKEN_SECRET
+        generateValue: true
+      - key: ADMIN_NAME
+        sync: false
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PHONE
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
       - key: MPESA_ENV
         value: sandbox
       - key: MPESA_CONSUMER_KEY

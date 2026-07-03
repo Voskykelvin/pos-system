@@ -17,7 +17,7 @@ const RANGE_OPTIONS = [
   { label: '90 days', value: 90 }
 ];
 
-export default function Analytics() {
+export default function Analytics({ authToken }) {
   const [days, setDays] = useState(30);
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
@@ -26,7 +26,9 @@ export default function Analytics() {
   async function load(nextDays = days) {
     setLoading(true);
     try {
-      const response = await fetch(`/api/reports/analytics?days=${nextDays}`);
+      const response = await fetch(`/api/reports/analytics?days=${nextDays}`, {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Analytics failed');
       setData(payload);
@@ -40,7 +42,7 @@ export default function Analytics() {
 
   useEffect(() => {
     load(days);
-  }, [days]);
+  }, [authToken, days]);
 
   if (error) {
     return (

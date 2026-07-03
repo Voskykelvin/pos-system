@@ -9,6 +9,7 @@ const {
   EtimsInvoice
 } = require('../models');
 const { getBusinessDate } = require('../utils/businessTime');
+const { hashPassword } = require('../utils/passwords');
 
 const DEMO_IDS = {
   admin: '00000000-0000-0000-0000-000000000001',
@@ -131,14 +132,14 @@ async function seedDemoData() {
       id: DEMO_IDS.admin,
       name: 'Store Admin',
       email: 'admin@example.local',
-      passwordHash: 'demo-only',
+      passwordHash: hashPassword('admin12345'),
       role: 'admin'
     },
     {
       id: DEMO_IDS.cashier,
       name: 'Cashier One',
       email: 'cashier@example.local',
-      passwordHash: 'demo-only',
+      passwordHash: hashPassword('cashier12345'),
       role: 'cashier'
     }
   ]);

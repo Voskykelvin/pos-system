@@ -14,6 +14,8 @@
 | Method | Path | Purpose |
 | --- | --- | --- |
 | `GET` | `/api/health` | Runtime health check. |
+| `POST` | `/api/auth/login` | Staff login and auth token issue. |
+| `GET` | `/api/auth/me` | Current authenticated staff user. |
 | `GET` | `/api/bootstrap` | Current UI user/cashier identifiers. |
 | `GET` | `/api/site-map` | Machine-readable site map. |
 | `GET` | `/api/reports/today` | Dashboard metrics. |

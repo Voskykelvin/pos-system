@@ -37,7 +37,14 @@ const TAX_RATES = {
  * }
  */
 async function checkout(req, res) {
-  const { cashierId, customerId, items, payments, discountTotal = 0 } = req.body;
+  const {
+    cashierId: bodyCashierId,
+    customerId,
+    items,
+    payments,
+    discountTotal = 0
+  } = req.body;
+  const cashierId = req.user?.id || bodyCashierId;
 
   if (!cashierId) {
     return res.status(400).json({ error: 'cashierId is required' });

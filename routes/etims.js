@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const { processQueue, requeueFailed } = require('../services/etimsSyncWorker');
+const { authenticate, requireRoles } = require('../middleware/auth');
+
+router.use(authenticate, requireRoles('admin', 'manager'));
 
 // POST /api/etims/sync - manually trigger a sync batch, useful for testing
 router.post('/sync', async (req, res) => {

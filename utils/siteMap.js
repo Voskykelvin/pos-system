@@ -23,6 +23,8 @@ module.exports = {
   ],
   api: [
     { method: 'GET', path: '/api/health', purpose: 'Runtime health check' },
+    { method: 'POST', path: '/api/auth/login', purpose: 'Staff login and auth token issue' },
+    { method: 'GET', path: '/api/auth/me', purpose: 'Current authenticated staff user' },
     { method: 'GET', path: '/api/bootstrap', purpose: 'Current demo/user identifiers for the UI' },
     { method: 'GET', path: '/api/site-map', purpose: 'Machine-readable site map' },
     { method: 'GET', path: '/api/reports/today', purpose: 'Daily operator dashboard metrics' },

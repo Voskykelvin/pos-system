@@ -16,7 +16,7 @@ const EMPTY_FORM = {
   categoryId: ''
 };
 
-export default function ProductAdmin({ userId }) {
+export default function ProductAdmin({ authToken, userId }) {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState('');
@@ -32,13 +32,17 @@ export default function ProductAdmin({ userId }) {
   const [message, setMessage] = useState(null);
 
   async function loadProducts() {
-    const res = await fetch('/api/admin/products?includeInactive=true');
+    const res = await fetch('/api/admin/products?includeInactive=true', {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
     const data = await res.json();
     setProducts(data);
   }
 
   async function loadCategories() {
-    const res = await fetch('/api/admin/categories');
+    const res = await fetch('/api/admin/categories', {
+      headers: { Authorization: `Bearer ${authToken}` }
+    });
     const data = await res.json();
     setCategories(data);
   }
@@ -46,7 +50,7 @@ export default function ProductAdmin({ userId }) {
   useEffect(() => {
     loadProducts();
     loadCategories();
-  }, []);
+  }, [authToken]);
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
@@ -108,7 +112,10 @@ export default function ProductAdmin({ userId }) {
       if (editingId) {
         const res = await fetch(`/api/admin/products/${editingId}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`
+          },
           body: JSON.stringify(form)
         });
         const data = await res.json();
@@ -116,7 +123,10 @@ export default function ProductAdmin({ userId }) {
       } else {
         const res = await fetch('/api/admin/products', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${authToken}`
+          },
           body: JSON.stringify(form)
         });
         const data = await res.json();
@@ -138,7 +148,10 @@ export default function ProductAdmin({ userId }) {
     if (!confirm('Deactivate this product? It will no longer appear at checkout.')) return;
 
     try {
-      await fetch(`/api/admin/products/${editingId}`, { method: 'DELETE' });
+      await fetch(`/api/admin/products/${editingId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
       await loadProducts();
       setDrawerOpen(false);
     } catch (err) {
@@ -156,7 +169,10 @@ export default function ProductAdmin({ userId }) {
     try {
       const res = await fetch(`/api/admin/products/${editingId}/adjust-stock`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`
+        },
         body: JSON.stringify({
           type: adjustType,
           quantity: signedQty,

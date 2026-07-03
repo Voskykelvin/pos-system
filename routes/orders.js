@@ -3,16 +3,17 @@ const router = express.Router();
 const { checkout } = require('../controllers/checkoutController');
 const { voidOrder } = require('../controllers/voidController');
 const { Order, Payment } = require('../models');
+const { authenticate, requireRoles } = require('../middleware/auth');
 
 // POST /api/orders/checkout
-router.post('/checkout', checkout);
+router.post('/checkout', authenticate, requireRoles('admin', 'manager', 'cashier'), checkout);
 
 // POST /api/orders/:id/void
-router.post('/:id/void', voidOrder);
+router.post('/:id/void', authenticate, requireRoles('admin', 'manager'), voidOrder);
 
 // GET /api/orders/:id/status - used by the checkout screen to poll while
 // waiting on an M-Pesa callback
-router.get('/:id/status', async (req, res) => {
+router.get('/:id/status', authenticate, async (req, res) => {
   try {
     const order = await Order.findByPk(req.params.id, {
       include: [{ model: Payment }]
