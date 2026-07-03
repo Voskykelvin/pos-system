@@ -1,22 +1,22 @@
 .shell {
-  --sidebar: #172026;
-  --sidebar-soft: #22313a;
-  --surface: #ffffff;
-  --line: #d7e0e3;
-  --accent: #11828a;
-  --accent-soft: #dff3f4;
-  --ink-soft: #60717b;
+  --sidebar: var(--pos-sidebar);
+  --sidebar-soft: var(--pos-sidebar-soft);
+  --surface: var(--pos-surface);
+  --line: var(--pos-line);
+  --accent: var(--pos-green);
+  --accent-soft: #edf8d2;
+  --ink-soft: var(--pos-ink-soft);
 
   min-height: 100vh;
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  background: #f4f7f8;
-  color: #172026;
+  background: var(--pos-beige);
+  color: var(--pos-ink);
 }
 
 .sidebar {
   background: var(--sidebar);
-  color: #f8fbfc;
+  color: var(--pos-surface);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -38,8 +38,8 @@
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background: #13a2aa;
-  color: #ffffff;
+  background: var(--accent);
+  color: var(--pos-green-ink);
   font-weight: 800;
 }
 
@@ -51,7 +51,7 @@
 
 .brandMeta {
   margin-top: 2px;
-  color: #b8c7cc;
+  color: var(--pos-beige);
   font-size: 12px;
 }
 
@@ -63,7 +63,7 @@
 .navButton {
   border: 1px solid transparent;
   background: transparent;
-  color: #dce7ea;
+  color: var(--pos-beige);
   text-align: left;
   border-radius: 8px;
   padding: 11px 12px;
@@ -77,20 +77,20 @@
 }
 
 .navButton.active {
-  background: #ffffff;
-  color: #172026;
+  background: var(--accent);
+  color: var(--pos-green-ink);
 }
 
 .statusBox {
   margin-top: auto;
-  border: 1px solid #31434c;
+  border: 1px solid #3a4b2b;
   border-radius: 8px;
   padding: 12px;
-  background: #1c2a32;
+  background: var(--sidebar-soft);
 }
 
 .statusLabel {
-  color: #b8c7cc;
+  color: var(--pos-beige);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0;
@@ -100,7 +100,7 @@
   margin-top: 4px;
   font-family: "IBM Plex Mono", Consolas, monospace;
   font-size: 13px;
-  color: #ffffff;
+  color: var(--pos-surface);
 }
 
 .main {

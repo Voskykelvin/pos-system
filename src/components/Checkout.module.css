@@ -1,14 +1,14 @@
 .page {
-  --bg: #f4f7f8;
-  --surface: #ffffff;
-  --ink: #172026;
-  --ink-soft: #60717b;
-  --line: #d7e0e3;
-  --accent: #11828a;
-  --accent-ink: #ffffff;
-  --danger: #a33a2a;
-  --warn-bg: #fff4db;
-  --warn-ink: #8f5a00;
+  --bg: var(--pos-beige);
+  --surface: var(--pos-surface);
+  --ink: var(--pos-ink);
+  --ink-soft: var(--pos-ink-soft);
+  --line: var(--pos-line);
+  --accent: var(--pos-green);
+  --accent-ink: var(--pos-green-ink);
+  --danger: var(--pos-danger);
+  --warn-bg: var(--pos-warn-bg);
+  --warn-ink: var(--pos-warn);
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -55,7 +55,7 @@
 }
 
 .searchInput:focus {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--pos-green-dark);
   outline-offset: 1px;
 }
 
@@ -76,7 +76,7 @@
 }
 
 .productCard:hover {
-  border-color: var(--accent);
+  border-color: var(--pos-green-dark);
 }
 
 .productCard:active {
@@ -100,7 +100,7 @@
 .stockMeta {
   margin-top: 8px;
   font-size: 12px;
-  color: var(--accent);
+  color: var(--pos-green-dark);
   font-weight: 700;
 }
 
@@ -171,7 +171,7 @@
   height: 26px;
   border-radius: 6px;
   border: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--pos-panel);
   font-size: 15px;
   line-height: 1;
   cursor: pointer;
@@ -250,7 +250,7 @@
   padding: 12px;
   border-radius: 8px;
   border: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--pos-panel);
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
@@ -338,8 +338,8 @@
 }
 
 .statusBanner.success {
-  background: #e8f4ee;
-  color: var(--accent);
+  background: #edf8d2;
+  color: var(--pos-green-dark);
 }
 
 .statusBanner.error {
@@ -358,7 +358,7 @@
   margin-top: 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--pos-panel);
   padding: 10px 12px;
   display: grid;
   gap: 8px;

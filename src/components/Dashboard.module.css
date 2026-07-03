@@ -1,16 +1,16 @@
 .page {
-  --surface: #ffffff;
-  --line: #d7e0e3;
-  --ink: #172026;
-  --ink-soft: #60717b;
-  --accent: #11828a;
-  --accent-dark: #0f6870;
-  --warn: #b16b00;
-  --warn-bg: #fff4db;
+  --surface: var(--pos-surface);
+  --line: var(--pos-line);
+  --ink: var(--pos-ink);
+  --ink-soft: var(--pos-ink-soft);
+  --accent: var(--pos-green);
+  --accent-dark: var(--pos-green-dark);
+  --warn: var(--pos-warn);
+  --warn-bg: var(--pos-warn-bg);
 
   min-height: 100vh;
   padding: 24px;
-  background: #f4f7f8;
+  background: var(--pos-beige);
   color: var(--ink);
 }
 
@@ -46,6 +46,10 @@
   font-weight: 700;
 }
 
+.refreshBtn:hover {
+  border-color: var(--accent-dark);
+}
+
 .metrics {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -58,6 +62,11 @@
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
+}
+
+.metric:first-child {
+  border-color: var(--accent-dark);
+  box-shadow: inset 4px 0 0 var(--accent);
 }
 
 .metric {
@@ -99,7 +108,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  background: #fbfcfd;
+  background: var(--pos-panel);
 }
 
 .panelHeader h2 {
@@ -165,8 +174,8 @@
 }
 
 .errorPanel {
-  color: #a33a2a;
-  background: #fff0ec;
+  color: var(--pos-danger);
+  background: var(--pos-danger-bg);
   border: 1px solid #f0c6bd;
   border-radius: 8px;
 }

@@ -1,14 +1,14 @@
 .page {
-  --bg: #f4f7f8;
-  --surface: #ffffff;
-  --ink: #172026;
-  --ink-soft: #60717b;
-  --line: #d7e0e3;
-  --accent: #11828a;
-  --accent-ink: #ffffff;
-  --danger: #a33a2a;
-  --warn-bg: #fff4db;
-  --warn-ink: #8f5a00;
+  --bg: var(--pos-beige);
+  --surface: var(--pos-surface);
+  --ink: var(--pos-ink);
+  --ink-soft: var(--pos-ink-soft);
+  --line: var(--pos-line);
+  --accent: var(--pos-green);
+  --accent-ink: var(--pos-green-ink);
+  --danger: var(--pos-danger);
+  --warn-bg: var(--pos-warn-bg);
+  --warn-ink: var(--pos-warn);
 
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: var(--ink);
@@ -58,9 +58,9 @@
 }
 
 .toggleBtn.active {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
-  border-color: var(--warn-ink);
+  background: #edf8d2;
+  color: var(--pos-green-dark);
+  border-color: var(--pos-green-dark);
 }
 
 .primaryBtn {
@@ -95,7 +95,7 @@
   letter-spacing: 0;
   color: var(--ink-soft);
   border-bottom: 1px solid var(--line);
-  background: var(--bg);
+  background: var(--pos-panel);
 }
 
 .table td {
@@ -115,7 +115,7 @@
 }
 
 .row:hover {
-  background: var(--bg);
+  background: var(--pos-panel);
 }
 
 .lowStockBadge {
@@ -191,7 +191,7 @@
   font-size: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--bg);
+  background: var(--pos-panel);
   color: var(--ink);
 }
 
@@ -284,7 +284,7 @@
 }
 
 .successText {
-  color: var(--accent);
+  color: var(--pos-green-dark);
   font-size: 13px;
   margin-top: 8px;
 }
