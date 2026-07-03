@@ -7,6 +7,7 @@
 | `/` | Dashboard | Daily sales, payment mix, queued eTIMS invoices, low-stock watchlist, and recent orders. |
 | `/checkout` | Checkout | Cashier search, barcode lookup, cart, VAT totals, cash tender/change, and M-Pesa initiation. |
 | `/inventory` | Inventory | Product catalog, category assignment, low-stock filter, and auditable stock adjustments. |
+| `/analytics` | Analytics | Sales summaries, stock health, best sellers, category mix, and slow movers. |
 
 ## API
 
@@ -16,6 +17,7 @@
 | `GET` | `/api/bootstrap` | Current UI user/cashier identifiers. |
 | `GET` | `/api/site-map` | Machine-readable site map. |
 | `GET` | `/api/reports/today` | Dashboard metrics. |
+| `GET` | `/api/reports/analytics?days=30` | Sales, inventory, and stock health analytics. |
 | `GET` | `/api/products/search?q=milk` | Cashier product lookup by text. |
 | `GET` | `/api/products/search?barcode=6160001000012` | Cashier product lookup by barcode. |
 | `POST` | `/api/orders/checkout` | Create order, payments, stock movements, and queued eTIMS invoice. |

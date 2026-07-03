@@ -8,6 +8,7 @@
     "dev:api": "node server.js",
     "dev:web": "vite --host 0.0.0.0",
     "build": "vite build",
+    "db:sync": "node scripts/sync-db.js",
     "start": "node server.js",
     "smoke": "node scripts/smoke-test.js"
   },

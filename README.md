@@ -33,3 +33,7 @@ The smoke test boots the app against the demo database, searches products, compl
 ## Site Map
 
 See [docs/SITE_MAP.md](docs/SITE_MAP.md).
+
+## Production
+
+See [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) and [docs/POS_BUILD_ROADMAP.md](docs/POS_BUILD_ROADMAP.md).

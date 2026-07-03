@@ -14,6 +14,11 @@ module.exports = {
       path: '/inventory',
       name: 'Inventory',
       purpose: 'Product catalog, categories, stock levels, and stock adjustments'
+    },
+    {
+      path: '/analytics',
+      name: 'Analytics',
+      purpose: 'Best sellers, sales mix, stock health, slow movers, and inventory value'
     }
   ],
   api: [
@@ -21,6 +26,7 @@ module.exports = {
     { method: 'GET', path: '/api/bootstrap', purpose: 'Current demo/user identifiers for the UI' },
     { method: 'GET', path: '/api/site-map', purpose: 'Machine-readable site map' },
     { method: 'GET', path: '/api/reports/today', purpose: 'Daily operator dashboard metrics' },
+    { method: 'GET', path: '/api/reports/analytics?days=30', purpose: 'Sales, inventory, and stock health analytics' },
     { method: 'GET', path: '/api/products/search?q=milk', purpose: 'Cashier product lookup' },
     { method: 'POST', path: '/api/orders/checkout', purpose: 'Create order, payments, stock movements, and queued eTIMS invoice' },
     { method: 'GET', path: '/api/orders/:id/status', purpose: 'Poll payment state after checkout' },

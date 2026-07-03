@@ -2,18 +2,21 @@ import { useEffect, useMemo, useState } from 'react';
 import Checkout from './components/Checkout.jsx';
 import ProductAdmin from './components/ProductAdmin.jsx';
 import Dashboard from './components/Dashboard.jsx';
+import Analytics from './components/Analytics.jsx';
 import styles from './App.module.css';
 
 const ROUTES = {
   '/': 'dashboard',
   '/checkout': 'checkout',
-  '/inventory': 'inventory'
+  '/inventory': 'inventory',
+  '/analytics': 'analytics'
 };
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', path: '/' },
   { id: 'checkout', label: 'Checkout', path: '/checkout' },
-  { id: 'inventory', label: 'Inventory', path: '/inventory' }
+  { id: 'inventory', label: 'Inventory', path: '/inventory' },
+  { id: 'analytics', label: 'Analytics', path: '/analytics' }
 ];
 
 function getInitialView() {
@@ -94,6 +97,7 @@ export default function App() {
         {view === 'dashboard' && <Dashboard />}
         {view === 'checkout' && <Checkout cashierId={bootstrap.cashierId} />}
         {view === 'inventory' && <ProductAdmin userId={bootstrap.userId} />}
+        {view === 'analytics' && <Analytics />}
       </main>
     </div>
   );
