@@ -23,6 +23,8 @@ const etimsRoutes = require('./routes/etims');
 const auditLogsRoutes = require('./routes/auditLogs');
 const customerRoutes = require('./routes/customers');
 const promotionRoutes = require('./routes/promotions');
+const supplierRoutes = require('./routes/suppliers');
+const purchaseOrderRoutes = require('./routes/purchaseOrders');
 
 const app = express();
 
@@ -95,6 +97,8 @@ app.use('/api/etims', etimsRoutes);
 app.use('/api/audit-logs', auditLogsRoutes);
 app.use('/api/customers', customerRoutes);
 app.use('/api/promotions', promotionRoutes);
+app.use('/api/suppliers', supplierRoutes);
+app.use('/api/purchase-orders', purchaseOrderRoutes);
 
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');

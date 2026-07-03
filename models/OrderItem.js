@@ -22,6 +22,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false
     },
+    costPrice: {
+      // snapshot at time of sale for gross profit calculations
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+      defaultValue: 0
+    },
     taxRate: {
       // snapshot, e.g. 0.16 for standard VAT
       type: DataTypes.DECIMAL(5, 4),

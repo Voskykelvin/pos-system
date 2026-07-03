@@ -288,3 +288,104 @@
   font-size: 13px;
   margin-top: 8px;
 }
+
+/* Batch 3 Sub-nav and Tab Styling */
+.tabGroup {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tabBtn {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  cursor: pointer;
+  color: var(--ink);
+}
+
+.tabBtn.active {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+
+.tabContent {
+  background: var(--surface);
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  display: grid;
+  gap: 16px;
+}
+
+.inlineForm {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.inlineForm input, .inlineForm select {
+  padding: 8px 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.poForm {
+  display: grid;
+  gap: 12px;
+  max-width: 600px;
+}
+
+.addPoItemBox {
+  border: 1px dashed var(--line);
+  padding: 12px;
+  border-radius: 6px;
+  background: var(--bg);
+}
+
+.poItemList {
+  padding-left: 20px;
+  font-size: 13px;
+}
+
+.csvBox {
+  margin-bottom: 12px;
+}
+
+.csvImportArea {
+  display: grid;
+  gap: 10px;
+}
+
+.csvTextarea {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  font-family: monospace;
+  font-size: 13px;
+}
+
+.badgeOk {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.badgeLow {
+  color: var(--danger);
+  font-weight: 700;
+  background: #fee2e2;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.lowStockRow {
+  background: #fff5f5;
+}
+

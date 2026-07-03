@@ -31,14 +31,14 @@ Status: built.
 
 ### Batch 3: Inventory Depth
 
-Status: next.
+Status: built.
 
-- Supplier receiving.
-- Purchase orders.
-- CSV import/export.
-- Cost snapshot on order items.
-- Reorder suggestions based on sales velocity.
-- Product variants/pack sizes.
+- **Suppliers Directory**: `Supplier` model and routes (`GET/POST/PUT /api/suppliers`) for vendor management.
+- **Purchase Orders & Stock Intake**: `PurchaseOrder` and `PurchaseOrderItem` models and receiving workflow (`POST /api/purchase-orders/:id/receive`) that automatically increments product stock, logs purchase `InventoryTransaction` entries, and updates product cost price.
+- **Cost Price Snapshots**: `costPrice` snapshot on `OrderItem` at checkout for accurate gross profit analytics over time.
+- **Sales Velocity Reorder Suggestions**: `GET /api/reports/reorder-suggestions?days=30` analyzes daily sales velocity over N days to calculate exact reorder quantities.
+- **Bulk CSV Import & Export**: `POST /api/admin/products/import-csv` for bulk product creation/updates and `GET /api/admin/products/export-csv` for catalog downloads.
+- **Inventory Sub-Tabs**: Added 5 sub-navigation tabs to `ProductAdmin.jsx` (Products, Suppliers, Purchase Orders, Reorder Suggestions, CSV Tools).
 
 ### Batch 4: Data Quality And Safety
 
@@ -56,15 +56,15 @@ Status: built.
 
 Status: built.
 
-- **Customer Phone Lookup & Create at Checkout**: Cashiers can search customers by phone/name or register a new customer right inside Checkout.
-- **Split-Tender Payments**: Supports paying via multiple methods (Cash + M-Pesa) on the same sale with a multi-row UI and automatic balance calculation.
-- **Auth Rate Limiting & Security Headers**: Installed `express-rate-limit` (10 login attempts per 15 min; 120 API requests/min) and `helmet` for CSP/security headers.
-- **Partial Refund by Line Item**: Managers can select specific items and quantities from a past order to return and restore stock individually.
-- **CSV Data Export**: `GET /api/reports/export?days=7` streams Excel-compatible CSVs directly from Analytics.
-- **Multi-Till Shift Summary**: `GET /api/shifts/summary` aggregates all cashiers' shift floats, sales, and variances for managers.
-- **Loyalty Points Engine**: Auto-awards 1 point per KES 100 spent (configurable) and tracks customer point ledgers (`LoyaltyTransaction`).
-- **Promotions & Discount Codes**: `Promotion` model supporting percent/fixed discounts, expiration dates, min order totals, max use caps, and `GET /api/promotions/validate`.
-- **SMS Receipt Scaffold**: Service wrapper for Africa's Talking SMS receipts (`services/smsService.js`), safely no-opting when credentials aren't set.
+- Customer Phone Lookup & Create at Checkout.
+- Split-Tender Payments (Cash + M-Pesa).
+- Auth Rate Limiting & Helmet Headers.
+- Partial Refund by Line Item.
+- CSV Data Export.
+- Multi-Till Shift Summary.
+- Loyalty Points Engine.
+- Promotions & Discount Codes.
+- SMS Receipt Scaffold.
 
 ---
 

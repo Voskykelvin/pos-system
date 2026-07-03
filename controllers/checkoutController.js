@@ -136,6 +136,7 @@ async function checkout(req, res) {
         productId: product.id,
         quantity: line.quantity,
         unitPrice,
+        costPrice: product.costPrice || 0,
         taxRate,
         lineTotal: lineSubtotal + lineTax
       });

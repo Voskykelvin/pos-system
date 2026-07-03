@@ -401,4 +401,69 @@ async function exportCsv(req, res) {
   }
 }
 
-module.exports = { analytics, exportCsv, today };
+/**
+ * GET /api/reports/reorder-suggestions?days=30&leadTimeDays=7
+ * Analyzes item sales velocity over past N days to recommend PO reorder quantities.
+ */
+async function reorderSuggestions(req, res) {
+  try {
+    const days = Math.max(Number(req.query.days || 30), 1);
+    const leadTimeDays = Math.max(Number(req.query.leadTimeDays || 7), 1);
+    const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+    const products = await Product.findAll({
+      where: { isActive: true },
+      include: [{ model: Category, attributes: ['name'] }]
+    });
+
+    // Aggregate total quantities sold per product in period
+    const sales = await OrderItem.findAll({
+      attributes: ['productId', [sequelize.fn('SUM', sequelize.col('quantity')), 'totalSold']],
+      include: [{
+        model: Order,
+        attributes: [],
+        where: {
+          status: 'completed',
+          createdAt: { [Op.gte]: start }
+        }
+      }],
+      group: ['productId'],
+      raw: true
+    });
+
+    const salesMap = new Map(sales.map((s) => [s.productId, Number(s.totalSold || 0)]));
+
+    const suggestions = products.map((p) => {
+      const totalSold = salesMap.get(p.id) || 0;
+      const dailyVelocity = totalSold / days;
+      const leadTimeDemand = dailyVelocity * leadTimeDays;
+      const currentStock = Number(p.stockQuantity);
+      const reorderLevel = Number(p.reorderLevel);
+
+      // Reorder needed if current stock falls below (Lead Time Demand + Reorder Level)
+      const targetStock = Math.ceil(leadTimeDemand + reorderLevel);
+      const suggestedReorderQty = Math.max(targetStock - currentStock, 0);
+
+      return {
+        productId: p.id,
+        sku: p.sku,
+        name: p.name,
+        category: p.Category?.name || 'Uncategorized',
+        currentStock,
+        reorderLevel,
+        costPrice: Number(p.costPrice),
+        unit: p.unit,
+        totalSoldInPeriod: Number(totalSold.toFixed(2)),
+        dailyVelocity: Number(dailyVelocity.toFixed(2)),
+        suggestedReorderQty: Math.ceil(suggestedReorderQty),
+        needsReorder: currentStock <= reorderLevel || suggestedReorderQty > 0
+      };
+    }).filter((s) => s.needsReorder).sort((a, b) => b.suggestedReorderQty - a.suggestedReorderQty);
+
+    return res.json({ days, leadTimeDays, suggestions });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { analytics, exportCsv, reorderSuggestions, today };

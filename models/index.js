@@ -60,7 +60,10 @@ const models = {
   AuditLog: require('./AuditLog')(sequelize, modelDataTypes),
   Shift: require('./Shift')(sequelize, modelDataTypes),
   LoyaltyTransaction: require('./LoyaltyTransaction')(sequelize, modelDataTypes),
-  Promotion: require('./Promotion')(sequelize, modelDataTypes)
+  Promotion: require('./Promotion')(sequelize, modelDataTypes),
+  Supplier: require('./Supplier')(sequelize, modelDataTypes),
+  PurchaseOrder: require('./PurchaseOrder')(sequelize, modelDataTypes),
+  PurchaseOrderItem: require('./PurchaseOrderItem')(sequelize, modelDataTypes)
 };
 
 Object.values(models).forEach((model) => {
