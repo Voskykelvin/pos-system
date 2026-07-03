@@ -5,13 +5,13 @@ const {
   list, create, update, deactivate, adjustStock, lowStock
 } = require('../controllers/productAdminController');
 
-router.use(authenticate, requireRoles('admin', 'manager'));
+router.use(authenticate);
 
-router.get('/', list);
-router.get('/low-stock', lowStock);
-router.post('/', create);
-router.put('/:id', update);
-router.delete('/:id', deactivate);
-router.post('/:id/adjust-stock', adjustStock);
+router.get('/', requireRoles('admin', 'manager'), list);
+router.get('/low-stock', requireRoles('admin', 'manager'), lowStock);
+router.post('/', requireRoles('admin', 'manager'), create);
+router.put('/:id', requireRoles('admin', 'manager'), update);
+router.delete('/:id', requireRoles('admin', 'manager'), deactivate);
+router.post('/:id/adjust-stock', requireRoles('admin', 'manager', 'cashier'), adjustStock);
 
 module.exports = router;

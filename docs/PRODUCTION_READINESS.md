@@ -23,7 +23,7 @@ Render references:
    - Password hashing. Built in Batch 1.
    - Session/signed-token handling. Built in Batch 1.
    - Role-based permissions for admin, manager, cashier. Built in Batch 1.
-   - Manager approval for voids, refunds, discounts, stock corrections.
+   - Manager approval for voids, refunds, discounts, stock corrections. Built in Batch 2.
 
 2. Database lifecycle
    - Replace `sync({ alter: true })` with migrations.
@@ -42,12 +42,14 @@ Render references:
    - Confirm exact KRA VSCU/OSCU payload contract.
    - Replace placeholder `etimsClient` request shape.
    - Add credit note/refund flow for invoices already transmitted.
+   - Current refunds/voids deliberately block already transmitted eTIMS invoices until this credit note flow is implemented.
    - Turn scheduler on only after credentials and payload are verified.
 
 5. Receipt and audit layer
-   - Printable receipt view.
+   - Printable receipt view. Built in Batch 2.
    - Receipt number sequence safety under concurrent checkout.
-   - Audit log for staff actions.
+   - Audit log for staff actions. Built in Batch 2.
+   - Shift open/close and cash reconciliation. Built in Batch 2.
    - Stock cost snapshot on each order item.
 
 6. Security and compliance
@@ -95,7 +97,7 @@ eTIMS:
 4. Set secrets in Render.
 5. Deploy staging.
 6. Run `npm run smoke` locally and test staging manually.
-7. Perform a test cash sale, M-Pesa sandbox sale, void, stock adjustment, and analytics check.
+7. Perform a test cash sale, M-Pesa sandbox sale, discount approval, receipt lookup, refund/void, stock adjustment, shift close, audit-log review, and analytics check.
 8. Connect production Daraja and eTIMS credentials.
 9. Enable scheduler.
 10. Switch custom domain and go live.

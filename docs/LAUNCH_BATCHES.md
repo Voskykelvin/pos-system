@@ -19,17 +19,19 @@ Status: built.
 
 ### Batch 2: Operational Controls
 
-Status: next.
+Status: built.
 
 - Manager approval for voids, discounts, refunds, and stock corrections.
 - Audit log table for staff actions.
+- Manager/admin audit review endpoint and Operations screen panel.
 - Shift open/close and cash reconciliation.
 - Printable receipt view.
 - Receipt/order search.
+- Refunds and voids restore stock, reverse payments, cancel queued eTIMS invoices, and block direct reversal after eTIMS transmission.
 
 ### Batch 3: Inventory Depth
 
-Status: queued.
+Status: next.
 
 - Supplier receiving.
 - Purchase orders.

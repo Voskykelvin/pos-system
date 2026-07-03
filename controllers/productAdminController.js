@@ -1,4 +1,6 @@
 const { sequelize, Product, Category, InventoryTransaction } = require('../models');
+const { logAudit } = require('../services/auditLogger');
+const { resolveManagerApproval } = require('../services/managerApproval');
 
 // GET /api/admin/products?includeInactive=true
 async function list(req, res) {
@@ -56,6 +58,15 @@ async function create(req, res) {
       }, { transaction: t });
     }
 
+    await logAudit({
+      req,
+      action: 'product.create',
+      entityType: 'product',
+      entityId: product.id,
+      metadata: { sku, name, openingStock: Number(stockQuantity || 0) },
+      transaction: t
+    });
+
     await t.commit();
     res.status(201).json(product);
   } catch (err) {
@@ -85,6 +96,14 @@ async function update(req, res) {
       costPrice, sellingPrice, reorderLevel, categoryId, isActive
     });
 
+    await logAudit({
+      req,
+      action: 'product.update',
+      entityType: 'product',
+      entityId: product.id,
+      metadata: { sku, name }
+    });
+
     res.json(product);
   } catch (err) {
     res.status(400).json({ error: err.message });
@@ -99,6 +118,13 @@ async function deactivate(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
     await product.update({ isActive: false });
+    await logAudit({
+      req,
+      action: 'product.deactivate',
+      entityType: 'product',
+      entityId: product.id,
+      metadata: { sku: product.sku, name: product.name }
+    });
     res.json({ id: product.id, isActive: false });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -110,7 +136,7 @@ async function deactivate(req, res) {
 // quantity should be positive for purchase/adjustment-in, negative for wastage/adjustment-out
 async function adjustStock(req, res) {
   const { id } = req.params;
-  const { type, quantity, note, userId } = req.body;
+  const { type, quantity, note } = req.body;
 
   if (!type || quantity === undefined) {
     return res.status(400).json({ error: 'type and quantity are required' });
@@ -121,6 +147,7 @@ async function adjustStock(req, res) {
 
   const t = await sequelize.transaction();
   try {
+    const approval = await resolveManagerApproval(req, { reason: 'stock adjustment' });
     const product = await Product.findByPk(id, {
       transaction: t,
       lock: t.LOCK.UPDATE
@@ -130,7 +157,8 @@ async function adjustStock(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const newBalance = Number(product.stockQuantity) + Number(quantity);
+    const balanceBefore = Number(product.stockQuantity);
+    const newBalance = balanceBefore + Number(quantity);
     if (newBalance < 0) {
       await t.rollback();
       return res.status(400).json({
@@ -147,14 +175,30 @@ async function adjustStock(req, res) {
       balanceAfter: newBalance,
       referenceType: 'manual',
       note,
-      userId: userId || null
+      userId: req.user?.id || null
     }, { transaction: t });
+
+    await logAudit({
+      req,
+      action: 'inventory.adjust',
+      entityType: 'product',
+      entityId: product.id,
+      approvedByUserId: approval.approvedByUserId,
+      metadata: {
+        type,
+        quantity: Number(quantity),
+        balanceBefore,
+        balanceAfter: newBalance,
+        note
+      },
+      transaction: t
+    });
 
     await t.commit();
     res.json({ productId: product.id, stockQuantity: newBalance });
   } catch (err) {
     await t.rollback();
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 }
 

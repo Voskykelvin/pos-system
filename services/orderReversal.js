@@ -16,7 +16,7 @@ const {
  * Caller is responsible for the transaction and for checking order.status
  * and EtimsInvoice.status === 'transmitted' before calling this.
  */
-async function reverseOrder(order, { reason, userId }, t) {
+async function reverseOrder(order, { reason, userId, status = 'voided' }, t) {
   for (const item of order.OrderItems) {
     const product = await Product.findByPk(item.productId, {
       transaction: t,
@@ -32,7 +32,7 @@ async function reverseOrder(order, { reason, userId }, t) {
       type: 'return',
       quantity: item.quantity,
       balanceAfter: newBalance,
-      referenceType: 'order_void',
+      referenceType: status === 'refunded' ? 'order_refund' : 'order_void',
       referenceId: order.id,
       note: reason,
       userId: userId || null
@@ -49,7 +49,7 @@ async function reverseOrder(order, { reason, userId }, t) {
     await order.EtimsInvoice.update({ status: 'cancelled' }, { transaction: t });
   }
 
-  await order.update({ status: 'voided' }, { transaction: t });
+  await order.update({ status, paymentStatus: 'reversed' }, { transaction: t });
 }
 
 module.exports = { reverseOrder };

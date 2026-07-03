@@ -16,6 +16,8 @@ const productsRoutes = require('./routes/products');
 const adminProductsRoutes = require('./routes/adminProducts');
 const adminCategoriesRoutes = require('./routes/adminCategories');
 const reportsRoutes = require('./routes/reports');
+const shiftsRoutes = require('./routes/shifts');
+const auditLogsRoutes = require('./routes/auditLogs');
 
 const app = express();
 app.use(express.json());
@@ -49,6 +51,8 @@ app.use('/api/products', productsRoutes);
 app.use('/api/admin/products', adminProductsRoutes);
 app.use('/api/admin/categories', adminCategoriesRoutes);
 app.use('/api/reports', reportsRoutes);
+app.use('/api/shifts', shiftsRoutes);
+app.use('/api/audit-logs', auditLogsRoutes);
 
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');

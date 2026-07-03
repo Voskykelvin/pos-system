@@ -4,20 +4,23 @@ import ProductAdmin from './components/ProductAdmin.jsx';
 import Dashboard from './components/Dashboard.jsx';
 import Analytics from './components/Analytics.jsx';
 import Login from './components/Login.jsx';
+import Operations from './components/Operations.jsx';
 import styles from './App.module.css';
 
 const ROUTES = {
   '/': 'dashboard',
   '/checkout': 'checkout',
   '/inventory': 'inventory',
-  '/analytics': 'analytics'
+  '/analytics': 'analytics',
+  '/operations': 'operations'
 };
 
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', path: '/', roles: ['admin', 'manager'] },
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
-  { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] }
+  { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] },
+  { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] }
 ];
 
 function getInitialView() {
@@ -154,9 +157,12 @@ export default function App() {
 
       <main className={styles.main}>
         {view === 'dashboard' && <Dashboard authToken={authToken} />}
-        {view === 'checkout' && <Checkout authToken={authToken} cashierId={bootstrap.cashierId} />}
+        {view === 'checkout' && (
+          <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
+        )}
         {view === 'inventory' && <ProductAdmin authToken={authToken} userId={bootstrap.userId} />}
         {view === 'analytics' && <Analytics authToken={authToken} />}
+        {view === 'operations' && <Operations authToken={authToken} user={bootstrap.user} />}
       </main>
     </div>
   );

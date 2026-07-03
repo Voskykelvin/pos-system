@@ -11,6 +11,8 @@ const {
 } = require('../models');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const { buildEtimsPayload } = require('../utils/etimsPayload');
+const { logAudit } = require('../services/auditLogger');
+const { resolveManagerApproval } = require('../services/managerApproval');
 
 // Set from your own business record / env config
 const BUSINESS = {
@@ -59,6 +61,16 @@ async function checkout(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    const normalizedDiscount = Number(discountTotal || 0);
+    if (!Number.isFinite(normalizedDiscount) || normalizedDiscount < 0) {
+      throw new Error('discountTotal must be a non-negative number');
+    }
+
+    let approval = null;
+    if (normalizedDiscount > 0) {
+      approval = await resolveManagerApproval(req, { reason: 'discount' });
+    }
+
     // 1. Load products and lock the rows to prevent two cashiers
     //    selling the last unit of the same item at the same time
     const productIds = items.map((i) => i.productId);
@@ -116,7 +128,11 @@ async function checkout(req, res) {
       });
     }
 
-    const total = subtotal + taxTotal - Number(discountTotal);
+    if (normalizedDiscount >= subtotal + taxTotal) {
+      throw new Error('discountTotal cannot be equal to or greater than the sale total');
+    }
+
+    const total = subtotal + taxTotal - normalizedDiscount;
 
     const paymentSum = payments.reduce((sum, p) => sum + Number(p.amount), 0);
     if (Math.abs(paymentSum - total) > 0.01) {
@@ -136,7 +152,7 @@ async function checkout(req, res) {
       customerId: customerId || null,
       subtotal,
       taxTotal,
-      discountTotal,
+      discountTotal: normalizedDiscount,
       total,
       status: 'completed',
       paymentStatus: anyPending ? 'pending' : 'paid'
@@ -194,6 +210,21 @@ async function checkout(req, res) {
       payload
     }, { transaction: t });
 
+    await logAudit({
+      req,
+      action: 'order.checkout',
+      entityType: 'order',
+      entityId: order.id,
+      approvedByUserId: approval?.approvedByUserId || null,
+      metadata: {
+        orderNumber: order.orderNumber,
+        total,
+        discountTotal: normalizedDiscount,
+        paymentMethods: payments.map((p) => p.method)
+      },
+      transaction: t
+    });
+
     await t.commit();
 
     return res.status(201).json({
@@ -210,7 +241,7 @@ async function checkout(req, res) {
     });
   } catch (err) {
     await t.rollback();
-    return res.status(400).json({ error: err.message });
+    return res.status(err.status || 400).json({ error: err.message });
   }
 }
 

@@ -1,6 +1,6 @@
 # POS System
 
-Express, Sequelize, and React POS for checkout, inventory control, M-Pesa initiation, eTIMS queueing, and daily operator reporting.
+Express, Sequelize, and React POS for checkout, inventory control, shift operations, receipt lookup, M-Pesa initiation, eTIMS queueing, and daily operator reporting.
 
 ## Run Locally
 
@@ -36,6 +36,8 @@ npm run smoke
 ```
 
 The smoke test boots the app against the demo database, searches products, completes a cash checkout, and checks the daily report.
+
+Managers and admins can also use the Operations tab for shift reconciliation, receipt lookup, void/refund controls, printable receipts, and recent audit logs.
 
 ## First Admin
 

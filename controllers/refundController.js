@@ -9,20 +9,7 @@ const { reverseOrder } = require('../services/orderReversal');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 
-/**
- * POST /api/orders/:id/void
- * Body: { userId, reason }
- *
- * Reverses a completed order: restores stock, marks payments as reversed,
- * flags the order voided. Blocks the void if the eTIMS invoice has already
- * been transmitted to KRA, since reversing a filed tax invoice requires a
- * proper credit note through eTIMS, not a silent delete, and that flow is
- * not built here.
- *
- * NOTE: this endpoint should sit behind role-check middleware (manager/
- * admin only) once auth is wired up. Not enforced here.
- */
-async function voidOrder(req, res) {
+async function refundOrder(req, res) {
   const { id } = req.params;
   const { reason } = req.body;
   const userId = req.user?.id;
@@ -30,7 +17,7 @@ async function voidOrder(req, res) {
   const t = await sequelize.transaction();
 
   try {
-    const approval = await resolveManagerApproval(req, { reason: 'order void' });
+    const approval = await resolveManagerApproval(req, { reason: 'order refund' });
     const order = await Order.findByPk(id, {
       include: [
         { model: OrderItem },
@@ -49,7 +36,7 @@ async function voidOrder(req, res) {
     if (order.status !== 'completed') {
       await t.rollback();
       return res.status(400).json({
-        error: `Order is already ${order.status}, cannot void again`
+        error: `Order is ${order.status}, cannot refund`
       });
     }
 
@@ -57,21 +44,25 @@ async function voidOrder(req, res) {
       await t.rollback();
       return res.status(409).json({
         error:
-          'This order has already been reported to KRA eTIMS. It must be reversed with a credit note, not voided directly.'
+          'This order has already been reported to KRA eTIMS. A credit note flow is required before refunding.'
       });
     }
 
-    await reverseOrder(order, { reason: reason || 'Order voided', userId, status: 'voided' }, t);
+    await reverseOrder(
+      order,
+      { reason: reason || 'Order refunded', userId, status: 'refunded' },
+      t
+    );
 
     await logAudit({
       req,
-      action: 'order.void',
+      action: 'order.refund',
       entityType: 'order',
       entityId: order.id,
       approvedByUserId: approval.approvedByUserId,
       metadata: {
         orderNumber: order.orderNumber,
-        reason: reason || 'Order voided'
+        reason: reason || 'Order refunded'
       },
       transaction: t
     });
@@ -81,7 +72,7 @@ async function voidOrder(req, res) {
     return res.json({
       orderId: order.id,
       orderNumber: order.orderNumber,
-      status: 'voided'
+      status: 'refunded'
     });
   } catch (err) {
     await t.rollback();
@@ -89,4 +80,4 @@ async function voidOrder(req, res) {
   }
 }
 
-module.exports = { voidOrder };
+module.exports = { refundOrder };

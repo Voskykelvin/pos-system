@@ -19,6 +19,11 @@ module.exports = {
       path: '/analytics',
       name: 'Analytics',
       purpose: 'Best sellers, sales mix, stock health, slow movers, and inventory value'
+    },
+    {
+      path: '/operations',
+      name: 'Operations',
+      purpose: 'Shift control, cash reconciliation, receipt lookup, voids, refunds, printing, and audit review'
     }
   ],
   api: [
@@ -31,8 +36,16 @@ module.exports = {
     { method: 'GET', path: '/api/reports/analytics?days=30', purpose: 'Sales, inventory, and stock health analytics' },
     { method: 'GET', path: '/api/products/search?q=milk', purpose: 'Cashier product lookup' },
     { method: 'POST', path: '/api/orders/checkout', purpose: 'Create order, payments, stock movements, and queued eTIMS invoice' },
+    { method: 'GET', path: '/api/orders/search?q=receipt', purpose: 'Find recent receipts/orders' },
+    { method: 'GET', path: '/api/orders/:id/receipt', purpose: 'Detailed receipt view for printing and support' },
     { method: 'GET', path: '/api/orders/:id/status', purpose: 'Poll payment state after checkout' },
     { method: 'POST', path: '/api/orders/:id/void', purpose: 'Void completed orders before eTIMS transmission' },
+    { method: 'POST', path: '/api/orders/:id/refund', purpose: 'Refund completed orders before eTIMS transmission' },
+    { method: 'GET', path: '/api/shifts/current', purpose: 'Current open shift for the cashier' },
+    { method: 'POST', path: '/api/shifts/open', purpose: 'Open a cashier shift with starting float' },
+    { method: 'POST', path: '/api/shifts/:id/close', purpose: 'Close shift and record cash variance' },
+    { method: 'GET', path: '/api/shifts', purpose: 'Manager list of recent shifts' },
+    { method: 'GET', path: '/api/audit-logs', purpose: 'Manager review of recent sensitive actions and approvals' },
     { method: 'POST', path: '/api/mpesa/stk-push', purpose: 'Start M-Pesa STK push for a pending payment' },
     { method: 'POST', path: '/api/mpesa/callback', purpose: 'Receive Safaricom Daraja payment callback' },
     { method: 'POST', path: '/api/etims/sync', purpose: 'Manually process queued eTIMS invoices' },

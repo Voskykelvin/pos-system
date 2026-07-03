@@ -8,6 +8,7 @@
 | `/checkout` | Checkout | Cashier search, barcode lookup, cart, VAT totals, cash tender/change, and M-Pesa initiation. |
 | `/inventory` | Inventory | Product catalog, category assignment, low-stock filter, and auditable stock adjustments. |
 | `/analytics` | Analytics | Sales summaries, stock health, best sellers, category mix, and slow movers. |
+| `/operations` | Operations | Shift control, cash reconciliation, receipt lookup, receipt printing, voids, refunds, and audit review. |
 
 ## API
 
@@ -23,8 +24,16 @@
 | `GET` | `/api/products/search?q=milk` | Cashier product lookup by text. |
 | `GET` | `/api/products/search?barcode=6160001000012` | Cashier product lookup by barcode. |
 | `POST` | `/api/orders/checkout` | Create order, payments, stock movements, and queued eTIMS invoice. |
+| `GET` | `/api/orders/search?q=receipt` | Search recent receipts/orders by receipt number. |
+| `GET` | `/api/orders/:id/receipt` | Detailed receipt payload for lookup and printing. |
 | `GET` | `/api/orders/:id/status` | Poll payment status after checkout. |
 | `POST` | `/api/orders/:id/void` | Void a completed order before eTIMS transmission. |
+| `POST` | `/api/orders/:id/refund` | Refund a completed order before eTIMS transmission. |
+| `GET` | `/api/shifts/current` | Current open shift for the authenticated cashier. |
+| `GET` | `/api/shifts` | Manager/admin list of recent shifts. |
+| `POST` | `/api/shifts/open` | Open a cashier shift with starting float. |
+| `POST` | `/api/shifts/:id/close` | Close a shift and record counted cash variance. |
+| `GET` | `/api/audit-logs` | Manager/admin review of recent sensitive actions and approvals. |
 | `POST` | `/api/mpesa/stk-push` | Start M-Pesa STK push for a pending payment. |
 | `POST` | `/api/mpesa/callback` | Receive Safaricom Daraja callback. |
 | `POST` | `/api/etims/sync` | Manually process queued eTIMS invoices. |

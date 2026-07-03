@@ -56,7 +56,9 @@ const models = {
   Order: require('./Order')(sequelize, modelDataTypes),
   OrderItem: require('./OrderItem')(sequelize, modelDataTypes),
   Payment: require('./Payment')(sequelize, modelDataTypes),
-  EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes)
+  EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes),
+  AuditLog: require('./AuditLog')(sequelize, modelDataTypes),
+  Shift: require('./Shift')(sequelize, modelDataTypes)
 };
 
 Object.values(models).forEach((model) => {

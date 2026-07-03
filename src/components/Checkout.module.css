@@ -234,6 +234,28 @@
   border-top: 1px solid var(--line);
 }
 
+.discountRow {
+  display: grid;
+  grid-template-columns: 1fr 110px;
+  align-items: center;
+  gap: 10px;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 14px;
+  color: var(--ink-soft);
+  padding: 6px 0;
+}
+
+.discountRow input {
+  width: 100%;
+  min-height: 32px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  color: var(--ink);
+  padding: 0 8px;
+  text-align: right;
+}
+
 .paymentSection {
   padding: 16px 20px 20px;
   border-top: 1px solid var(--line);
@@ -275,6 +297,14 @@
 
 .cashBox {
   margin-bottom: 12px;
+}
+
+.approvalBox {
+  margin-bottom: 12px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
 }
 
 .cashLabel {

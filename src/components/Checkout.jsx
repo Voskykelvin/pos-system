@@ -9,13 +9,16 @@ function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
 }
 
-export default function Checkout({ authToken, cashierId }) {
+export default function Checkout({ authToken, cashierId, user }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]); // [{ productId, name, unitPrice, quantity, taxCategory }]
   const [method, setMethod] = useState('cash');
   const [phone, setPhone] = useState('');
   const [cashReceived, setCashReceived] = useState('');
+  const [discountTotal, setDiscountTotal] = useState('');
+  const [managerIdentifier, setManagerIdentifier] = useState('');
+  const [managerPassword, setManagerPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null); // 'waiting' | 'paid' | 'failed'
@@ -96,10 +99,12 @@ export default function Checkout({ authToken, cashierId }) {
     const rate = VAT_RATES[i.taxCategory] ?? 0.16;
     return sum + i.unitPrice * i.quantity * rate;
   }, 0);
-  const total = subtotal + taxTotal;
+  const discountValue = Number(discountTotal || 0);
+  const total = Math.max(subtotal + taxTotal - discountValue, 0);
   const cashValue = Number(cashReceived || 0);
   const changeDue = method === 'cash' ? Math.max(cashValue - total, 0) : 0;
   const cashShort = method === 'cash' && cashValue < total;
+  const discountNeedsApproval = discountValue > 0 && user?.role === 'cashier';
 
   const pollOrderStatus = useCallback((orderId) => {
     pollRef.current = setInterval(async () => {
@@ -148,7 +153,11 @@ export default function Checkout({ authToken, cashierId }) {
         body: JSON.stringify({
           cashierId,
           items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-          payments: paymentPayload
+          payments: paymentPayload,
+          discountTotal: discountValue,
+          managerApproval: discountNeedsApproval
+            ? { identifier: managerIdentifier, password: managerPassword }
+            : undefined
         })
       });
       const data = await res.json();
@@ -166,6 +175,9 @@ export default function Checkout({ authToken, cashierId }) {
         });
         setCart([]);
         setCashReceived('');
+        setDiscountTotal('');
+        setManagerIdentifier('');
+        setManagerPassword('');
         setSubmitting(false);
         return;
       }
@@ -204,6 +216,8 @@ export default function Checkout({ authToken, cashierId }) {
     cashierId &&
     !submitting &&
     orderStatus !== 'waiting' &&
+    total > 0 &&
+    (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim())) &&
     ((method === 'cash' && !cashShort) || phone.trim().length >= 9);
 
   return (
@@ -296,6 +310,17 @@ export default function Checkout({ authToken, cashierId }) {
             <span>VAT</span>
             <span>{formatKes(taxTotal)}</span>
           </div>
+          <div className={styles.discountRow}>
+            <span>Discount</span>
+            <input
+              type="number"
+              min="0"
+              step="1"
+              value={discountTotal}
+              onChange={(e) => setDiscountTotal(e.target.value)}
+              placeholder="0.00"
+            />
+          </div>
           <div className={`${styles.totalsRow} ${styles.grand}`}>
             <span>Total</span>
             <span>{formatKes(total)}</span>
@@ -359,6 +384,25 @@ export default function Checkout({ authToken, cashierId }) {
                 <span>{cashShort ? 'Short' : 'Change'}</span>
                 <span>{formatKes(cashShort ? total - cashValue : changeDue)}</span>
               </div>
+            </div>
+          )}
+
+          {discountNeedsApproval && (
+            <div className={styles.approvalBox}>
+              <label className={styles.cashLabel}>Manager approval</label>
+              <input
+                className={styles.phoneInput}
+                value={managerIdentifier}
+                onChange={(e) => setManagerIdentifier(e.target.value)}
+                placeholder="Manager email or phone"
+              />
+              <input
+                className={styles.phoneInput}
+                type="password"
+                value={managerPassword}
+                onChange={(e) => setManagerPassword(e.target.value)}
+                placeholder="Manager password"
+              />
             </div>
           )}
 

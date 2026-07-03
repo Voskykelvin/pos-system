@@ -40,6 +40,9 @@ module.exports = (sequelize, DataTypes) => {
   User.associate = (models) => {
     User.hasMany(models.Order, { foreignKey: 'cashierId' });
     User.hasMany(models.InventoryTransaction, { foreignKey: 'userId' });
+    User.hasMany(models.AuditLog, { foreignKey: 'userId', as: 'auditActions' });
+    User.hasMany(models.AuditLog, { foreignKey: 'approvedByUserId', as: 'approvedActions' });
+    User.hasMany(models.Shift, { foreignKey: 'cashierId', as: 'shifts' });
   };
 
   return User;
