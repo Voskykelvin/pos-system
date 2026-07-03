@@ -3,14 +3,14 @@
   --line: var(--pos-line);
   --ink: var(--pos-ink);
   --ink-soft: var(--pos-ink-soft);
-  --accent: var(--pos-green);
-  --accent-dark: var(--pos-green-dark);
+  --accent: var(--pos-accent);
+  --accent-dark: var(--pos-accent-dark);
   --warn: var(--pos-warn);
   --warn-bg: var(--pos-warn-bg);
 
   min-height: 100vh;
   padding: 24px;
-  background: var(--pos-beige);
+  background: var(--pos-bg);
   color: var(--ink);
 }
 

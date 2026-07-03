@@ -1,11 +1,11 @@
 .page {
-  --bg: var(--pos-beige);
+  --bg: var(--pos-bg);
   --surface: var(--pos-surface);
   --ink: var(--pos-ink);
   --ink-soft: var(--pos-ink-soft);
   --line: var(--pos-line);
-  --accent: var(--pos-green);
-  --accent-ink: var(--pos-green-ink);
+  --accent: var(--pos-accent);
+  --accent-ink: var(--pos-ink);
   --danger: var(--pos-danger);
   --warn-bg: var(--pos-warn-bg);
   --warn-ink: var(--pos-warn);
@@ -58,9 +58,9 @@
 }
 
 .toggleBtn.active {
-  background: #edf8d2;
-  color: var(--pos-green-dark);
-  border-color: var(--pos-green-dark);
+  background: var(--pos-warn-bg);
+  color: var(--pos-accent-dark);
+  border-color: var(--pos-accent-dark);
 }
 
 .primaryBtn {
@@ -284,7 +284,7 @@
 }
 
 .successText {
-  color: var(--pos-green-dark);
+  color: var(--pos-success);
   font-size: 13px;
   margin-top: 8px;
 }

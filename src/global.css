@@ -1,22 +1,28 @@
 :root {
-  --pos-green: #8ed220;
-  --pos-beige: #ede8d0;
-  --pos-ink: #1d2415;
-  --pos-ink-soft: #626b55;
-  --pos-surface: #fffdf4;
-  --pos-panel: #f8f3df;
-  --pos-line: #d8d0aa;
-  --pos-green-ink: #1d2415;
-  --pos-green-dark: #5f9216;
-  --pos-sidebar: #1b2415;
-  --pos-sidebar-soft: #2b381f;
-  --pos-danger: #a33a2a;
-  --pos-danger-bg: #fff0ec;
-  --pos-warn: #8f5a00;
-  --pos-warn-bg: #fff4db;
+  --pos-bg: #fbf4e8;
+  --pos-surface: #fff9f0;
+  --pos-panel: #fff7e6;
+  --pos-panel-strong: #f7e7bc;
+  --pos-line: rgba(216, 184, 94, 0.28);
+  --pos-line-strong: rgba(134, 92, 5, 0.35);
+  --pos-ink: #2a1f08;
+  --pos-ink-mid: #4f3f23;
+  --pos-ink-soft: #7d6b49;
+  --pos-accent: #d8b85e;
+  --pos-accent-light: #f0d37f;
+  --pos-accent-dark: #865c05;
+  --pos-accent-mid: #a8790e;
+  --pos-sidebar: #2a1f08;
+  --pos-sidebar-soft: #4f3f23;
+  --pos-success: #6d845d;
+  --pos-success-bg: #eef2e8;
+  --pos-danger: #96502a;
+  --pos-danger-bg: #f8ede2;
+  --pos-warn: #d98f06;
+  --pos-warn-bg: #fff2d5;
 
   color: var(--pos-ink);
-  background: var(--pos-beige);
+  background: var(--pos-bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -43,6 +49,6 @@ select {
 button:focus-visible,
 input:focus-visible,
 select:focus-visible {
-  outline: 2px solid var(--pos-green-dark);
+  outline: 2px solid var(--pos-accent-dark);
   outline-offset: 2px;
 }

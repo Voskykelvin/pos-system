@@ -3,14 +3,14 @@
   --sidebar-soft: var(--pos-sidebar-soft);
   --surface: var(--pos-surface);
   --line: var(--pos-line);
-  --accent: var(--pos-green);
-  --accent-soft: #edf8d2;
+  --accent: var(--pos-accent);
+  --accent-soft: var(--pos-panel-strong);
   --ink-soft: var(--pos-ink-soft);
 
   min-height: 100vh;
   display: grid;
   grid-template-columns: 236px minmax(0, 1fr);
-  background: var(--pos-beige);
+  background: var(--pos-bg);
   color: var(--pos-ink);
 }
 
@@ -39,7 +39,7 @@
   display: grid;
   place-items: center;
   background: var(--accent);
-  color: var(--pos-green-ink);
+  color: var(--pos-ink);
   font-weight: 800;
 }
 
@@ -51,7 +51,7 @@
 
 .brandMeta {
   margin-top: 2px;
-  color: var(--pos-beige);
+  color: var(--pos-panel-strong);
   font-size: 12px;
 }
 
@@ -63,7 +63,7 @@
 .navButton {
   border: 1px solid transparent;
   background: transparent;
-  color: var(--pos-beige);
+  color: var(--pos-panel-strong);
   text-align: left;
   border-radius: 8px;
   padding: 11px 12px;
@@ -78,19 +78,19 @@
 
 .navButton.active {
   background: var(--accent);
-  color: var(--pos-green-ink);
+  color: var(--pos-ink);
 }
 
 .statusBox {
   margin-top: auto;
-  border: 1px solid #3a4b2b;
+  border: 1px solid rgba(240, 211, 127, 0.24);
   border-radius: 8px;
   padding: 12px;
   background: var(--sidebar-soft);
 }
 
 .statusLabel {
-  color: var(--pos-beige);
+  color: var(--pos-panel-strong);
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0;
