@@ -51,7 +51,8 @@ async function checkout(req, res) {
     items,
     payments,
     discountTotal = 0,
-    promotionCode    // optional promo code string
+    promotionCode,    // optional promo code string
+    redeemPoints = 0  // optional loyalty points to redeem
   } = req.body;
   const cashierId = req.user?.id || bodyCashierId;
 
@@ -163,7 +164,19 @@ async function checkout(req, res) {
         : Math.min(Number(appliedPromotion.value), base);
     }
 
-    const combinedDiscount = normalizedDiscount + promoDiscount;
+    // Calculate loyalty redemption discount
+    let loyaltyDiscount = 0;
+    const numRedeemPoints = Math.max(Number(redeemPoints || 0), 0);
+    const ptsPerKes = Number(process.env.LOYALTY_POINTS_PER_KES) || 100;
+    if (numRedeemPoints > 0 && customerId) {
+      const cust = await Customer.findByPk(customerId, { transaction: t });
+      if (!cust || (cust.loyaltyPoints || 0) < numRedeemPoints) {
+        throw Object.assign(new Error('Insufficient customer loyalty points'), { status: 400 });
+      }
+      loyaltyDiscount = Math.floor(numRedeemPoints / ptsPerKes);
+    }
+
+    const combinedDiscount = normalizedDiscount + promoDiscount + loyaltyDiscount;
     const total = Math.max(subtotal + taxTotal - combinedDiscount, 0);
 
     const paymentSum = payments.reduce((sum, p) => sum + Number(p.amount), 0);
@@ -258,14 +271,34 @@ async function checkout(req, res) {
 
     await t.commit();
 
-    // ── Post-commit: award loyalty points (non-blocking) ─────────────────
+    // ── Post-commit: award or redeem loyalty points (non-blocking) ─────────────────
     if (customerId) {
       try {
         const customer = await Customer.findByPk(customerId);
         if (customer) {
+          let currentPoints = customer.loyaltyPoints || 0;
+
+          // Process point redemption if requested
+          if (numRedeemPoints > 0 && currentPoints >= numRedeemPoints) {
+            const balanceBefore = currentPoints;
+            const balanceAfter = balanceBefore - numRedeemPoints;
+            await customer.update({ loyaltyPoints: balanceAfter });
+            await LoyaltyTransaction.create({
+              customerId: customer.id,
+              orderId: order.id,
+              type: 'redeem',
+              points: -numRedeemPoints,
+              balanceBefore,
+              balanceAfter,
+              note: `Redeemed on order ${order.orderNumber}`
+            });
+            currentPoints = balanceAfter;
+          }
+
+          // Process point earning on net total paid
           const pointsEarned = Math.floor(Number(total) / 100 * LOYALTY_POINTS_PER_100);
           if (pointsEarned > 0) {
-            const balanceBefore = customer.loyaltyPoints || 0;
+            const balanceBefore = currentPoints;
             const balanceAfter = balanceBefore + pointsEarned;
             await customer.update({ loyaltyPoints: balanceAfter });
             await LoyaltyTransaction.create({

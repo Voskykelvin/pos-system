@@ -53,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.BOOLEAN,
       defaultValue: true
     },
+    imageUrl: {
+      type: DataTypes.STRING,
+      allowNull: true
+    },
     categoryId: {
       type: DataTypes.UUID,
       allowNull: false

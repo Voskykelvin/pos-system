@@ -258,6 +258,8 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [promoError, setPromoError] = useState(null);
   const [promoChecking, setPromoChecking] = useState(false);
 
+  const [redeemLoyalty, setRedeemLoyalty] = useState(false);
+
   const [managerIdentifier, setManagerIdentifier] = useState('');
   const [managerPassword, setManagerPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -287,6 +289,47 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
+  // ─── Global Hardware Barcode Scanner Auto-Listener ─────────────────────────
+  useEffect(() => {
+    let buffer = '';
+    let lastKeyTime = Date.now();
+
+    const handleKeyDown = async (e) => {
+      // Ignore if user is actively typing inside an input element
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) {
+        return;
+      }
+
+      const currentTime = Date.now();
+      if (currentTime - lastKeyTime > 100) {
+        buffer = '';
+      }
+      lastKeyTime = currentTime;
+
+      if (e.key === 'Enter') {
+        const barcode = buffer.trim();
+        buffer = '';
+        if (/^\d{4,}$/.test(barcode)) {
+          e.preventDefault();
+          try {
+            const res = await fetch(`/api/products/search?barcode=${encodeURIComponent(barcode)}`, {
+              headers: { Authorization: `Bearer ${authToken}` }
+            });
+            const data = await res.json();
+            if (Array.isArray(data) && data.length > 0) {
+              addToCart(data[0]);
+            }
+          } catch { /* ignore scan error */ }
+        }
+      } else if (e.key.length === 1) {
+        buffer += e.key;
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [authToken]);
+
   // Sync payment total with cart total whenever total changes
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const taxTotal = cart.reduce((sum, i) => {
@@ -295,7 +338,8 @@ export default function Checkout({ authToken, cashierId, user }) {
   }, 0);
   const discountValue = Number(discountTotal || 0);
   const promoDiscount = promoResult ? Number(promoResult.discountAmount) : 0;
-  const total = Math.max(subtotal + taxTotal - discountValue - promoDiscount, 0);
+  const loyaltyDiscount = redeemLoyalty && customer?.loyaltyPoints > 0 ? Math.floor(customer.loyaltyPoints / 100) : 0;
+  const total = Math.max(subtotal + taxTotal - discountValue - promoDiscount - loyaltyDiscount, 0);
 
   // When total changes and there's a single payment row, auto-update its amount
   useEffect(() => {
@@ -407,6 +451,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           payments: paymentPayload,
           discountTotal: discountValue,
           promotionCode: promoResult ? promoCode.trim() : undefined,
+          redeemPoints: redeemLoyalty && customer ? customer.loyaltyPoints : 0,
           managerApproval: discountNeedsApproval ? { identifier: managerIdentifier, password: managerPassword } : undefined
         })
       });
@@ -491,6 +536,9 @@ export default function Checkout({ authToken, cashierId, user }) {
           <div className={styles.productGrid}>
             {results.map((product) => (
               <button key={product.id} className={styles.productCard} onClick={() => addToCart(product)}>
+                {product.imageUrl && (
+                  <img src={product.imageUrl} alt={product.name} className={styles.productImg} />
+                )}
                 <div className={styles.productName}>{product.name}</div>
                 <div className={styles.productMeta}>{formatKes(product.sellingPrice)} / {product.unit}</div>
                 <div className={styles.stockMeta}>Stock: {Number(product.stockQuantity)} {product.unit}</div>
@@ -508,8 +556,18 @@ export default function Checkout({ authToken, cashierId, user }) {
             authToken={authToken}
             customer={customer}
             onSelect={setCustomer}
-            onClear={() => setCustomer(null)}
+            onClear={() => { setCustomer(null); setRedeemLoyalty(false); }}
           />
+          {customer && customer.loyaltyPoints > 0 && (
+            <label className={styles.loyaltyRedeemBox}>
+              <input
+                type="checkbox"
+                checked={redeemLoyalty}
+                onChange={(e) => setRedeemLoyalty(e.target.checked)}
+              />
+              <span>Redeem {customer.loyaltyPoints} pts (-KES {Math.floor(customer.loyaltyPoints / 100).toFixed(2)})</span>
+            </label>
+          )}
         </div>
 
         <div className={styles.cartHeader}>

@@ -13,7 +13,8 @@ const EMPTY_FORM = {
   sellingPrice: '',
   reorderLevel: 5,
   stockQuantity: 0,
-  categoryId: ''
+  categoryId: '',
+  imageUrl: ''
 };
 
 export default function ProductAdmin({ authToken, userId }) {
@@ -37,6 +38,9 @@ export default function ProductAdmin({ authToken, userId }) {
   // Category inline modal
   const [newCatName, setNewCatName] = useState('');
   const [showCatModal, setShowCatModal] = useState(false);
+
+  // Barcode sticker printing modal
+  const [showBarcodeModal, setShowBarcodeModal] = useState(false);
 
   // Suppliers & POs state
   const [suppliers, setSuppliers] = useState([]);
@@ -149,7 +153,8 @@ export default function ProductAdmin({ authToken, userId }) {
       sellingPrice: p.sellingPrice || '',
       reorderLevel: p.reorderLevel || 5,
       stockQuantity: p.stockQuantity || 0,
-      categoryId: p.categoryId
+      categoryId: p.categoryId,
+      imageUrl: p.imageUrl || ''
     });
     setError(null);
     setMessage(null);
@@ -378,6 +383,7 @@ export default function ProductAdmin({ authToken, userId }) {
               />
               Low stock only
             </label>
+            <button className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(true)}>🏷️ Print Barcode Stickers</button>
             <button className={styles.primaryBtn} onClick={openCreate}>+ Add Product</button>
           </div>
 
@@ -644,6 +650,7 @@ export default function ProductAdmin({ authToken, userId }) {
                 </div>
               </label>
               <label>Unit <input value={form.unit} onChange={(e) => setForm({...form, unit: e.target.value})} /></label>
+              <label>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>
               <label>Selling Price KES * <input type="number" step="0.01" value={form.sellingPrice} onChange={(e) => setForm({...form, sellingPrice: e.target.value})} required /></label>
               <label>Reorder Level <input type="number" value={form.reorderLevel} onChange={(e) => setForm({...form, reorderLevel: e.target.value})} /></label>
@@ -692,6 +699,34 @@ export default function ProductAdmin({ authToken, userId }) {
                 <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(false)}>Cancel</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Barcode Sticker Label Sheet Printing Modal */}
+      {showBarcodeModal && (
+        <div className={styles.drawerOverlay} onClick={() => setShowBarcodeModal(false)}>
+          <div className={styles.barcodeModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.tabHeaderAction}>
+              <h3>Printable Barcode Sticker Sheets</h3>
+              <button className={styles.primaryBtn} onClick={() => window.print()}>🖨️ Print Labels</button>
+            </div>
+            <p className={styles.subtitle}>Standard shelf & product barcode labels ready for thermal or A4 sticker paper.</p>
+
+            <div className={styles.stickerGrid}>
+              {products.filter(p => p.isActive).map((p) => (
+                <div key={p.id} className={styles.stickerCard}>
+                  <div className={styles.stickerTitle}>{p.name}</div>
+                  <div className={styles.barcodeLines}>||| | |||| || | ||| ||||</div>
+                  <div className={styles.barcodeCode}>{p.barcode || p.sku}</div>
+                  <div className={styles.stickerPrice}>KES {Number(p.sellingPrice).toFixed(2)}</div>
+                </div>
+              ))}
+            </div>
+
+            <div className={styles.drawerActions}>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(false)}>Close</button>
+            </div>
           </div>
         </div>
       )}
