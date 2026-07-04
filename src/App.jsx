@@ -8,6 +8,7 @@ import Operations from './components/Operations.jsx';
 import CustomerAdmin from './components/CustomerAdmin.jsx';
 import Signup from './components/Signup.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
+import Homepage from './components/Homepage.jsx';
 import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
 
@@ -147,6 +148,8 @@ export default function App() {
   }
 
   const [showSignup, setShowSignup] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [signupPlan, setSignupPlan] = useState('starter');
 
   if (!authReady) {
     return <div className={styles.loading}>Loading application...</div>;
@@ -155,43 +158,56 @@ export default function App() {
   if (showSignup && !authToken) {
     return (
       <Signup
+        initialPlan={signupPlan}
         onSignupSuccess={(token, user) => {
           localStorage.setItem('pos_auth_token', token);
           setAuthToken(token);
           setShowSignup(false);
+          setShowLogin(false);
           setView('dashboard');
         }}
-        onNavigateLogin={() => setShowSignup(false)}
+        onNavigateLogin={() => {
+          setShowSignup(false);
+          setShowLogin(true);
+        }}
+        onNavigateHome={() => {
+          setShowSignup(false);
+          setShowLogin(false);
+        }}
+      />
+    );
+  }
+
+  if (showLogin && !authToken) {
+    return (
+      <Login
+        onLogin={(payload) => {
+          const token = typeof payload === 'string' ? payload : payload.token;
+          localStorage.setItem('pos_auth_token', token);
+          setAuthToken(token);
+          setShowLogin(false);
+          if (payload.user) {
+            setBootstrap({
+              userId: payload.user.id,
+              cashierId: payload.user.id,
+              user: payload.user
+            });
+          }
+        }}
+        onNavigateHome={() => setShowLogin(false)}
       />
     );
   }
 
   if (!authToken) {
     return (
-      <div>
-        <Login
-          onLogin={(payload) => {
-            const token = typeof payload === 'string' ? payload : payload.token;
-            localStorage.setItem('pos_auth_token', token);
-            setAuthToken(token);
-            if (payload.user) {
-              setBootstrap({
-                userId: payload.user.id,
-                cashierId: payload.user.id,
-                user: payload.user
-              });
-            }
-          }}
-        />
-        <div style={{ textAlign: 'center', padding: '16px', background: '#0f172a' }}>
-          <button
-            style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
-            onClick={() => setShowSignup(true)}
-          >
-            Want to launch your own store? Sign up for Jijenge POS
-          </button>
-        </div>
-      </div>
+      <Homepage
+        onNavigateLogin={() => setShowLogin(true)}
+        onNavigateSignup={(planId = 'starter') => {
+          setSignupPlan(planId);
+          setShowSignup(true);
+        }}
+      />
     );
   }
 

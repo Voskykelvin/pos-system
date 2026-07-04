@@ -1,7 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const { signup, superAdminDashboard, updateTenant } = require('../controllers/tenantController');
+const { plans, signup, superAdminDashboard, updateTenant } = require('../controllers/tenantController');
 const { authenticate, requireRoles } = require('../middleware/auth');
+
+// Public pricing tiers used by the master frontend and signup flow
+router.get('/plans', plans);
 
 // Public self-serve store onboarding signup
 router.post('/signup', signup);

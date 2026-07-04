@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from './Login.module.css';
 
-export default function Login({ onLogin, onLoginSuccess }) {
+export default function Login({ onLogin, onLoginSuccess, onNavigateHome }) {
   const [identifier, setIdentifier] = useState('admin@example.local');
   const [password, setPassword] = useState('admin12345');
   const [error, setError] = useState(null);
@@ -31,6 +31,11 @@ export default function Login({ onLogin, onLoginSuccess }) {
 
   return (
     <main className={styles.page}>
+      {onNavigateHome && (
+        <button className={styles.homeLink} type="button" onClick={onNavigateHome}>
+          Back to homepage
+        </button>
+      )}
       <section className={styles.panel}>
         <div className={styles.brandMark}>P</div>
         <h1>Jijenge POS</h1>

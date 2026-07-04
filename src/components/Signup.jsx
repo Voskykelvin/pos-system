@@ -1,19 +1,55 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import styles from './Signup.module.css';
 
-export default function Signup({ onSignupSuccess, onNavigateLogin }) {
+const fallbackPlans = [
+  { id: 'starter', name: 'Starter', priceUsd: 29 },
+  { id: 'growth', name: 'Growth', priceUsd: 79 },
+  { id: 'enterprise', name: 'Enterprise', priceUsd: 199 }
+];
+
+function planLabel(plan) {
+  return `${plan.name} - $${Number(plan.priceUsd || 0).toFixed(0)}/mo`;
+}
+
+export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNavigateLogin, onNavigateHome }) {
   const [form, setForm] = useState({
     businessName: '',
     email: '',
     password: '',
     currency: 'KES',
-    plan: 'starter'
+    plan: initialPlan
   });
 
+  const [plans, setPlans] = useState(fallbackPlans);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+
+  useEffect(() => {
+    setForm((current) => ({ ...current, plan: initialPlan }));
+  }, [initialPlan]);
+
+  useEffect(() => {
+    let active = true;
+
+    async function loadPlans() {
+      try {
+        const res = await fetch('/api/plans');
+        const data = await res.json();
+        if (active && res.ok && Array.isArray(data.plans)) {
+          setPlans(data.plans);
+        }
+      } catch {
+        // Fallback plans keep signup usable in static previews.
+      }
+    }
+
+    loadPlans();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -43,8 +79,10 @@ export default function Signup({ onSignupSuccess, onNavigateLogin }) {
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.badge}>Jijenge POS Platform</div>
-          <h1 className={styles.title}>Launch Your Store</h1>
-          <p className={styles.subtitle}>Start your 14-day free trial. No credit card required.</p>
+          <h1 className={styles.title}>Create your store</h1>
+          <p className={styles.subtitle}>
+            Use this if you own the shop. We will create the store and your admin account.
+          </p>
         </div>
 
         {error && <div className={styles.errorAlert}>{error}</div>}
@@ -104,29 +142,37 @@ export default function Signup({ onSignupSuccess, onNavigateLogin }) {
             </label>
 
             <label className={styles.label}>
-              Subscription Tier
+              Plan
               <select
                 className={styles.select}
                 value={form.plan}
                 onChange={(e) => setForm({ ...form, plan: e.target.value })}
               >
-                <option value="starter">Starter Plan ($29/mo)</option>
-                <option value="growth">Growth Plan ($79/mo)</option>
-                <option value="enterprise">Enterprise Plan ($199/mo)</option>
+                {plans.map((plan) => (
+                  <option key={plan.id} value={plan.id}>{planLabel(plan)}</option>
+                ))}
               </select>
             </label>
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'Provisioning Store...' : 'Launch My Jijenge POS Store'}
+            {loading ? 'Creating store...' : 'Create my Jijenge store'}
           </button>
         </form>
 
         <div className={styles.footer}>
-          Already have an account?{' '}
+          Already added as staff?{' '}
           <button className={styles.linkBtn} onClick={onNavigateLogin}>
-            Sign in here
+            Sign in
           </button>
+          {onNavigateHome && (
+            <>
+              <span className={styles.footerDivider}>or</span>
+              <button className={styles.linkBtn} onClick={onNavigateHome}>
+                return home
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

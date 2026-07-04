@@ -40,6 +40,7 @@ module.exports = {
     { method: 'GET', path: '/api/health', purpose: 'Runtime health check' },
     { method: 'GET', path: '/api/bootstrap', purpose: 'Current authenticated user and cashier identifiers' },
     { method: 'GET', path: '/api/site-map', purpose: 'Machine-readable site map' },
+    { method: 'GET', path: '/api/plans', purpose: 'Public plan and pricing catalog for homepage and signup' },
     { method: 'POST', path: '/api/signup', purpose: 'Self-serve tenant signup' },
     { method: 'GET', path: '/api/super-admin/dashboard', purpose: 'Platform owner MRR, activation, tenant health, plan tiers, and activity metrics' },
     { method: 'PUT', path: '/api/super-admin/tenants/:id', purpose: 'Platform owner tenant update' },

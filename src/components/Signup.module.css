@@ -127,6 +127,11 @@
   color: #64748b;
 }
 
+.footerDivider {
+  display: inline-block;
+  margin: 0 8px;
+}
+
 .linkBtn {
   background: none;
   border: none;

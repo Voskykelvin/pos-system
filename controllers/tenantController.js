@@ -63,6 +63,14 @@ function buildDailySeries(start, end) {
 }
 
 /**
+ * GET /api/plans
+ * Public plan catalog for the homepage and signup flow.
+ */
+async function plans(req, res) {
+  return res.json({ plans: getPlanCatalog() });
+}
+
+/**
  * POST /api/signup
  * Self-serve onboarding for store owners.
  * Body: { businessName, email, password, currency, country, plan }
@@ -385,4 +393,4 @@ async function updateTenant(req, res) {
   }
 }
 
-module.exports = { signup, superAdminDashboard, updateTenant };
+module.exports = { plans, signup, superAdminDashboard, updateTenant };
