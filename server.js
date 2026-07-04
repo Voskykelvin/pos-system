@@ -145,13 +145,13 @@ async function start({ port = PORT } = {}) {
   }
 
   return app.listen(port, () => {
-    console.log(`POS app listening on port ${port}`);
+    console.log(`Jijenge POS listening on port ${port}`);
   });
 }
 
 if (require.main === module) {
   start().catch((err) => {
-    console.error('Failed to start POS app:', err);
+    console.error('Failed to start Jijenge POS:', err);
     process.exit(1);
   });
 }

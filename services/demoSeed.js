@@ -12,6 +12,7 @@ const { getBusinessDate } = require('../utils/businessTime');
 const { hashPassword } = require('../utils/passwords');
 
 const DEMO_IDS = {
+  superAdmin: '00000000-0000-0000-0000-000000000000',
   admin: '00000000-0000-0000-0000-000000000001',
   cashier: '00000000-0000-0000-0000-000000000002',
   groceries: '10000000-0000-0000-0000-000000000001',
@@ -128,6 +129,13 @@ async function seedDemoData() {
   if (existing > 0) return;
 
   await User.bulkCreate([
+    {
+      id: DEMO_IDS.superAdmin,
+      name: process.env.SUPER_ADMIN_NAME || 'Kelvin O.',
+      email: process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.local',
+      passwordHash: hashPassword(process.env.SUPER_ADMIN_PASSWORD || 'superadmin12345'),
+      role: 'super_admin'
+    },
     {
       id: DEMO_IDS.admin,
       name: 'Store Admin',

@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: pos-system
+    name: jijenge-pos
     runtime: node
     plan: starter
     buildCommand: npm ci && npm run build
@@ -12,7 +12,7 @@ services:
         value: production
       - key: DATABASE_URL
         fromDatabase:
-          name: pos-system-db
+          name: jijenge-pos-db
           property: connectionString
       - key: BUSINESS_TIME_ZONE
         value: Africa/Nairobi
@@ -54,7 +54,7 @@ services:
         sync: false
 
 databases:
-  - name: pos-system-db
+  - name: jijenge-pos-db
     plan: basic-256mb
-    databaseName: pos_system
-    user: pos_system
+    databaseName: jijenge_pos
+    user: jijenge_pos

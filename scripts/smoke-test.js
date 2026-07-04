@@ -49,6 +49,22 @@ async function main() {
     });
     const authHeaders = { Authorization: `Bearer ${login.token}` };
 
+    const superAdminLogin = await request(baseUrl, '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        identifier: process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.local',
+        password: process.env.SUPER_ADMIN_PASSWORD || 'superadmin12345'
+      })
+    });
+    const superAdminHeaders = { Authorization: `Bearer ${superAdminLogin.token}` };
+    const platformDashboard = await request(baseUrl, '/api/super-admin/dashboard', {
+      headers: superAdminHeaders
+    });
+    if (!platformDashboard.metrics) {
+      throw new Error('Super admin dashboard did not return platform metrics');
+    }
+
     const bootstrap = await request(baseUrl, '/api/bootstrap', {
       headers: authHeaders
     });

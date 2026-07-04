@@ -4,11 +4,19 @@ const { sequelize, User } = require('../models');
 const { hashPassword } = require('../utils/passwords');
 
 async function main() {
+  const role = process.env.ADMIN_ROLE || 'admin';
+  const allowedRoles = new Set(['super_admin', 'admin', 'manager', 'cashier']);
+  if (!allowedRoles.has(role)) {
+    throw new Error(`ADMIN_ROLE must be one of: ${Array.from(allowedRoles).join(', ')}`);
+  }
+
   const {
-    ADMIN_NAME = 'Store Admin',
-    ADMIN_EMAIL,
+    ADMIN_NAME = role === 'super_admin'
+      ? process.env.SUPER_ADMIN_NAME || 'Kelvin O.'
+      : 'Store Admin',
+    ADMIN_EMAIL = role === 'super_admin' ? process.env.SUPER_ADMIN_EMAIL : undefined,
     ADMIN_PHONE,
-    ADMIN_PASSWORD
+    ADMIN_PASSWORD = role === 'super_admin' ? process.env.SUPER_ADMIN_PASSWORD : undefined
   } = process.env;
 
   if (!ADMIN_EMAIL && !ADMIN_PHONE) {
@@ -27,10 +35,10 @@ async function main() {
     await existing.update({
       name: ADMIN_NAME,
       passwordHash: hashPassword(ADMIN_PASSWORD),
-      role: 'admin',
+      role,
       isActive: true
     });
-    console.log(`Updated admin user ${existing.id}`);
+    console.log(`Updated ${role} user ${existing.id}`);
     return;
   }
 
@@ -39,11 +47,11 @@ async function main() {
     email: ADMIN_EMAIL || null,
     phone: ADMIN_PHONE || null,
     passwordHash: hashPassword(ADMIN_PASSWORD),
-    role: 'admin',
+    role,
     isActive: true
   });
 
-  console.log(`Created admin user ${user.id}`);
+  console.log(`Created ${role} user ${user.id}`);
 }
 
 main()

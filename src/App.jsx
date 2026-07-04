@@ -188,7 +188,7 @@ export default function App() {
             style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
             onClick={() => setShowSignup(true)}
           >
-            Want to launch your own store? Sign up for SaaS POS
+            Want to launch your own store? Sign up for Jijenge POS
           </button>
         </div>
       </div>
@@ -201,7 +201,7 @@ export default function App() {
         <div className={styles.brand}>
           <span className={styles.brandMark}>P</span>
           <div>
-            <div className={styles.brandName}>POS System</div>
+            <div className={styles.brandName}>Jijenge POS</div>
             <div className={styles.brandMeta}>{bootstrap.demoMode ? 'Demo store' : 'Live store'}</div>
           </div>
         </div>

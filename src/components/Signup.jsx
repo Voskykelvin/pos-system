@@ -42,7 +42,7 @@ export default function Signup({ onSignupSuccess, onNavigateLogin }) {
     <div className={styles.container}>
       <div className={styles.card}>
         <div className={styles.header}>
-          <div className={styles.badge}>SaaS POS Platform</div>
+          <div className={styles.badge}>Jijenge POS Platform</div>
           <h1 className={styles.title}>Launch Your Store</h1>
           <p className={styles.subtitle}>Start your 14-day free trial. No credit card required.</p>
         </div>
@@ -118,7 +118,7 @@ export default function Signup({ onSignupSuccess, onNavigateLogin }) {
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'Provisioning Store...' : 'Launch My POS Store'}
+            {loading ? 'Provisioning Store...' : 'Launch My Jijenge POS Store'}
           </button>
         </form>
 

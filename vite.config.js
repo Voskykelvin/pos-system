@@ -9,9 +9,9 @@ module.exports = defineConfig({
       registerType: 'autoUpdate',
       devOptions: { enabled: true },
       manifest: {
-        name: 'POS System',
-        short_name: 'POS',
-        description: 'Multi-Tenant Offline-First POS System',
+        name: 'Jijenge POS',
+        short_name: 'Jijenge',
+        description: 'Multi-tenant offline-first Jijenge POS',
         theme_color: '#0f172a',
         background_color: '#ffffff',
         display: 'standalone',

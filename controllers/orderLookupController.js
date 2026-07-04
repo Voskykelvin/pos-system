@@ -114,7 +114,7 @@ async function receipt(req, res) {
         transmittedAt: order.EtimsInvoice.transmittedAt
       } : null,
       business: {
-        name: process.env.BUSINESS_NAME || 'My Mini Supermarket',
+        name: process.env.BUSINESS_NAME || 'Jijenge POS',
         kraPin: process.env.BUSINESS_KRA_PIN || null
       }
     });

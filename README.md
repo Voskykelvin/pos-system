@@ -1,6 +1,6 @@
-# Enterprise POS System
+# Jijenge POS
 
-An enterprise-grade Point of Sale (POS) & Retail Management System built with Node.js, Express, Sequelize ORM, and React (Vite). Designed for high-speed checkout, multi-tender payments, inventory management, supplier purchase orders, sales velocity analytics, eTIMS tax compliance, and multi-till shift reconciliation.
+Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management system built with Node.js, Express, Sequelize ORM, and React (Vite). Designed for high-speed checkout, multi-tender payments, inventory management, supplier purchase orders, sales velocity analytics, eTIMS tax compliance, and multi-till shift reconciliation.
 
 ---
 
@@ -47,7 +47,7 @@ npm install
 # 2. Build frontend assets
 npm run build
 
-# 3. Start POS server
+# 3. Start Jijenge POS server
 npm start
 ```
 
@@ -56,6 +56,7 @@ Open `http://localhost:4000`.
 > **Note**: If `DATABASE_URL` is omitted, the application automatically launches with an in-memory database pre-seeded with demo products, categories, suppliers, promo codes, and staff accounts!
 
 ### Demo Logins
+- **Super Admin**: `superadmin@example.local` / `superadmin12345` unless overridden by `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`
 - **Admin**: `admin@example.local` / `admin12345`
 - **Cashier**: `cashier@example.local` / `cashier12345`
 

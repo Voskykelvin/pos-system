@@ -33,7 +33,7 @@ export default function Login({ onLogin, onLoginSuccess }) {
     <main className={styles.page}>
       <section className={styles.panel}>
         <div className={styles.brandMark}>P</div>
-        <h1>POS System</h1>
+        <h1>Jijenge POS</h1>
         <p>Sign in with your staff account.</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>

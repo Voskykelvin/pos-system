@@ -24,7 +24,7 @@ const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
 
 // Set from your own business record / env config
 const BUSINESS = {
-  name: process.env.BUSINESS_NAME || 'My Mini Supermarket',
+  name: process.env.BUSINESS_NAME || 'Jijenge POS',
   kraPin: process.env.BUSINESS_KRA_PIN
 };
 
