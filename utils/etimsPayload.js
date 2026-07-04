@@ -38,7 +38,7 @@ function buildEtimsPayload({ order, orderItems, business }) {
     taxTotal: Number(order.taxTotal),
     discountTotal: Number(order.discountTotal),
     total: Number(order.total),
-    currency: 'KES'
+    currency: business.currency || 'KES'
   };
 }
 

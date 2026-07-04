@@ -46,6 +46,11 @@ Optional SMS receipts:
 - `AFRICASTALKING_API_KEY`
 - `AFRICASTALKING_SENDER_ID`
 
+Multi-tenant credential option:
+
+- Tenant settings can define `business`, `mpesa`, `etims`, and `sms` blocks.
+- Each integration block can use `envPrefix`; for example `envPrefix: "STORE_A"` reads `STORE_A_MPESA_CONSUMER_KEY`, `STORE_A_ETIMS_API_KEY`, or `STORE_A_AFRICASTALKING_API_KEY` before falling back to the global variables above.
+
 ## Go-Live Checklist
 
 - [ ] Provision Render PostgreSQL.
@@ -73,6 +78,9 @@ Optional SMS receipts:
 | Idempotency | Complete | Checkout and M-Pesa STK push keys. |
 | Security headers | Complete | `helmet` CSP. |
 | Rate limits | Complete | Auth, general API, and tenant-aware limits. |
+| Plan enforcement | Complete | Growth/Enterprise feature gates for analytics, purchasing, promotions, loyalty, and customer credit. |
+| Tenant uniqueness | Complete | Tenant-scoped product, customer, and promotion uniqueness. |
+| Tenant integration config | Complete | Per-tenant settings with env fallback for M-Pesa, eTIMS, SMS, and business receipt metadata. |
 | Inventory | Complete | Products, suppliers, POs, CSV, reorder suggestions. |
 | Operations | Complete | Shifts, expenses, receipt lookup, voids, refunds, audit logs. |
 | Reporting | Complete | Dashboard, analytics, reorder suggestions, CSV export. |

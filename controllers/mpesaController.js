@@ -1,7 +1,8 @@
-const { sequelize, Payment, Order, OrderItem, EtimsInvoice } = require('../models');
+const { sequelize, Payment, Order, OrderItem, EtimsInvoice, Tenant } = require('../models');
 const { initiateStkPush } = require('../utils/mpesa');
 const { reverseOrder } = require('../services/orderReversal');
 const { tenantWhere } = require('../utils/tenantScope');
+const { resolveTenantConfig } = require('../utils/tenantConfig');
 
 /**
  * POST /api/mpesa/stk-push
@@ -22,7 +23,7 @@ async function initiate(req, res) {
   try {
     const payment = await Payment.findOne({
       where: { id: paymentId },
-      include: [{ model: Order, where: tenantWhere(req) }]
+      include: [{ model: Order, where: tenantWhere(req), include: [{ model: Tenant }] }]
     });
 
     if (!payment) {
@@ -39,7 +40,8 @@ async function initiate(req, res) {
       phone,
       amount: payment.amount,
       accountReference: payment.Order.orderNumber,
-      transactionDesc: `Payment for order ${payment.Order.orderNumber}`
+      transactionDesc: `Payment for order ${payment.Order.orderNumber}`,
+      config: (await resolveTenantConfig(payment.Order.Tenant || payment.Order.tenantId)).mpesa
     });
 
     if (response.ResponseCode !== '0') {

@@ -17,10 +17,18 @@
  *   await sendReceipt(customerPhone, { orderNumber, total, businessName });
  */
 
-const ENABLED = Boolean(process.env.AFRICASTALKING_API_KEY);
+function buildSmsConfig(config = {}) {
+  return {
+    username: config.username || process.env.AFRICASTALKING_USERNAME || 'sandbox',
+    apiKey: config.apiKey || process.env.AFRICASTALKING_API_KEY,
+    senderId: config.senderId || process.env.AFRICASTALKING_SENDER_ID || ''
+  };
+}
 
-async function sendReceipt(phone, { orderNumber, total, businessName }) {
-  if (!ENABLED) {
+async function sendReceipt(phone, { orderNumber, total, businessName, smsConfig }) {
+  const config = buildSmsConfig(smsConfig);
+
+  if (!config.apiKey) {
     // Log the would-be SMS in dev so it's visible during local testing
     if (process.env.NODE_ENV !== 'production') {
       console.log(
@@ -38,21 +46,17 @@ async function sendReceipt(phone, { orderNumber, total, businessName }) {
       `Total KES ${Number(total).toFixed(2)}. ` +
       `Thank you for shopping with us!`;
 
-    const username = process.env.AFRICASTALKING_USERNAME || 'sandbox';
-    const apiKey = process.env.AFRICASTALKING_API_KEY;
-    const senderId = process.env.AFRICASTALKING_SENDER_ID || '';
-
     const body = new URLSearchParams({
-      username,
+      username: config.username,
       to: phone,
       message,
-      ...(senderId ? { from: senderId } : {})
+      ...(config.senderId ? { from: config.senderId } : {})
     });
 
     const response = await fetch('https://api.africastalking.com/version1/messaging', {
       method: 'POST',
       headers: {
-        apiKey,
+        apiKey: config.apiKey,
         Accept: 'application/json',
         'Content-Type': 'application/x-www-form-urlencoded'
       },
@@ -74,4 +78,4 @@ async function sendReceipt(phone, { orderNumber, total, businessName }) {
   }
 }
 
-module.exports = { sendReceipt, isEnabled: () => ENABLED };
+module.exports = { sendReceipt, isEnabled: (config) => Boolean(buildSmsConfig(config).apiKey) };

@@ -1,11 +1,13 @@
 const axios = require('axios');
 
-const {
-  ETIMS_ENV = 'sandbox',
-  ETIMS_BASE_URL,       // set once you have your KRA VSCU endpoint
-  ETIMS_API_KEY,        // or whatever auth scheme your SI credentials use
-  ETIMS_DEVICE_SERIAL   // the CU/device identifier issued during SI registration
-} = process.env;
+function buildConfig(config = {}) {
+  return {
+    env: config.env || process.env.ETIMS_ENV || 'sandbox',
+    baseUrl: config.baseUrl || process.env.ETIMS_BASE_URL,
+    apiKey: config.apiKey || process.env.ETIMS_API_KEY,
+    deviceSerial: config.deviceSerial || process.env.ETIMS_DEVICE_SERIAL
+  };
+}
 
 /**
  * Sends one invoice payload to KRA eTIMS (VSCU).
@@ -19,20 +21,25 @@ const {
  * Must return { success: true, cuInvoiceNumber, qrCodeUrl, raw } on success,
  * or throw an Error on failure so the worker can retry / mark it failed.
  */
-async function transmitInvoice(payload) {
-  if (!ETIMS_BASE_URL) {
+async function transmitInvoice(payload, inputConfig = {}) {
+  const config = buildConfig(inputConfig);
+
+  if (!config.baseUrl) {
     throw new Error(
       'ETIMS_BASE_URL is not configured. Complete SI registration on iTax first.'
     );
   }
+  if (!config.apiKey || !config.deviceSerial) {
+    throw new Error('ETIMS_API_KEY and ETIMS_DEVICE_SERIAL must be configured before syncing invoices.');
+  }
 
   const { data } = await axios.post(
-    `${ETIMS_BASE_URL}/invoices`,
+    `${config.baseUrl}/invoices`,
     payload,
     {
       headers: {
-        Authorization: `Bearer ${ETIMS_API_KEY}`,
-        'X-Device-Serial': ETIMS_DEVICE_SERIAL,
+        Authorization: `Bearer ${config.apiKey}`,
+        'X-Device-Serial': config.deviceSerial,
         'Content-Type': 'application/json'
       },
       timeout: 15000

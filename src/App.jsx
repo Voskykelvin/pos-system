@@ -27,8 +27,8 @@ const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', path: '/', roles: ['admin', 'manager'] },
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
-  { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] },
-  { id: 'customers', label: 'Customers', path: '/customers', roles: ['admin', 'manager'] },
+  { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'], feature: 'advanced_analytics' },
+  { id: 'customers', label: 'Customers', path: '/customers', roles: ['admin', 'manager'], feature: 'customer_credit' },
   { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] },
   { id: 'saas_owner', label: 'Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
@@ -50,7 +50,8 @@ export default function App() {
     userId: null,
     cashierId: null,
     demoMode: false,
-    user: null
+    user: null,
+    tenant: null
   });
 
   useEffect(() => {
@@ -110,8 +111,12 @@ export default function App() {
   const visibleNavItems = useMemo(() => {
     const role = bootstrap.user?.role;
     if (!role) return [];
-    return NAV_ITEMS.filter((item) => item.roles.includes(role));
-  }, [bootstrap.user]);
+    const enabledFeatures = bootstrap.tenant?.enabledFeatures || [];
+    return NAV_ITEMS.filter((item) => (
+      item.roles.includes(role) &&
+      (!item.feature || !bootstrap.tenant || enabledFeatures.includes(item.feature))
+    ));
+  }, [bootstrap.user, bootstrap.tenant]);
 
   const allowedIds = visibleNavItems.map((i) => i.id);
 
@@ -148,7 +153,7 @@ export default function App() {
   function handleLogout() {
     localStorage.removeItem('pos_auth_token');
     setAuthToken(null);
-    setBootstrap({ userId: null, cashierId: null, user: null, demoMode: false });
+    setBootstrap({ userId: null, cashierId: null, user: null, tenant: null, demoMode: false });
     window.history.pushState({}, '', '/');
     setView('dashboard');
   }
@@ -194,10 +199,11 @@ export default function App() {
           setShowLogin(false);
           if (payload.user) {
             setBootstrap({
-              userId: payload.user.id,
-              cashierId: payload.user.id,
-              user: payload.user
-            });
+            userId: payload.user.id,
+            cashierId: payload.user.id,
+            user: payload.user,
+            tenant: payload.tenant || null
+          });
           }
         }}
         onNavigateHome={goToMasterHomepage}
@@ -267,7 +273,7 @@ export default function App() {
           <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
         )}
         {view === 'inventory' && allowedIds.includes('inventory') && (
-          <ProductAdmin authToken={authToken} userId={bootstrap.userId} />
+          <ProductAdmin authToken={authToken} userId={bootstrap.userId} tenant={bootstrap.tenant} />
         )}
         {view === 'analytics' && allowedIds.includes('analytics') && (
           <Analytics authToken={authToken} />

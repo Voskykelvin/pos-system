@@ -39,6 +39,11 @@ module.exports = (sequelize, DataTypes) => {
     ownerUserId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    settings: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: {}
     }
   }, {
     tableName: 'tenants',

@@ -1,4 +1,4 @@
-const { User } = require('../models');
+const { User, Tenant } = require('../models');
 const { verifyAuthToken } = require('../utils/authToken');
 
 async function authenticate(req, res, next) {
@@ -11,10 +11,15 @@ async function authenticate(req, res, next) {
     }
 
     const payload = verifyAuthToken(token);
-    const user = await User.findByPk(payload.sub);
+    const user = await User.findByPk(payload.sub, {
+      include: [{ model: Tenant, attributes: ['id', 'name', 'plan', 'status', 'currency', 'country'] }]
+    });
 
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'User is inactive or missing' });
+    }
+    if (user.Tenant?.status === 'suspended') {
+      return res.status(403).json({ error: 'This store is suspended. Contact the platform owner.' });
     }
 
     req.user = {
@@ -28,6 +33,14 @@ async function authenticate(req, res, next) {
     req.tenantId = user.role === 'super_admin' && req.get('x-tenant-id')
       ? req.get('x-tenant-id')
       : user.tenantId || null;
+    req.tenant = user.Tenant ? {
+      id: user.Tenant.id,
+      name: user.Tenant.name,
+      plan: user.Tenant.plan,
+      status: user.Tenant.status,
+      currency: user.Tenant.currency,
+      country: user.Tenant.country
+    } : null;
 
     return next();
   } catch (err) {

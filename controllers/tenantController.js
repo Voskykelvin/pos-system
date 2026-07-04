@@ -62,6 +62,12 @@ function buildDailySeries(start, end) {
   return series;
 }
 
+function sanitizeTenant(tenant) {
+  const plain = typeof tenant.get === 'function' ? tenant.get({ plain: true }) : tenant;
+  const { settings, ...safe } = plain;
+  return safe;
+}
+
 /**
  * GET /api/plans
  * Public plan catalog for the homepage and signup flow.
@@ -263,7 +269,7 @@ async function superAdminDashboard(req, res) {
       }).length;
 
     const tenantRows = tenants.map((tenant) => {
-      const plain = tenant.get({ plain: true });
+      const plain = sanitizeTenant(tenant);
       const activity = tenantActivity.get(tenant.id) || {
         attemptedOrders: 0,
         paidOrders: 0,
@@ -364,7 +370,7 @@ async function updateTenant(req, res) {
     const tenant = await Tenant.findByPk(req.params.id);
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
-    const { status, plan, currency } = req.body;
+    const { status, plan, currency, settings } = req.body;
     const updates = {};
 
     if (status !== undefined) {
@@ -385,9 +391,16 @@ async function updateTenant(req, res) {
       updates.currency = String(currency).toUpperCase();
     }
 
+    if (settings !== undefined) {
+      if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        return res.status(400).json({ error: 'settings must be an object' });
+      }
+      updates.settings = settings;
+    }
+
     await tenant.update(updates);
 
-    return res.json(tenant);
+    return res.json(sanitizeTenant(tenant));
   } catch (err) {
     return res.status(400).json({ error: err.message });
   }

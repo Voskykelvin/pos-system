@@ -18,15 +18,11 @@ const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { sendReceipt } = require('../services/smsService');
 const { tenantWhere } = require('../utils/tenantScope');
+const { resolveTenantConfig } = require('../utils/tenantConfig');
+const { assertPlanFeature } = require('../middleware/planEnforcement');
 
 // Loyalty: 1 point earned per KES 100 spent (configurable)
 const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
-
-// Set from your own business record / env config
-const BUSINESS = {
-  name: process.env.BUSINESS_NAME || 'Jijenge POS',
-  kraPin: process.env.BUSINESS_KRA_PIN
-};
 
 // Maps a Category's taxCategory to the actual VAT rate applied at checkout.
 // Adjust STANDARD_VAT_RATE if the statutory rate changes.
@@ -71,6 +67,21 @@ async function checkout(req, res) {
     return res.status(400).json({ error: 'Credit payments require a selected customer' });
   }
 
+  try {
+    if (payments.some((p) => p.method === 'credit')) {
+      await assertPlanFeature(req, 'customer_credit');
+    }
+    if (Number(redeemPoints || 0) > 0) {
+      await assertPlanFeature(req, 'loyalty');
+    }
+    if (promotionCode) {
+      await assertPlanFeature(req, 'promotions');
+    }
+  } catch (err) {
+    return res.status(err.status || 403).json({ error: err.message });
+  }
+
+  const runtimeConfig = await resolveTenantConfig(req.tenantId);
   const t = await sequelize.transaction();
 
   try {
@@ -275,7 +286,7 @@ async function checkout(req, res) {
     const payload = buildEtimsPayload({
       order: { ...order.toJSON(), customerKraPin },
       orderItems: etimsLineItems,
-      business: BUSINESS
+      business: runtimeConfig.business
     });
 
     await EtimsInvoice.create({
@@ -348,7 +359,8 @@ async function checkout(req, res) {
             sendReceipt(customer.phone, {
               orderNumber: order.orderNumber,
               total,
-              businessName: BUSINESS.name
+              businessName: runtimeConfig.business.name,
+              smsConfig: runtimeConfig.sms
             }).catch(() => {}); // fire-and-forget
           }
         }

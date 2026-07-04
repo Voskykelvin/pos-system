@@ -21,6 +21,9 @@ Implemented pieces:
 - Auth tokens that carry tenant context.
 - Tenant-scoped admin, customer, inventory, purchasing, promotion, and operations queries where the request has a tenant.
 - Platform owner dashboard for tenant status and plan oversight.
+- Tenant-scoped product SKU/barcode, customer phone, and promotion code uniqueness.
+- Plan feature enforcement for Growth/Enterprise modules.
+- Optional tenant runtime settings for business metadata and integration credential lookup.
 
 ## Trade-Offs
 
@@ -39,7 +42,6 @@ Implemented pieces:
 
 ## SaaS Product Follow-Up
 
-- Add tenant-aware uniqueness for product SKU/barcode, customer phone, and promotion code.
-- Add subscription billing and plan enforcement.
+- Add subscription billing provider integration.
 - Add tenant export/import and soft-delete restore workflows.
-- Add per-tenant payment, tax, receipt, and localization configuration.
+- Expand tenant payment, tax, receipt, and localization configuration UI.

@@ -9,6 +9,7 @@ const { startEtimsScheduler } = require('./services/etimsScheduler');
 const { seedDemoData } = require('./services/demoSeed');
 const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
+const { getPlan } = require('./utils/planCatalog');
 
 // Routes require the route files after app and limiter are configured.
 const authRoutes = require('./routes/auth');
@@ -79,10 +80,15 @@ app.get('/api/site-map', (req, res) => {
 });
 
 app.get('/api/bootstrap', authenticate, async (req, res) => {
+  const tenantPlan = req.tenant?.plan ? getPlan(req.tenant.plan) : null;
   res.json({
     userId: req.user.id,
     cashierId: req.user.id,
     user: req.user,
+    tenant: req.tenant ? {
+      ...req.tenant,
+      enabledFeatures: tenantPlan?.enabledFeatures || []
+    } : null,
     demoMode: isUsingMemoryDatabase()
   });
 });

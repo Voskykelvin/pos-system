@@ -14,6 +14,7 @@ Last reviewed: 2026-07-04.
 - Checkout and M-Pesa STK push use idempotency middleware.
 - SQL access is through Sequelize or migration scripts with parameterized replacements.
 - Production schema changes use `npm run db:migrate`.
+- CI runs the frontend build, smoke test, and a visible dependency audit on pushes and pull requests.
 
 ## Audit Notes
 
@@ -30,7 +31,7 @@ Known dependency follow-up:
 - Review the latest Vite/esbuild advisory status before exposing any dev server outside localhost.
 - `node-cron` is on v4.5.0.
 - `npm audit --omit=dev` still reports the Sequelize-transitive `uuid < 11.1.1` advisory. npm's forced fix downgrades Sequelize and should not be applied without a planned ORM migration.
-- Add `npm audit` to CI once CI exists.
+- `npm audit --omit=dev` is visible in CI but non-blocking until the Sequelize-transitive advisory has a safe upgrade path.
 
 ## Production Hardening Checklist
 

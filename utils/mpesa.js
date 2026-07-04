@@ -1,43 +1,59 @@
 const axios = require('axios');
 
-const {
-  MPESA_ENV = 'sandbox',
-  MPESA_CONSUMER_KEY,
-  MPESA_CONSUMER_SECRET,
-  MPESA_SHORTCODE,
-  MPESA_PASSKEY,
-  MPESA_CALLBACK_URL
-} = process.env;
-
-const BASE_URL =
-  MPESA_ENV === 'production'
+function mpesaBaseUrl(env = 'sandbox') {
+  return env === 'production'
     ? 'https://api.safaricom.co.ke'
     : 'https://sandbox.safaricom.co.ke';
+}
 
-// Simple in-memory token cache. Daraja tokens are valid ~1 hour, so we
-// refresh a little early rather than requesting a fresh one on every call.
-let cachedToken = null;
-let tokenExpiresAt = 0;
+function buildConfig(config = {}) {
+  return {
+    env: config.env || process.env.MPESA_ENV || 'sandbox',
+    consumerKey: config.consumerKey || process.env.MPESA_CONSUMER_KEY,
+    consumerSecret: config.consumerSecret || process.env.MPESA_CONSUMER_SECRET,
+    shortcode: config.shortcode || process.env.MPESA_SHORTCODE,
+    passkey: config.passkey || process.env.MPESA_PASSKEY,
+    callbackUrl: config.callbackUrl || process.env.MPESA_CALLBACK_URL
+  };
+}
 
-async function getAccessToken() {
-  if (cachedToken && Date.now() < tokenExpiresAt) {
-    return cachedToken;
+function requireConfig(config) {
+  for (const key of ['consumerKey', 'consumerSecret', 'shortcode', 'passkey', 'callbackUrl']) {
+    if (!config[key]) {
+      throw new Error(`M-Pesa ${key} is not configured`);
+    }
+  }
+}
+
+// Daraja tokens are valid about 1 hour. Cache per credential pair so tenants
+// with separate credentials do not reuse each other's token.
+const tokenCache = new Map();
+
+async function getAccessToken(inputConfig) {
+  const config = buildConfig(inputConfig);
+  requireConfig(config);
+  const baseUrl = mpesaBaseUrl(config.env);
+  const cacheKey = `${baseUrl}:${config.consumerKey}`;
+  const cached = tokenCache.get(cacheKey);
+
+  if (cached && Date.now() < cached.expiresAt) {
+    return cached.token;
   }
 
   const credentials = Buffer.from(
-    `${MPESA_CONSUMER_KEY}:${MPESA_CONSUMER_SECRET}`
+    `${config.consumerKey}:${config.consumerSecret}`
   ).toString('base64');
 
   const { data } = await axios.get(
-    `${BASE_URL}/oauth/v1/generate?grant_type=client_credentials`,
+    `${baseUrl}/oauth/v1/generate?grant_type=client_credentials`,
     { headers: { Authorization: `Basic ${credentials}` } }
   );
 
-  cachedToken = data.access_token;
-  // Refresh 60 seconds before actual expiry as a safety margin
-  tokenExpiresAt = Date.now() + (Number(data.expires_in) - 60) * 1000;
+  const token = data.access_token;
+  const expiresAt = Date.now() + (Number(data.expires_in) - 60) * 1000;
+  tokenCache.set(cacheKey, { token, expiresAt });
 
-  return cachedToken;
+  return token;
 }
 
 function generateTimestamp() {
@@ -53,8 +69,8 @@ function generateTimestamp() {
   );
 }
 
-function generatePassword(timestamp) {
-  return Buffer.from(`${MPESA_SHORTCODE}${MPESA_PASSKEY}${timestamp}`).toString(
+function generatePassword(timestamp, config) {
+  return Buffer.from(`${config.shortcode}${config.passkey}${timestamp}`).toString(
     'base64'
   );
 }
@@ -72,23 +88,26 @@ function normalizePhone(phone) {
  * Returns Safaricom's immediate acknowledgement, NOT the payment result.
  * The actual result arrives later at the callback URL.
  */
-async function initiateStkPush({ phone, amount, accountReference, transactionDesc }) {
-  const token = await getAccessToken();
+async function initiateStkPush({ phone, amount, accountReference, transactionDesc, config: inputConfig }) {
+  const config = buildConfig(inputConfig);
+  requireConfig(config);
+  const token = await getAccessToken(config);
   const timestamp = generateTimestamp();
-  const password = generatePassword(timestamp);
+  const password = generatePassword(timestamp, config);
+  const baseUrl = mpesaBaseUrl(config.env);
 
   const { data } = await axios.post(
-    `${BASE_URL}/mpesa/stkpush/v1/processrequest`,
+    `${baseUrl}/mpesa/stkpush/v1/processrequest`,
     {
-      BusinessShortCode: MPESA_SHORTCODE,
+      BusinessShortCode: config.shortcode,
       Password: password,
       Timestamp: timestamp,
       TransactionType: 'CustomerPayBillOnline',
       Amount: Math.round(Number(amount)),
       PartyA: normalizePhone(phone),
-      PartyB: MPESA_SHORTCODE,
+      PartyB: config.shortcode,
       PhoneNumber: normalizePhone(phone),
-      CallBackURL: MPESA_CALLBACK_URL,
+      CallBackURL: config.callbackUrl,
       AccountReference: accountReference,
       TransactionDesc: transactionDesc
     },

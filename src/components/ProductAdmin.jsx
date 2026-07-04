@@ -17,7 +17,16 @@ const EMPTY_FORM = {
   imageUrl: ''
 };
 
-export default function ProductAdmin({ authToken, userId }) {
+const PRODUCT_TABS = [
+  { id: 'products', label: 'Products' },
+  { id: 'suppliers', label: 'Suppliers', feature: 'purchasing' },
+  { id: 'pos', label: 'Purchase Orders', feature: 'purchasing' },
+  { id: 'reorder', label: 'Reorder Suggestions', feature: 'reorder_suggestions' },
+  { id: 'promotions', label: 'Promotions', feature: 'promotions' },
+  { id: 'csv', label: 'CSV Import/Export' }
+];
+
+export default function ProductAdmin({ authToken, userId, tenant }) {
   const [activeTab, setActiveTab] = useState('products'); // products | suppliers | pos | reorder | promotions | csv
 
   // Products state
@@ -54,6 +63,9 @@ export default function ProductAdmin({ authToken, userId }) {
   // Promotions state
   const [promotions, setPromotions] = useState([]);
   const [promoForm, setPromoForm] = useState({ code: '', type: 'percent', value: '', minOrderTotal: 0, maxUses: 0, description: '' });
+  const enabledFeatures = tenant?.enabledFeatures || [];
+  const canUseFeature = (feature) => !feature || !tenant || enabledFeatures.includes(feature);
+  const visibleTabs = PRODUCT_TABS.filter((tab) => canUseFeature(tab.feature));
 
   async function api(path, options = {}) {
     const res = await fetch(path, {
@@ -114,6 +126,12 @@ export default function ProductAdmin({ authToken, userId }) {
     loadProducts();
     loadCategories();
   }, [authToken]);
+
+  useEffect(() => {
+    if (!visibleTabs.some((tab) => tab.id === activeTab)) {
+      setActiveTab('products');
+    }
+  }, [activeTab, visibleTabs]);
 
   useEffect(() => {
     if (activeTab === 'suppliers') loadSuppliers();
@@ -359,12 +377,16 @@ export default function ProductAdmin({ authToken, userId }) {
       {/* Sub-nav tabs */}
       <div className={styles.topBar}>
         <div className={styles.tabGroup}>
-          <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.active : ''}`} onClick={() => setActiveTab('products')}>Products</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'suppliers' ? styles.active : ''}`} onClick={() => setActiveTab('suppliers')}>Suppliers</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'pos' ? styles.active : ''}`} onClick={() => setActiveTab('pos')}>Purchase Orders</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'reorder' ? styles.active : ''}`} onClick={() => setActiveTab('reorder')}>Reorder Suggestions</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'promotions' ? styles.active : ''}`} onClick={() => setActiveTab('promotions')}>Promotions</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'csv' ? styles.active : ''}`} onClick={() => setActiveTab('csv')}>CSV Import/Export</button>
+          {visibleTabs.map((tab) => (
+            <button
+              key={tab.id}
+              className={`${styles.tabBtn} ${activeTab === tab.id ? styles.active : ''}`}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
       </div>
 
@@ -437,7 +459,7 @@ export default function ProductAdmin({ authToken, userId }) {
       )}
 
       {/* SUPPLIERS TAB */}
-      {activeTab === 'suppliers' && (
+      {activeTab === 'suppliers' && canUseFeature('purchasing') && (
         <div className={styles.tabContent}>
           <h2>Suppliers Directory</h2>
           <form onSubmit={handleCreateSupplier} className={styles.inlineForm}>
@@ -467,7 +489,7 @@ export default function ProductAdmin({ authToken, userId }) {
       )}
 
       {/* PURCHASE ORDERS TAB */}
-      {activeTab === 'pos' && (
+      {activeTab === 'pos' && canUseFeature('purchasing') && (
         <div className={styles.tabContent}>
           <h2>Create Purchase Order</h2>
           <form onSubmit={handleCreatePo} className={styles.poForm}>
@@ -536,7 +558,7 @@ export default function ProductAdmin({ authToken, userId }) {
       )}
 
       {/* REORDER SUGGESTIONS TAB */}
-      {activeTab === 'reorder' && (
+      {activeTab === 'reorder' && canUseFeature('reorder_suggestions') && (
         <div className={styles.tabContent}>
           <div className={styles.tabHeaderAction}>
             <div>
@@ -573,7 +595,7 @@ export default function ProductAdmin({ authToken, userId }) {
       )}
 
       {/* PROMOTIONS TAB */}
-      {activeTab === 'promotions' && (
+      {activeTab === 'promotions' && canUseFeature('promotions') && (
         <div className={styles.tabContent}>
           <h2>Promotions & Discount Codes</h2>
           <form onSubmit={handleCreatePromo} className={styles.inlineForm}>

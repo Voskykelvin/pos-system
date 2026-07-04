@@ -1,7 +1,8 @@
 const { Op } = require('sequelize');
-const { User } = require('../models');
+const { User, Tenant } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 const { verifyPassword } = require('../utils/passwords');
+const { getPlan } = require('../utils/planCatalog');
 
 function publicUser(user) {
   return {
@@ -27,16 +28,31 @@ async function login(req, res) {
       where: {
         isActive: true,
         [Op.or]: [{ email: { [Op.iLike]: trimmed } }, { phone: trimmed }]
-      }
+      },
+      include: [{ model: Tenant, attributes: ['id', 'name', 'plan', 'status', 'currency', 'country'] }]
     });
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid login details' });
     }
+    if (user.Tenant?.status === 'suspended') {
+      return res.status(403).json({ error: 'This store is suspended. Contact the platform owner.' });
+    }
+
+    const tenantPlan = user.Tenant?.plan ? getPlan(user.Tenant.plan) : null;
 
     return res.json({
       token: createAuthToken(user),
-      user: publicUser(user)
+      user: publicUser(user),
+      tenant: user.Tenant ? {
+        id: user.Tenant.id,
+        name: user.Tenant.name,
+        plan: user.Tenant.plan,
+        status: user.Tenant.status,
+        currency: user.Tenant.currency,
+        country: user.Tenant.country,
+        enabledFeatures: tenantPlan?.enabledFeatures || []
+      } : null
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });

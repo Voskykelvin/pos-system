@@ -8,7 +8,7 @@ router.use(authenticate, requireRoles('admin', 'manager'));
 // POST /api/etims/sync - manually trigger a sync batch, useful for testing
 router.post('/sync', async (req, res) => {
   try {
-    const results = await processQueue();
+    const results = await processQueue({ tenantId: req.tenantId || null });
     res.json(results);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -18,7 +18,7 @@ router.post('/sync', async (req, res) => {
 // POST /api/etims/requeue-failed - retry invoices that hit max retries
 router.post('/requeue-failed', async (req, res) => {
   try {
-    const result = await requeueFailed();
+    const result = await requeueFailed({ tenantId: req.tenantId || null });
     res.json(result);
   } catch (err) {
     res.status(500).json({ error: err.message });

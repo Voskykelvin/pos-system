@@ -43,6 +43,10 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 - Platform owner dashboard at `/super-admin` with MRR, signup activation, store activity, tenant health, and plan packaging.
 - Shared Starter, Growth, and Enterprise tier catalog for plan pricing and feature packaging.
 - Tenant-aware model fields and scoped admin/customer/operations queries where tenant context is present.
+- Tenant-scoped uniqueness for product SKU/barcode, customer phone, and promotion codes.
+- Plan feature enforcement for analytics, purchasing, promotions, loyalty, and customer credit.
+- Optional per-tenant runtime settings for business receipt metadata, M-Pesa, eTIMS, and SMS credentials with environment-variable fallback.
+- CI workflow for build, smoke test, and dependency-audit visibility.
 
 ## Credential-Blocked Work
 
@@ -52,11 +56,9 @@ These items cannot be completed entirely in code without live accounts, secrets,
 - Safaricom Daraja production credentials and public callback URL.
 - KRA eTIMS live registration, device serial, base URL, and API key.
 - Africa's Talking live SMS username, API key, and sender ID.
-- Subscription billing provider setup if the SaaS offering moves beyond manual plan management.
+- Subscription billing provider credentials and webhook setup if the SaaS offering moves beyond manual plan management.
 
 ## Known Follow-Up
 
-- Convert global uniqueness constraints for product SKU/barcode, customer phone, and promotion code into tenant-aware uniqueness before onboarding many independent stores.
-- Add CI for `npm run build`, `npm run smoke`, and `npm audit`.
 - Add a real payment subscription integration for SaaS billing.
-- Add tenant-aware eTIMS invoice filtering if each tenant will manage its own KRA integration.
+- Add tenant export/import and restore workflows for store-level operational support.

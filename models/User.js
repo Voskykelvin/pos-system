@@ -42,6 +42,7 @@ module.exports = (sequelize, DataTypes) => {
   });
 
   User.associate = (models) => {
+    User.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     User.hasMany(models.Order, { foreignKey: 'cashierId' });
     User.hasMany(models.InventoryTransaction, { foreignKey: 'userId' });
     User.hasMany(models.AuditLog, { foreignKey: 'userId', as: 'auditActions' });
