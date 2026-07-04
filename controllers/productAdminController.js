@@ -23,7 +23,7 @@ async function create(req, res) {
   const {
     sku, barcode, name, unit, isWeighted,
     costPrice, sellingPrice, reorderLevel,
-    stockQuantity, categoryId
+    stockQuantity, categoryId, imageUrl
   } = req.body;
 
   if (!sku || !name || !sellingPrice || !categoryId) {
@@ -45,6 +45,7 @@ async function create(req, res) {
       reorderLevel: reorderLevel ?? 5,
       stockQuantity: stockQuantity || 0,
       categoryId,
+      imageUrl: imageUrl || null,
       ...withTenant(req)
     }, { transaction: t });
 
@@ -82,7 +83,7 @@ async function update(req, res) {
   const { id } = req.params;
   const {
     sku, barcode, name, unit, isWeighted,
-    costPrice, sellingPrice, reorderLevel, categoryId, isActive
+    costPrice, sellingPrice, reorderLevel, categoryId, imageUrl, isActive
   } = req.body;
 
   try {
@@ -94,8 +95,17 @@ async function update(req, res) {
     // Note: stockQuantity is deliberately NOT editable here. Stock changes
     // must go through /adjust-stock so every change leaves an audit trail.
     await product.update({
-      sku, barcode, name, unit, isWeighted,
-      costPrice, sellingPrice, reorderLevel, categoryId, isActive
+      sku,
+      barcode: barcode || null,
+      name,
+      unit,
+      isWeighted,
+      costPrice,
+      sellingPrice,
+      reorderLevel,
+      categoryId,
+      imageUrl: imageUrl || null,
+      isActive
     });
 
     await logAudit({

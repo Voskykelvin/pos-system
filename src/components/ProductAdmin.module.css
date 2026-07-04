@@ -72,6 +72,11 @@
   background: var(--accent);
   color: var(--accent-ink);
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  white-space: nowrap;
 }
 
 .tableWrap {
@@ -158,7 +163,7 @@
 }
 
 .drawer {
-  width: 420px;
+  width: min(560px, 100vw);
   max-width: 100%;
   background: var(--surface);
   height: 100vh;
@@ -241,7 +246,6 @@
 }
 
 .secondaryBtn {
-  flex: 1;
   padding: 12px;
   font-size: 14px;
   font-weight: 600;
@@ -250,6 +254,12 @@
   background: var(--surface);
   cursor: pointer;
   color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  text-decoration: none;
+  white-space: nowrap;
 }
 
 .saveBtn {
@@ -287,6 +297,166 @@
   color: var(--pos-success);
   font-size: 13px;
   margin-top: 8px;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+
+.controls .searchInput {
+  flex: 1 1 260px;
+}
+
+.checkboxLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.checkboxLabel input {
+  margin: 0;
+}
+
+.successBanner,
+.errorBanner {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.successBanner {
+  color: var(--pos-success);
+  background: var(--pos-success-bg);
+  border: 1px solid #bbf7d0;
+}
+
+.errorBanner {
+  color: var(--danger);
+  background: var(--pos-danger-bg);
+  border: 1px solid #fecaca;
+}
+
+.drawerOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: stretch;
+  justify-content: flex-end;
+  background: rgba(15, 23, 42, 0.42);
+}
+
+.drawer h3,
+.catModal h3,
+.barcodeModal h3 {
+  margin: 0 0 18px;
+  font-size: 20px;
+}
+
+.form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px 12px;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form input,
+.form select,
+.form textarea {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  color: var(--ink);
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.form textarea {
+  min-height: 112px;
+  padding: 10px 12px;
+  resize: vertical;
+}
+
+.form input::placeholder {
+  color: #94a3b8;
+}
+
+.fullWidth,
+.form .drawerActions {
+  grid-column: 1 / -1;
+}
+
+.form .checkboxLabel {
+  align-self: end;
+  min-height: 42px;
+  display: flex;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  color: var(--ink);
+}
+
+.form .checkboxLabel input {
+  width: auto;
+  min-height: auto;
+  padding: 0;
+}
+
+.drawerActions > button {
+  flex: 1;
+}
+
+.subtitle {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.adjustSection {
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.adjustSection h4 {
+  margin: 0 0 12px;
+}
+
+.adjustForm {
+  display: grid;
+  gap: 10px;
+}
+
+.adjustForm input,
+.adjustForm select {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  color: var(--ink);
+  padding: 0 12px;
+  font-size: 14px;
 }
 
 /* Batch 3 Sub-nav and Tab Styling */
@@ -398,6 +568,10 @@
   flex: 1;
 }
 
+.categorySelectRow button {
+  flex: 0 0 auto;
+}
+
 .tabHeaderAction {
   display: flex;
   justify-content: space-between;
@@ -412,6 +586,8 @@
   border-radius: 12px;
   max-width: 400px;
   width: 90%;
+  margin: auto;
+  align-self: center;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
@@ -424,6 +600,8 @@
   width: 95%;
   max-height: 85vh;
   overflow-y: auto;
+  margin: auto;
+  align-self: center;
   box-shadow: 0 10px 25px rgba(0,0,0,0.2);
 }
 
@@ -533,6 +711,10 @@
     padding: 18px;
   }
 
+  .form {
+    grid-template-columns: 1fr;
+  }
+
   .row2 {
     grid-template-columns: 1fr;
   }
@@ -556,5 +738,3 @@
     grid-template-columns: 1fr;
   }
 }
-
-

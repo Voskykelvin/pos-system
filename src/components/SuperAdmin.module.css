@@ -68,7 +68,7 @@
   border-right: 0;
 }
 
-.segmented .activeSegment {
+.activeSegment {
   background: var(--pos-accent);
   color: #ffffff;
 }

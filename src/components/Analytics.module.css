@@ -83,7 +83,7 @@
   border-right: 0;
 }
 
-.segmented .activeSegment {
+.activeSegment {
   background: var(--accent);
   color: var(--ink);
 }

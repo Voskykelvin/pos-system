@@ -14,25 +14,17 @@ function formatTime(value) {
 
 export default function Dashboard({ authToken }) {
   const [report, setReport] = useState(null);
-  const [siteMap, setSiteMap] = useState(null);
   const [error, setError] = useState(null);
 
   async function load() {
     try {
-      const [reportRes, siteMapRes] = await Promise.all([
-        fetch('/api/reports/today', {
-          headers: { Authorization: `Bearer ${authToken}` }
-        }),
-        fetch('/api/site-map')
-      ]);
-      const [reportData, siteMapData] = await Promise.all([
-        reportRes.json(),
-        siteMapRes.json()
-      ]);
+      const reportRes = await fetch('/api/reports/today', {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const reportData = await reportRes.json();
 
       if (!reportRes.ok) throw new Error(reportData.error || 'Report failed');
       setReport(reportData);
-      setSiteMap(siteMapData);
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -158,23 +150,6 @@ export default function Dashboard({ authToken }) {
           )}
         </section>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
-            <h2>Site map</h2>
-            <span>{siteMap?.api?.length || 0} API</span>
-          </div>
-          <div className={styles.routeList}>
-            {(siteMap?.screens || []).map((screen) => (
-              <a className={styles.routeRow} href={screen.path} key={screen.path}>
-                <strong>{screen.path}</strong>
-                <span>
-                  <b>{screen.name}</b>
-                  <small>{screen.purpose}</small>
-                </span>
-              </a>
-            ))}
-          </div>
-        </section>
       </div>
     </section>
   );

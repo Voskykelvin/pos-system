@@ -5,6 +5,7 @@ import styles from './Checkout.module.css';
 import { addOrderToQueue, getCachedCatalog, cacheCatalog } from '../utils/offlineQueue';
 
 const VAT_RATES = { standard: 0.16, zero_rated: 0, exempt: 0 };
+const SCAN_CODE_PATTERN = /^[A-Za-z0-9._-]{4,}$/;
 
 function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
@@ -275,38 +276,90 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [lastReceipt, setLastReceipt] = useState(null);
   const pollRef = useRef(null);
 
+  const addToCart = useCallback((product) => {
+    setCart((prev) => {
+      const existing = prev.find((i) => i.productId === product.id);
+      if (existing) return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      return [...prev, {
+        productId: product.id,
+        name: product.name,
+        unitPrice: isWholesale ? Number(product.wholesalePrice || product.sellingPrice) : Number(product.sellingPrice),
+        quantity: 1,
+        taxCategory: product.Category?.taxCategory || 'standard'
+      }];
+    });
+    setQuery('');
+    setResults([]);
+    setOrderStatus(null);
+    setLastReceipt(null);
+  }, [isWholesale]);
+
+  const lookupProducts = useCallback(async (term, { preferBarcode = false, exactCode = false } = {}) => {
+    const normalized = term.trim();
+    if (!normalized) return [];
+
+    let data = [];
+    if (!navigator.onLine) {
+      const cached = await getCachedCatalog();
+      const lowered = normalized.toLowerCase();
+      data = cached.filter((p) => {
+        const barcode = p.barcode || '';
+        const sku = p.sku || '';
+        if (exactCode) return barcode === normalized || sku === normalized;
+        return (
+          p.name.toLowerCase().includes(lowered) ||
+          barcode.toLowerCase().includes(lowered) ||
+          sku.toLowerCase().includes(lowered)
+        );
+      });
+    } else {
+      if (preferBarcode) {
+        const res = await fetch(`/api/products/search?barcode=${encodeURIComponent(normalized)}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        data = await res.json();
+      }
+
+      if ((!Array.isArray(data) || data.length === 0) && normalized.length >= 2) {
+        const res = await fetch(`/api/products/search?q=${encodeURIComponent(normalized)}`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        data = await res.json();
+        if (exactCode && Array.isArray(data)) {
+          data = data.filter((p) => p.barcode === normalized || p.sku === normalized);
+        }
+      }
+
+      if (Array.isArray(data) && data.length > 0) {
+        await cacheCatalog(data);
+      }
+    }
+
+    return Array.isArray(data) ? data : [];
+  }, [authToken]);
+
+  const addScannedProduct = useCallback(async (code) => {
+    const normalized = code.trim();
+    if (!SCAN_CODE_PATTERN.test(normalized)) return false;
+
+    const data = await lookupProducts(normalized, { preferBarcode: true, exactCode: true });
+    if (data.length === 0) return false;
+    addToCart(data[0]);
+    return true;
+  }, [addToCart, lookupProducts]);
+
   // Debounced product search
   useEffect(() => {
     if (query.trim().length < 2) { setResults([]); return; }
     const h = setTimeout(async () => {
       try {
         const term = query.trim();
-        const searchParams = /^\d{6,}$/.test(term)
-          ? `barcode=${encodeURIComponent(term)}`
-          : `q=${encodeURIComponent(term)}`;
-
-        let data = [];
-        if (!navigator.onLine) {
-          const cached = await getCachedCatalog();
-          data = cached.filter(p =>
-            p.name.toLowerCase().includes(term) ||
-            (p.barcode && p.barcode.includes(term)) ||
-            (p.sku && p.sku.includes(term))
-          );
-        } else {
-          const res = await fetch(`/api/products/search?${searchParams}`, {
-            headers: { Authorization: `Bearer ${authToken}` }
-          });
-          data = await res.json();
-          if (data.length > 0) {
-            await cacheCatalog(data); // Append/update cache for these searched items
-          }
-        }
+        const data = await lookupProducts(term, { preferBarcode: /^\d{6,}$/.test(term) });
         setResults(data);
       } catch { setResults([]); }
     }, 250);
     return () => clearTimeout(h);
-  }, [authToken, query]);
+  }, [lookupProducts, query]);
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
@@ -330,26 +383,9 @@ export default function Checkout({ authToken, cashierId, user }) {
       if (e.key === 'Enter') {
         const barcode = buffer.trim();
         buffer = '';
-        if (/^\d{4,}$/.test(barcode)) {
+        if (SCAN_CODE_PATTERN.test(barcode)) {
           e.preventDefault();
-          try {
-            let data = [];
-            if (!navigator.onLine) {
-              const cached = await getCachedCatalog();
-              data = cached.filter(p => p.barcode === barcode || p.sku === barcode);
-            } else {
-              const res = await fetch(`/api/products/search?barcode=${encodeURIComponent(barcode)}`, {
-                headers: { Authorization: `Bearer ${authToken}` }
-              });
-              data = await res.json();
-              if (Array.isArray(data) && data.length > 0) {
-                await cacheCatalog(data);
-              }
-            }
-            if (Array.isArray(data) && data.length > 0) {
-              addToCart(data[0]);
-            }
-          } catch { /* ignore scan error */ }
+          try { await addScannedProduct(barcode); } catch { /* ignore scan error */ }
         }
       } else if (e.key.length === 1) {
         buffer += e.key;
@@ -358,7 +394,7 @@ export default function Checkout({ authToken, cashierId, user }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [authToken]);
+  }, [addScannedProduct]);
 
   // Sync payment total with cart total whenever total changes
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
@@ -377,24 +413,6 @@ export default function Checkout({ authToken, cashierId, user }) {
       setPayments((prev) => [{ ...prev[0], amount: total.toFixed(2) }]);
     }
   }, [total]);
-
-  function addToCart(product) {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.productId === product.id);
-      if (existing) return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
-      return [...prev, {
-        productId: product.id,
-        name: product.name,
-        unitPrice: isWholesale ? Number(product.wholesalePrice || product.sellingPrice) : Number(product.sellingPrice),
-        quantity: 1,
-        taxCategory: product.Category?.taxCategory || 'standard'
-      }];
-    });
-    setQuery('');
-    setResults([]);
-    setOrderStatus(null);
-    setLastReceipt(null);
-  }
 
   function changeQty(productId, delta) {
     setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
@@ -591,6 +609,11 @@ export default function Checkout({ authToken, cashierId, user }) {
             placeholder="Scan barcode or search a product..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={async (e) => {
+              if (e.key !== 'Enter') return;
+              const added = await addScannedProduct(query);
+              if (added) e.preventDefault();
+            }}
             autoFocus
           />
         </div>

@@ -189,9 +189,9 @@ export default function Homepage({
   }, [siteMap]);
 
   const featuredPlan = plans.find((plan) => plan.id === 'growth') || plans[1] || plans[0];
-  const navCtaLabel = isAuthenticated ? 'Open app' : 'Get started';
+  const navCtaLabel = isAuthenticated ? 'Open workspace' : 'Get started';
   const primaryCtaLabel = isAuthenticated ? 'Open my workspace' : 'Create my store';
-  const secondaryCtaLabel = isAuthenticated ? 'Back to app' : 'I already have an account';
+  const secondaryCtaLabel = isAuthenticated ? 'Back to workspace' : 'I already have an account';
 
   function startSignup(planId = 'starter') {
     onNavigateSignup(planId);
@@ -334,7 +334,7 @@ export default function Homepage({
           </div>
           <p className={styles.loginNote}>
             {isAuthenticated
-              ? 'You are signed in. Use the map below to jump into the live app pages, or go back to your workspace.'
+              ? 'You are signed in. Use the modules below to jump into your workspace.'
               : 'New owner? Create a store. Staff member? Ask the owner or manager to add you, then sign in.'}
           </p>
         </div>
@@ -354,14 +354,14 @@ export default function Homepage({
       <section className={styles.featureSection} id="features">
         <div className={styles.sectionHeader}>
           <p>Product</p>
-          <h2>The master frontend maps to the real app.</h2>
-          <span>These are not brochure-only features. They point to the same modules staff use after login.</span>
+          <h2>The workspace maps to live store operations.</h2>
+          <span>These are not brochure-only features. They open the same modules staff use after sign-in.</span>
         </div>
 
         <div className={styles.moduleGrid}>
           {featureScreens.map((screen) => (
             <a className={styles.moduleCard} href={featureHref(screen)} key={screen.path}>
-              <div className={styles.moduleEyebrow}>{screen.path}</div>
+              <div className={styles.moduleEyebrow}>{screenIntro(screen)}</div>
               <h3>{screen.name === 'Platform SaaS' ? 'Platform' : screen.name}</h3>
               <p>{screen.purpose}</p>
             </a>

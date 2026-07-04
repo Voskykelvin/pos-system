@@ -124,10 +124,12 @@ export default function ProductAdmin({ authToken, userId }) {
 
   const filtered = useMemo(() => {
     return products.filter((p) => {
+      const needle = search.toLowerCase();
       const matchesSearch =
         !search ||
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.sku.toLowerCase().includes(search.toLowerCase());
+        p.name.toLowerCase().includes(needle) ||
+        p.sku.toLowerCase().includes(needle) ||
+        (p.barcode || '').toLowerCase().includes(needle);
       const matchesLow = !lowStockOnly || Number(p.stockQuantity) <= Number(p.reorderLevel);
       return matchesSearch && matchesLow;
     });
@@ -170,6 +172,11 @@ export default function ProductAdmin({ authToken, userId }) {
     try {
       const payload = {
         ...form,
+        sku: form.sku.trim(),
+        barcode: form.barcode.trim() || null,
+        name: form.name.trim(),
+        unit: form.unit.trim() || 'each',
+        imageUrl: form.imageUrl.trim() || null,
         costPrice: Number(form.costPrice || 0),
         sellingPrice: Number(form.sellingPrice),
         reorderLevel: Number(form.reorderLevel),
@@ -370,7 +377,7 @@ export default function ProductAdmin({ authToken, userId }) {
           <div className={styles.controls}>
             <input
               type="text"
-              placeholder="Search by name or SKU..."
+              placeholder="Search by name, SKU, or barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className={styles.searchInput}
@@ -391,6 +398,7 @@ export default function ProductAdmin({ authToken, userId }) {
             <thead>
               <tr>
                 <th>SKU</th>
+                <th>Barcode</th>
                 <th>Name</th>
                 <th>Unit</th>
                 <th>Cost Price</th>
@@ -406,6 +414,7 @@ export default function ProductAdmin({ authToken, userId }) {
                 return (
                   <tr key={p.id} className={isLow ? styles.lowStockRow : ''}>
                     <td><code>{p.sku}</code></td>
+                    <td><code>{p.barcode || '-'}</code></td>
                     <td>{p.name}</td>
                     <td>{p.unit}</td>
                     <td>KES {Number(p.costPrice).toFixed(2)}</td>
@@ -639,9 +648,9 @@ export default function ProductAdmin({ authToken, userId }) {
             <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit} className={styles.form}>
               <label>SKU * <input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} required /></label>
-              <label>Barcode <input value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
-              <label>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
-              <label>Category *
+              <label>Barcode <input inputMode="numeric" value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
+              <label className={styles.fullWidth}>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
+              <label className={styles.fullWidth}>Category *
                 <div className={styles.categorySelectRow}>
                   <select value={form.categoryId} onChange={(e) => setForm({...form, categoryId: e.target.value})} required>
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -650,10 +659,21 @@ export default function ProductAdmin({ authToken, userId }) {
                 </div>
               </label>
               <label>Unit <input value={form.unit} onChange={(e) => setForm({...form, unit: e.target.value})} /></label>
-              <label>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={form.isWeighted}
+                  onChange={(e) => setForm({...form, isWeighted: e.target.checked})}
+                />
+                Sold by weight
+              </label>
+              <label className={styles.fullWidth}>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>
               <label>Selling Price KES * <input type="number" step="0.01" value={form.sellingPrice} onChange={(e) => setForm({...form, sellingPrice: e.target.value})} required /></label>
               <label>Reorder Level <input type="number" value={form.reorderLevel} onChange={(e) => setForm({...form, reorderLevel: e.target.value})} /></label>
+              {!editingId && (
+                <label>Opening Stock <input type="number" step="0.001" value={form.stockQuantity} onChange={(e) => setForm({...form, stockQuantity: e.target.value})} /></label>
+              )}
 
               <div className={styles.drawerActions}>
                 <button type="submit" className={styles.primaryBtn} disabled={saving}>Save Product</button>

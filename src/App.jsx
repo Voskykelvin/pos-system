@@ -99,7 +99,7 @@ export default function App() {
     }
 
     window.addEventListener('online', handleOnline);
-    // Also try syncing when the app loads (if already online)
+    // Also try syncing when the workspace loads (if already online)
     if (navigator.onLine) {
       handleOnline();
     }
@@ -159,7 +159,7 @@ export default function App() {
   const requestedProtectedLogin = !authToken && !showSignup && isProtectedAppPath(window.location.pathname);
 
   if (!authReady) {
-    return <div className={styles.loading}>Loading application...</div>;
+    return <div className={styles.loading}>Loading workspace...</div>;
   }
 
   if (showSignup && !authToken) {
@@ -221,7 +221,7 @@ export default function App() {
     return (
       <Homepage
         isAuthenticated
-        accountActionLabel="Back to app"
+        accountActionLabel="Back to workspace"
         onNavigateLogin={goToAppLanding}
         onNavigateSignup={goToAppLanding}
       />
