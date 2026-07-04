@@ -17,7 +17,7 @@ const EMPTY_FORM = {
 };
 
 export default function ProductAdmin({ authToken, userId }) {
-  const [activeTab, setActiveTab] = useState('products'); // products | suppliers | pos | reorder | csv
+  const [activeTab, setActiveTab] = useState('products'); // products | suppliers | pos | reorder | promotions | csv
 
   // Products state
   const [products, setProducts] = useState([]);
@@ -34,6 +34,10 @@ export default function ProductAdmin({ authToken, userId }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
 
+  // Category inline modal
+  const [newCatName, setNewCatName] = useState('');
+  const [showCatModal, setShowCatModal] = useState(false);
+
   // Suppliers & POs state
   const [suppliers, setSuppliers] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
@@ -42,6 +46,10 @@ export default function ProductAdmin({ authToken, userId }) {
   const [poSupplierId, setPoSupplierId] = useState('');
   const [poItems, setPoItems] = useState([]); // [{ productId, orderedQuantity, unitCostPrice }]
   const [csvText, setCsvText] = useState('');
+
+  // Promotions state
+  const [promotions, setPromotions] = useState([]);
+  const [promoForm, setPromoForm] = useState({ code: '', type: 'percent', value: '', minOrderTotal: 0, maxUses: 0, description: '' });
 
   async function api(path, options = {}) {
     const res = await fetch(path, {
@@ -91,6 +99,13 @@ export default function ProductAdmin({ authToken, userId }) {
     } catch { /* ignore */ }
   }
 
+  async function loadPromotions() {
+    try {
+      const data = await api('/api/admin/promotions');
+      setPromotions(data);
+    } catch { /* ignore */ }
+  }
+
   useEffect(() => {
     loadProducts();
     loadCategories();
@@ -100,6 +115,7 @@ export default function ProductAdmin({ authToken, userId }) {
     if (activeTab === 'suppliers') loadSuppliers();
     if (activeTab === 'pos') { loadSuppliers(); loadPurchaseOrders(); }
     if (activeTab === 'reorder') loadReorderSuggestions();
+    if (activeTab === 'promotions') loadPromotions();
   }, [activeTab]);
 
   const filtered = useMemo(() => {
@@ -180,6 +196,22 @@ export default function ProductAdmin({ authToken, userId }) {
     }
   }
 
+  async function handleCreateCategory(e) {
+    e.preventDefault();
+    if (!newCatName.trim()) return;
+    try {
+      const newCat = await api('/api/admin/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: newCatName.trim() })
+      });
+      await loadCategories();
+      setForm((f) => ({ ...f, categoryId: newCat.id }));
+      setNewCatName('');
+      setShowCatModal(false);
+    } catch (err) { alert(err.message); }
+  }
+
   async function handleAdjustStock(e) {
     e.preventDefault();
     if (!editingId || !adjustQty) return;
@@ -254,6 +286,48 @@ export default function ProductAdmin({ authToken, userId }) {
     } catch (err) { alert(err.message); }
   }
 
+  function generatePoFromReorder() {
+    if (reorderSuggestions.length === 0) return alert('No reorder suggestions available');
+    const items = reorderSuggestions.map((s) => ({
+      productId: s.productId,
+      name: s.name,
+      orderedQuantity: s.suggestedReorderQty,
+      unitCostPrice: s.costPrice || 100
+    }));
+    setPoItems(items);
+    setActiveTab('pos');
+  }
+
+  async function handleCreatePromo(e) {
+    e.preventDefault();
+    try {
+      await api('/api/admin/promotions', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ...promoForm,
+          value: Number(promoForm.value),
+          minOrderTotal: Number(promoForm.minOrderTotal || 0),
+          maxUses: Number(promoForm.maxUses || 0)
+        })
+      });
+      setPromoForm({ code: '', type: 'percent', value: '', minOrderTotal: 0, maxUses: 0, description: '' });
+      await loadPromotions();
+      alert('Promotion code created');
+    } catch (err) { alert(err.message); }
+  }
+
+  async function togglePromoStatus(promo) {
+    try {
+      await api(`/api/admin/promotions/${promo.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isActive: !promo.isActive })
+      });
+      await loadPromotions();
+    } catch (err) { alert(err.message); }
+  }
+
   async function handleImportCsv() {
     if (!csvText.trim()) return alert('Paste CSV data first');
     try {
@@ -270,13 +344,14 @@ export default function ProductAdmin({ authToken, userId }) {
 
   return (
     <div className={styles.page}>
-      {/* Sub-nav tabs for Batch 3 Inventory Depth */}
+      {/* Sub-nav tabs */}
       <div className={styles.topBar}>
         <div className={styles.tabGroup}>
           <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.active : ''}`} onClick={() => setActiveTab('products')}>📦 Products</button>
           <button className={`${styles.tabBtn} ${activeTab === 'suppliers' ? styles.active : ''}`} onClick={() => setActiveTab('suppliers')}>🚚 Suppliers</button>
           <button className={`${styles.tabBtn} ${activeTab === 'pos' ? styles.active : ''}`} onClick={() => setActiveTab('pos')}>📑 Purchase Orders</button>
           <button className={`${styles.tabBtn} ${activeTab === 'reorder' ? styles.active : ''}`} onClick={() => setActiveTab('reorder')}>💡 Reorder Suggestions</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'promotions' ? styles.active : ''}`} onClick={() => setActiveTab('promotions')}>🏷️ Promotions</button>
           <button className={`${styles.tabBtn} ${activeTab === 'csv' ? styles.active : ''}`} onClick={() => setActiveTab('csv')}>📥 CSV Import/Export</button>
         </div>
       </div>
@@ -448,8 +523,17 @@ export default function ProductAdmin({ authToken, userId }) {
       {/* REORDER SUGGESTIONS TAB */}
       {activeTab === 'reorder' && (
         <div className={styles.tabContent}>
-          <h2>Intelligent Reorder Suggestions (30-day Velocity)</h2>
-          <p className={styles.subtitle}>Recommends stock intake based on daily sales velocity and current stock levels.</p>
+          <div className={styles.tabHeaderAction}>
+            <div>
+              <h2>Intelligent Reorder Suggestions (30-day Velocity)</h2>
+              <p className={styles.subtitle}>Recommends stock intake based on daily sales velocity and current stock levels.</p>
+            </div>
+            {reorderSuggestions.length > 0 && (
+              <button className={styles.primaryBtn} onClick={generatePoFromReorder}>
+                ⚡ Auto-Generate PO with Suggested Items
+              </button>
+            )}
+          </div>
           <table className={styles.table}>
             <thead>
               <tr><th>SKU</th><th>Product</th><th>Stock</th><th>Reorder Level</th><th>Daily Velocity</th><th>Suggested Order</th></tr>
@@ -468,6 +552,51 @@ export default function ProductAdmin({ authToken, userId }) {
               {reorderSuggestions.length === 0 && (
                 <tr><td colSpan="6">All stock levels are optimal. No reorders needed.</td></tr>
               )}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* PROMOTIONS TAB */}
+      {activeTab === 'promotions' && (
+        <div className={styles.tabContent}>
+          <h2>Promotions & Discount Codes</h2>
+          <form onSubmit={handleCreatePromo} className={styles.inlineForm}>
+            <input placeholder="Promo Code (e.g. SAVE10) *" value={promoForm.code} onChange={(e) => setPromoForm({...promoForm, code: e.target.value})} required />
+            <select value={promoForm.type} onChange={(e) => setPromoForm({...promoForm, type: e.target.value})}>
+              <option value="percent">Percentage (%)</option>
+              <option value="fixed">Fixed Amount (KES)</option>
+            </select>
+            <input type="number" placeholder="Discount Value *" value={promoForm.value} onChange={(e) => setPromoForm({...promoForm, value: e.target.value})} required />
+            <input type="number" placeholder="Min Order Total" value={promoForm.minOrderTotal} onChange={(e) => setPromoForm({...promoForm, minOrderTotal: e.target.value})} />
+            <input placeholder="Description" value={promoForm.description} onChange={(e) => setPromoForm({...promoForm, description: e.target.value})} />
+            <button type="submit" className={styles.primaryBtn}>Create Promotion</button>
+          </form>
+
+          <table className={styles.table}>
+            <thead>
+              <tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Uses</th><th>Status</th><th>Action</th></tr>
+            </thead>
+            <tbody>
+              {promotions.map((p) => (
+                <tr key={p.id}>
+                  <td><code>{p.code}</code></td>
+                  <td>{p.type}</td>
+                  <td>{p.type === 'percent' ? `${p.value}%` : `KES ${p.value}`}</td>
+                  <td>KES {p.minOrderTotal}</td>
+                  <td>{p.usedCount} {p.maxUses > 0 ? `/ ${p.maxUses}` : ''}</td>
+                  <td>
+                    <span className={p.isActive ? styles.badgeOk : styles.badgeLow}>
+                      {p.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td>
+                    <button className={styles.secondaryBtn} onClick={() => togglePromoStatus(p)}>
+                      {p.isActive ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>
@@ -507,9 +636,12 @@ export default function ProductAdmin({ authToken, userId }) {
               <label>Barcode <input value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
               <label>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
               <label>Category *
-                <select value={form.categoryId} onChange={(e) => setForm({...form, categoryId: e.target.value})} required>
-                  {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                <div className={styles.categorySelectRow}>
+                  <select value={form.categoryId} onChange={(e) => setForm({...form, categoryId: e.target.value})} required>
+                    {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                  <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(true)}>+ Category</button>
+                </div>
               </label>
               <label>Unit <input value={form.unit} onChange={(e) => setForm({...form, unit: e.target.value})} /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>
@@ -538,6 +670,28 @@ export default function ProductAdmin({ authToken, userId }) {
                 </form>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Inline Category Creation Modal */}
+      {showCatModal && (
+        <div className={styles.drawerOverlay} onClick={() => setShowCatModal(false)}>
+          <div className={styles.catModal} onClick={(e) => e.stopPropagation()}>
+            <h3>Add New Product Category</h3>
+            <form onSubmit={handleCreateCategory} className={styles.form}>
+              <input
+                placeholder="Category Name (e.g. Dairy, Beverages) *"
+                value={newCatName}
+                onChange={(e) => setNewCatName(e.target.value)}
+                required
+                autoFocus
+              />
+              <div className={styles.drawerActions}>
+                <button type="submit" className={styles.primaryBtn}>Create Category</button>
+                <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(false)}>Cancel</button>
+              </div>
+            </form>
           </div>
         </div>
       )}

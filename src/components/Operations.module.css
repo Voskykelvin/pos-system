@@ -281,6 +281,70 @@
   cursor: pointer;
 }
 
+/* Multi-Till Shift Summary Styles */
+.summaryPanel {
+  grid-column: 1 / -1;
+}
+
+.summaryTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.summaryTable th {
+  text-align: left;
+  padding: 10px 12px;
+  background: var(--pos-panel);
+  border-bottom: 1px solid var(--line);
+  color: var(--ink-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.summaryTable td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.statusOpen {
+  background: #dcfce7;
+  color: #15803d;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.statusClosed {
+  background: #f1f5f9;
+  color: #64748b;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.varNeg {
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.varOk {
+  color: #16a34a;
+  font-weight: 600;
+}
+
+.summaryTotalsRow {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 12px;
+  font-size: 13px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+
 .auditList {
   max-height: 340px;
   overflow-y: auto;

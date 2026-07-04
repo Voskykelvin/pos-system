@@ -26,6 +26,9 @@ export default function Operations({ authToken, user }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditError, setAuditError] = useState(null);
 
+  // Multi-till shift summary state for managers
+  const [shiftSummary, setShiftSummary] = useState(null);
+
   const canManageOrders = user?.role === 'admin' || user?.role === 'manager';
   const canViewAudit = user?.role === 'admin' || user?.role === 'manager';
 
@@ -52,6 +55,14 @@ export default function Operations({ authToken, user }) {
     }
   }
 
+  async function loadShiftSummary() {
+    if (!canManageOrders) return;
+    try {
+      const payload = await api('/api/shifts/summary');
+      setShiftSummary(payload);
+    } catch { /* ignore */ }
+  }
+
   async function openShift() {
     try {
       const payload = await api('/api/shifts/open', {
@@ -63,6 +74,7 @@ export default function Operations({ authToken, user }) {
       setShiftMessage('Shift opened.');
       setShiftError(null);
       await loadAuditLogs();
+      await loadShiftSummary();
     } catch (err) {
       setShiftError(err.message);
     }
@@ -81,6 +93,7 @@ export default function Operations({ authToken, user }) {
       setShiftMessage('Shift closed.');
       setShiftError(null);
       await loadAuditLogs();
+      await loadShiftSummary();
     } catch (err) {
       setShiftError(err.message);
     }
@@ -110,7 +123,7 @@ export default function Operations({ authToken, user }) {
   async function loadAuditLogs() {
     if (!canViewAudit) return;
     try {
-      const payload = await api('/api/audit-logs?limit=20');
+      const payload = await api('/api/audit-logs');
       setAuditLogs(payload);
       setAuditError(null);
     } catch (err) {
@@ -118,15 +131,15 @@ export default function Operations({ authToken, user }) {
     }
   }
 
-  async function orderAction(action) {
+  async function orderAction(type) {
     if (!receipt?.id) return;
     try {
-      const payload = await api(`/api/orders/${receipt.id}/${action}`, {
+      await api(`/api/orders/${receipt.id}/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: actionReason || `Order ${action}` })
+        body: JSON.stringify({ reason: actionReason })
       });
-      await loadReceipt(payload.orderId);
+      await loadReceipt(receipt.id);
       await searchOrders();
       await loadAuditLogs();
       setOrderError(null);
@@ -139,6 +152,7 @@ export default function Operations({ authToken, user }) {
     loadShift();
     searchOrders('');
     loadAuditLogs();
+    loadShiftSummary();
   }, [authToken, canViewAudit]);
 
   return (
@@ -146,11 +160,12 @@ export default function Operations({ authToken, user }) {
       <header className={styles.header}>
         <div>
           <h1>Operations</h1>
-          <p>Shift control, cash reconciliation, and receipt lookup.</p>
+          <p>Shift control, multi-till cash reconciliation, and receipt lookup.</p>
         </div>
       </header>
 
       <div className={styles.grid}>
+        {/* Current Shift panel */}
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>Current shift</h2>
@@ -215,6 +230,56 @@ export default function Operations({ authToken, user }) {
           {shiftMessage && <div className={styles.success}>{shiftMessage}</div>}
         </section>
 
+        {/* Multi-Till Shift Summary for Managers */}
+        {canManageOrders && shiftSummary && (
+          <section className={`${styles.panel} ${styles.summaryPanel}`}>
+            <div className={styles.panelHeader}>
+              <h2>Today's Multi-Till Shift Summary</h2>
+              <span>{shiftSummary.date}</span>
+            </div>
+            <div className={styles.tableWrap}>
+              <table className={styles.summaryTable}>
+                <thead>
+                  <tr>
+                    <th>Cashier</th>
+                    <th>Status</th>
+                    <th>Float</th>
+                    <th>Expected</th>
+                    <th>Counted</th>
+                    <th>Variance</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {shiftSummary.shifts.map((s) => (
+                    <tr key={s.id}>
+                      <td><strong>{s.cashierName}</strong></td>
+                      <td><span className={s.status === 'open' ? styles.statusOpen : styles.statusClosed}>{s.status.toUpperCase()}</span></td>
+                      <td>{formatKes(s.openingFloat)}</td>
+                      <td>{formatKes(s.currentCashSalesExpected ?? s.cashSalesExpected)}</td>
+                      <td>{s.cashCounted !== null ? formatKes(s.cashCounted) : '—'}</td>
+                      <td className={Number(s.cashVariance) < 0 ? styles.varNeg : styles.varOk}>
+                        {s.cashVariance !== null ? formatKes(s.cashVariance) : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                  {shiftSummary.shifts.length === 0 && (
+                    <tr><td colSpan="6" className={styles.empty}>No shifts recorded today.</td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+            {shiftSummary.totals && (
+              <div className={styles.summaryTotalsRow}>
+                <div><span>Total Floats:</span> <strong>{formatKes(shiftSummary.totals.totalFloats)}</strong></div>
+                <div><span>Total Cash Expected:</span> <strong>{formatKes(shiftSummary.totals.totalExpectedCash)}</strong></div>
+                <div><span>Total Counted:</span> <strong>{formatKes(shiftSummary.totals.totalCashCounted)}</strong></div>
+                <div><span>Total Variance:</span> <strong className={Number(shiftSummary.totals.totalVariance) < 0 ? styles.varNeg : styles.varOk}>{formatKes(shiftSummary.totals.totalVariance)}</strong></div>
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* Receipt search */}
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>Receipt search</h2>
@@ -242,6 +307,7 @@ export default function Operations({ authToken, user }) {
           {orderError && <div className={styles.error}>{orderError}</div>}
         </section>
 
+        {/* Receipt Details */}
         <section className={`${styles.panel} ${styles.receiptPanel}`}>
           <div className={styles.panelHeader}>
             <h2>Receipt</h2>
@@ -345,6 +411,7 @@ export default function Operations({ authToken, user }) {
           )}
         </section>
 
+        {/* Audit Trail */}
         {canViewAudit && (
           <section className={`${styles.panel} ${styles.auditPanel}`}>
             <div className={styles.panelHeader}>

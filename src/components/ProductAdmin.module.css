@@ -389,3 +389,30 @@
   background: #fff5f5;
 }
 
+.categorySelectRow {
+  display: flex;
+  gap: 8px;
+}
+
+.categorySelectRow select {
+  flex: 1;
+}
+
+.tabHeaderAction {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.catModal {
+  background: var(--surface);
+  padding: 24px;
+  border-radius: 12px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+}
+
+
