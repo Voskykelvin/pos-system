@@ -84,8 +84,16 @@ async function create(req, res) {
   }
 
   try {
+    const normalizedCode = String(code).trim().toUpperCase();
+    const existing = await Promotion.findOne({
+      where: tenantWhere(req, { code: normalizedCode })
+    });
+    if (existing) {
+      return res.status(409).json({ error: 'A promotion with that code already exists in this store' });
+    }
+
     const promo = await Promotion.create({
-      code: String(code).trim().toUpperCase(),
+      code: normalizedCode,
       description: description || null,
       type,
       value,

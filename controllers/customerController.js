@@ -57,9 +57,19 @@ async function create(req, res) {
   }
 
   try {
+    const normalizedPhone = phone ? String(phone).trim() : null;
+    if (normalizedPhone) {
+      const existing = await Customer.findOne({
+        where: tenantWhere(req, { phone: normalizedPhone })
+      });
+      if (existing) {
+        return res.status(409).json({ error: 'A customer with that phone number already exists in this store' });
+      }
+    }
+
     const customer = await Customer.create({
       name:   name   ? String(name).trim()   : null,
-      phone:  phone  ? String(phone).trim()  : null,
+      phone:  normalizedPhone,
       kraPin: kraPin ? String(kraPin).trim() : null,
       loyaltyPoints: 0,
       ...withTenant(req)

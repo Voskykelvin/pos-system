@@ -7,12 +7,10 @@ module.exports = (sequelize, DataTypes) => {
     },
     sku: {
       type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
+      allowNull: false
     },
     barcode: {
       type: DataTypes.STRING,
-      unique: true,
       allowNull: true
     },
     name: {
@@ -77,7 +75,13 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'products',
     timestamps: true,
-    paranoid: true
+    paranoid: true,
+    indexes: [
+      { unique: true, fields: ['tenantId', 'sku'] },
+      { unique: true, fields: ['tenantId', 'barcode'] },
+      { fields: ['categoryId'] },
+      { fields: ['isActive'] }
+    ]
   });
 
   Product.associate = (models) => {

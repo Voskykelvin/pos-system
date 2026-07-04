@@ -1,7 +1,31 @@
+const { Op } = require('sequelize');
 const { sequelize, Product, Category, InventoryTransaction } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
+
+async function assertUniqueProductIdentity(req, { sku, barcode, excludeId = null }) {
+  const identityChecks = [];
+  const normalizedSku = sku ? String(sku).trim() : '';
+  const normalizedBarcode = barcode ? String(barcode).trim() : '';
+
+  if (normalizedSku) identityChecks.push({ sku: { [Op.iLike]: normalizedSku } });
+  if (normalizedBarcode) identityChecks.push({ barcode: { [Op.iLike]: normalizedBarcode } });
+  if (identityChecks.length === 0) return;
+
+  const where = tenantWhere(req, {
+    [Op.or]: identityChecks,
+    ...(excludeId ? { id: { [Op.ne]: excludeId } } : {})
+  });
+
+  const existing = await Product.findOne({ where });
+  if (!existing) return;
+
+  if (normalizedSku && String(existing.sku).toLowerCase() === normalizedSku.toLowerCase()) {
+    throw Object.assign(new Error('A product with that SKU already exists in this store'), { status: 409 });
+  }
+  throw Object.assign(new Error('A product with that barcode already exists in this store'), { status: 409 });
+}
 
 // GET /api/admin/products?includeInactive=true
 async function list(req, res) {
@@ -34,6 +58,8 @@ async function create(req, res) {
 
   const t = await sequelize.transaction();
   try {
+    await assertUniqueProductIdentity(req, { sku, barcode });
+
     const product = await Product.create({
       sku,
       barcode: barcode || null,
@@ -74,7 +100,7 @@ async function create(req, res) {
     res.status(201).json(product);
   } catch (err) {
     await t.rollback();
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message });
   }
 }
 
@@ -91,6 +117,12 @@ async function update(req, res) {
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
+
+    await assertUniqueProductIdentity(req, {
+      sku: sku || product.sku,
+      barcode: barcode === undefined ? product.barcode : barcode,
+      excludeId: product.id
+    });
 
     // Note: stockQuantity is deliberately NOT editable here. Stock changes
     // must go through /adjust-stock so every change leaves an audit trail.
@@ -118,7 +150,7 @@ async function update(req, res) {
 
     res.json(product);
   } catch (err) {
-    res.status(400).json({ error: err.message });
+    res.status(err.status || 400).json({ error: err.message });
   }
 }
 

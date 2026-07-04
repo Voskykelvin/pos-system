@@ -1,5 +1,6 @@
 'use strict';
 
+const { Op } = require('sequelize');
 const { Product, Category } = require('../models');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
@@ -79,6 +80,19 @@ async function importCatalogCsv(req, res) {
       }
 
       const existing = await Product.findOne({ where: tenantWhere(req, { sku: row.sku }) });
+      if (row.barcode) {
+        const barcodeOwner = await Product.findOne({
+          where: tenantWhere(req, {
+            barcode: row.barcode,
+            ...(existing ? { id: { [Op.ne]: existing.id } } : {})
+          })
+        });
+        if (barcodeOwner) {
+          return res.status(409).json({
+            error: `CSV row ${i + 1}: barcode ${row.barcode} already belongs to SKU ${barcodeOwner.sku}`
+          });
+        }
+      }
 
       const payload = {
         sku: row.sku,

@@ -11,7 +11,6 @@ module.exports = (sequelize, DataTypes) => {
     },
     phone: {
       type: DataTypes.STRING,
-      unique: true,
       allowNull: true
     },
     kraPin: {
@@ -40,7 +39,10 @@ module.exports = (sequelize, DataTypes) => {
   }, {
     tableName: 'customers',
     timestamps: true,
-    paranoid: true
+    paranoid: true,
+    indexes: [
+      { unique: true, fields: ['tenantId', 'phone'] }
+    ]
   });
 
   Customer.associate = (models) => {

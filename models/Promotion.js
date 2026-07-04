@@ -8,8 +8,7 @@ module.exports = (sequelize, DataTypes) => {
     code: {
       // e.g. SAVE10, WEEKEND20 - stored and matched uppercase
       type: DataTypes.STRING(50),
-      allowNull: false,
-      unique: true
+      allowNull: false
     },
     description: {
       type: DataTypes.STRING,
@@ -66,7 +65,7 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'promotions',
     timestamps: true,
     indexes: [
-      { fields: ['code'] },
+      { unique: true, fields: ['tenantId', 'code'] },
       { fields: ['isActive', 'expiresAt'] }
     ]
   });
