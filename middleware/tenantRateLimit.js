@@ -12,9 +12,9 @@ const tenantApiLimiter = rateLimit({
   windowMs: 60 * 1000, // 1 minute window
   max: 300, // max 300 API calls per minute per store
   keyGenerator: (req) => {
-    // Key by tenantId if authenticated, fallback to IP address
     return req.tenantId || req.ip;
   },
+  validate: { xForwardedForHeader: false, default: false },
   standardHeaders: 'draft-7',
   legacyHeaders: false,
   message: { error: 'Your store has exceeded the API request limit (300 req/min). Please try again in a moment.' }
