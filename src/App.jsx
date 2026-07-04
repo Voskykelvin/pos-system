@@ -9,6 +9,7 @@ import CustomerAdmin from './components/CustomerAdmin.jsx';
 import Signup from './components/Signup.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
 import styles from './App.module.css';
+import { syncOfflineOrders } from './utils/offlineQueue';
 
 const ROUTES = {
   '/': 'dashboard',
@@ -74,6 +75,29 @@ export default function App() {
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
+
+  useEffect(() => {
+    if (!authToken) return;
+    
+    async function handleOnline() {
+      console.log('Back online! Syncing offline orders...');
+      const { synced, failed } = await syncOfflineOrders(authToken);
+      if (synced > 0) {
+        alert(`Successfully synced ${synced} offline order(s).`);
+      }
+      if (failed > 0) {
+        alert(`Failed to sync ${failed} offline order(s). They will be retried later.`);
+      }
+    }
+    
+    window.addEventListener('online', handleOnline);
+    // Also try syncing when the app loads (if already online)
+    if (navigator.onLine) {
+      handleOnline();
+    }
+    
+    return () => window.removeEventListener('online', handleOnline);
+  }, [authToken]);
 
   const activePath = useMemo(() => {
     const item = NAV_ITEMS.find((navItem) => navItem.id === view);

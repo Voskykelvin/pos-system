@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './Checkout.module.css';
+import { addOrderToQueue, getCachedCatalog, cacheCatalog } from '../utils/offlineQueue';
 
 const VAT_RATES = { standard: 0.16, zero_rated: 0, exempt: 0 };
 
@@ -279,10 +280,24 @@ export default function Checkout({ authToken, cashierId, user }) {
         const searchParams = /^\d{6,}$/.test(term)
           ? `barcode=${encodeURIComponent(term)}`
           : `q=${encodeURIComponent(term)}`;
-        const res = await fetch(`/api/products/search?${searchParams}`, {
-          headers: { Authorization: `Bearer ${authToken}` }
-        });
-        const data = await res.json();
+        
+        let data = [];
+        if (!navigator.onLine) {
+          const cached = await getCachedCatalog();
+          data = cached.filter(p => 
+            p.name.toLowerCase().includes(term) || 
+            (p.barcode && p.barcode.includes(term)) ||
+            (p.sku && p.sku.includes(term))
+          );
+        } else {
+          const res = await fetch(`/api/products/search?${searchParams}`, {
+            headers: { Authorization: `Bearer ${authToken}` }
+          });
+          data = await res.json();
+          if (data.length > 0) {
+            await cacheCatalog(data); // Append/update cache for these searched items
+          }
+        }
         setResults(data);
       } catch { setResults([]); }
     }, 250);
@@ -314,10 +329,19 @@ export default function Checkout({ authToken, cashierId, user }) {
         if (/^\d{4,}$/.test(barcode)) {
           e.preventDefault();
           try {
-            const res = await fetch(`/api/products/search?barcode=${encodeURIComponent(barcode)}`, {
-              headers: { Authorization: `Bearer ${authToken}` }
-            });
-            const data = await res.json();
+            let data = [];
+            if (!navigator.onLine) {
+              const cached = await getCachedCatalog();
+              data = cached.filter(p => p.barcode === barcode || p.sku === barcode);
+            } else {
+              const res = await fetch(`/api/products/search?barcode=${encodeURIComponent(barcode)}`, {
+                headers: { Authorization: `Bearer ${authToken}` }
+              });
+              data = await res.json();
+              if (Array.isArray(data) && data.length > 0) {
+                await cacheCatalog(data);
+              }
+            }
             if (Array.isArray(data) && data.length > 0) {
               addToCart(data[0]);
             }
@@ -442,20 +466,43 @@ export default function Checkout({ authToken, cashierId, user }) {
       ...(p.method === 'mpesa' ? { mpesaPhone: p.mpesaPhone } : {})
     }));
 
+    const orderPayload = {
+      cashierId,
+      customerId: customer?.id || undefined,
+      items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
+      payments: paymentPayload,
+      discountTotal: discountValue,
+      promotionCode: promoResult ? promoCode.trim() : undefined,
+      redeemPoints: redeemLoyalty && customer ? customer.loyaltyPoints : 0,
+      managerApproval: discountNeedsApproval ? { identifier: managerIdentifier, password: managerPassword } : undefined
+    };
+
+    if (!navigator.onLine) {
+      if (payments.some((p) => p.method === 'mpesa')) {
+        setError('M-Pesa payments require an active internet connection.');
+        setSubmitting(false);
+        return;
+      }
+      try {
+        await addOrderToQueue(orderPayload);
+        const cashPayment = payments.find((p) => p.method === 'cash');
+        const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
+        setOrderStatus('paid');
+        setLastReceipt({ orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4), total, changeDue });
+        resetSale();
+      } catch (err) {
+        setError('Failed to queue offline order: ' + err.message);
+      } finally {
+        setSubmitting(false);
+      }
+      return;
+    }
+
     try {
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
-        body: JSON.stringify({
-          cashierId,
-          customerId: customer?.id || undefined,
-          items: cart.map((i) => ({ productId: i.productId, quantity: i.quantity })),
-          payments: paymentPayload,
-          discountTotal: discountValue,
-          promotionCode: promoResult ? promoCode.trim() : undefined,
-          redeemPoints: redeemLoyalty && customer ? customer.loyaltyPoints : 0,
-          managerApproval: discountNeedsApproval ? { identifier: managerIdentifier, password: managerPassword } : undefined
-        })
+        body: JSON.stringify(orderPayload)
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Checkout failed');
@@ -517,6 +564,11 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   return (
     <div className={styles.page}>
+      {!navigator.onLine && (
+        <div style={{ background: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontWeight: 'bold', gridColumn: '1 / -1' }}>
+          ⚠️ OFFLINE MODE: Sales will be queued locally and synced when connection is restored. M-Pesa is disabled.
+        </div>
+      )}
       {/* Product search + grid */}
       <div className={styles.catalog}>
         <div className={styles.searchBar}>
