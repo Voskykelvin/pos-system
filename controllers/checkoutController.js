@@ -9,7 +9,8 @@ const {
   EtimsInvoice,
   Customer,
   LoyaltyTransaction,
-  Promotion
+  Promotion,
+  CustomerLedger
 } = require('../models');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const { buildEtimsPayload } = require('../utils/etimsPayload');
@@ -221,17 +222,40 @@ async function checkout(req, res) {
       }, { transaction: t });
     }
 
-    // 5. Create payment records
+    // 5. Create payment records and customer ledgers for credit
     const createdPayments = [];
     for (const p of payments) {
+      const isCredit = p.method === 'credit';
       const paymentRow = await Payment.create({
         orderId: order.id,
         method: p.method,
         amount: p.amount,
-        status: p.method === 'cash' ? 'confirmed' : 'pending',
+        status: (p.method === 'cash' || isCredit) ? 'confirmed' : 'pending',
         mpesaPhone: p.mpesaPhone || null
       }, { transaction: t });
       createdPayments.push(paymentRow);
+
+      if (isCredit && customerId) {
+        const customer = await Customer.findByPk(customerId, { transaction: t });
+        if (!customer) throw new Error('Customer not found for credit sale');
+        
+        const newBalance = Number(customer.creditBalance) + Number(p.amount);
+        if (Number(customer.creditLimit) > 0 && newBalance > Number(customer.creditLimit)) {
+          // If we want to strictly enforce it:
+          // throw new Error(`Credit limit of ${customer.creditLimit} exceeded`);
+        }
+        await customer.update({ creditBalance: newBalance }, { transaction: t });
+
+        await CustomerLedger.create({
+          customerId: customer.id,
+          tenantId: req.tenantId, // Requires req.tenantId
+          orderId: order.id,
+          type: 'charge',
+          amount: p.amount,
+          balanceAfter: newBalance,
+          notes: `Credit sale for order ${order.orderNumber}`
+        }, { transaction: t });
+      }
     }
 
     // 6. Queue the eTIMS invoice for later transmission (offline-first)

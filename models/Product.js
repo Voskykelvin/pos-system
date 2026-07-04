@@ -39,6 +39,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false
     },
+    wholesalePrice: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: true
+    },
     reorderLevel: {
       type: DataTypes.INTEGER,
       defaultValue: 5

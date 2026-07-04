@@ -114,7 +114,9 @@ const models = {
   Supplier: require('./Supplier')(sequelize, modelDataTypes),
   PurchaseOrder: require('./PurchaseOrder')(sequelize, modelDataTypes),
   PurchaseOrderItem: require('./PurchaseOrderItem')(sequelize, modelDataTypes),
-  Tenant: require('./Tenant')(sequelize, modelDataTypes)
+  Tenant: require('./Tenant')(sequelize, modelDataTypes),
+  CustomerLedger: require('./CustomerLedger')(sequelize, modelDataTypes),
+  Expense: require('./Expense')(sequelize, modelDataTypes)
 };
 
 Object.values(models).forEach((model) => {
