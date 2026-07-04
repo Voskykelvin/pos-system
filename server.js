@@ -25,6 +25,7 @@ const customerRoutes = require('./routes/customers');
 const promotionRoutes = require('./routes/promotions');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const { tenantApiLimiter } = require('./middleware/tenantRateLimit');
 const tenantRoutes = require('./routes/tenants');
 
 const app = express();
@@ -87,6 +88,7 @@ app.get('/api/bootstrap', authenticate, async (req, res) => {
 
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', apiLimiter);
+app.use('/api', tenantApiLimiter);
 app.use('/api/orders', orderRoutes);
 app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/products', productRoutes);

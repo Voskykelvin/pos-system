@@ -60,10 +60,16 @@ module.exports = (sequelize, DataTypes) => {
     categoryId: {
       type: DataTypes.UUID,
       allowNull: false
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: {}
     }
   }, {
     tableName: 'products',
-    timestamps: true
+    timestamps: true,
+    paranoid: true
   });
 
   Product.associate = (models) => {

@@ -25,7 +25,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'customers',
-    timestamps: true
+    timestamps: true,
+    paranoid: true
   });
 
   Customer.associate = (models) => {

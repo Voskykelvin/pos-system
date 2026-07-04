@@ -30,7 +30,13 @@ module.exports = (sequelize, DataTypes) => {
     },
     discountTotal: {
       type: DataTypes.DECIMAL(12, 2),
-      defaultValue: 0
+      allowNull: false,
+      defaultValue: 0.00
+    },
+    metadata: {
+      type: DataTypes.JSON,
+      allowNull: false,
+      defaultValue: {}
     },
     total: {
       type: DataTypes.DECIMAL(12, 2),

@@ -18,7 +18,8 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'categories',
-    timestamps: true
+    timestamps: true,
+    paranoid: true
   });
 
   Category.associate = (models) => {
