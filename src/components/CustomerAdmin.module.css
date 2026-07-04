@@ -1,0 +1,197 @@
+.page {
+  --surface: var(--pos-surface);
+  --line: var(--pos-line);
+  --ink: var(--pos-ink);
+  --ink-soft: var(--pos-ink-soft);
+  --panel: var(--pos-panel);
+  --accent: var(--pos-accent);
+
+  min-height: 100vh;
+  padding: 24px;
+  background: var(--pos-bg);
+  color: var(--ink);
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 26px;
+  letter-spacing: 0;
+}
+
+.header p {
+  margin: 5px 0 0;
+  color: var(--ink-soft);
+}
+
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+  padding: 20px;
+}
+
+.searchBar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.searchInput {
+  flex: 1;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.searchBtn {
+  min-height: 40px;
+  padding: 0 20px;
+  background: var(--ink);
+  color: var(--pos-bg);
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.table th {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.actionBtn {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.actionBtn:hover {
+  background: var(--panel);
+}
+
+/* Modal */
+.modalOverlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal {
+  background: var(--surface);
+  padding: 24px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+}
+
+.modalMeta {
+  color: var(--ink-soft);
+  margin-bottom: 24px;
+}
+
+.paymentForm {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 24px;
+  background: var(--panel);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--line);
+}
+
+.paymentForm input {
+  flex: 1;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.paymentBtn {
+  min-height: 40px;
+  padding: 0 16px;
+  background: #10b981;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.paymentBtn:hover {
+  background: #059669;
+}
+
+.closeBtn {
+  width: 100%;
+  min-height: 40px;
+  margin-top: 24px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 6px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.ledgerRow {
+  display: grid;
+  grid-template-columns: 100px 1fr 100px 100px;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+}
+
+.ledgerHeader {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.amountCharge {
+  color: #ef4444;
+}
+
+.amountPayment {
+  color: #10b981;
+}

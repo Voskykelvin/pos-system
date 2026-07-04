@@ -23,6 +23,12 @@ export default function Operations({ authToken, user }) {
   const [receipt, setReceipt] = useState(null);
   const [orderError, setOrderError] = useState(null);
   const [actionReason, setActionReason] = useState('');
+  
+  // Expenses state
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseCategory, setExpenseCategory] = useState('wages');
+  const [expenseDesc, setExpenseDesc] = useState('');
+  const [expenseLogging, setExpenseLogging] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditError, setAuditError] = useState(null);
 
@@ -96,6 +102,33 @@ export default function Operations({ authToken, user }) {
       await loadShiftSummary();
     } catch (err) {
       setShiftError(err.message);
+    }
+  }
+
+  async function logExpense(e) {
+    e.preventDefault();
+    if (!expenseAmount) return;
+    setExpenseLogging(true);
+    try {
+      await api('/api/shifts/expenses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          amount: expenseAmount,
+          category: expenseCategory,
+          description: expenseDesc
+        })
+      });
+      setExpenseAmount('');
+      setExpenseDesc('');
+      setShiftMessage('Expense logged successfully.');
+      await loadShift();
+      await loadShiftSummary();
+      await loadAuditLogs();
+    } catch (err) {
+      setShiftError(err.message);
+    } finally {
+      setExpenseLogging(false);
     }
   }
 
@@ -197,8 +230,41 @@ export default function Operations({ authToken, user }) {
                 <span>Cash sales</span>
                 <strong>{formatKes(shift.currentCashSalesExpected ?? shift.cashSalesExpected)}</strong>
               </div>
+              <div className={styles.row}>
+                <span>Till Expenses</span>
+                <strong style={{ color: '#ef4444' }}>- {formatKes(shift.totalExpenses)}</strong>
+              </div>
               {shift.status === 'open' ? (
-                <div className={styles.formBlock}>
+                <>
+                  <form className={styles.expenseForm} onSubmit={logExpense}>
+                    <h4>Log Petty Cash Expense</h4>
+                    <div className={styles.expenseInputs}>
+                      <select value={expenseCategory} onChange={e => setExpenseCategory(e.target.value)}>
+                        <option value="wages">Casual Wages</option>
+                        <option value="utilities">Utilities (Tokens/Water)</option>
+                        <option value="supplies">Store Supplies</option>
+                        <option value="other">Other</option>
+                      </select>
+                      <input 
+                        type="number" 
+                        placeholder="Amount" 
+                        value={expenseAmount} 
+                        onChange={e => setExpenseAmount(e.target.value)} 
+                        required 
+                        min="1"
+                      />
+                    </div>
+                    <input 
+                      type="text" 
+                      placeholder="Description (Optional)" 
+                      value={expenseDesc} 
+                      onChange={e => setExpenseDesc(e.target.value)} 
+                    />
+                    <button type="submit" disabled={expenseLogging} className={styles.expenseBtn}>
+                      {expenseLogging ? 'Logging...' : 'Log Expense'}
+                    </button>
+                  </form>
+                  <div className={styles.formBlock}>
                   <label>
                     Cash counted
                     <input
@@ -212,6 +278,7 @@ export default function Operations({ authToken, user }) {
                     Close shift
                   </button>
                 </div>
+                </>
               ) : (
                 <>
                   <div className={styles.row}>

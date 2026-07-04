@@ -77,6 +77,80 @@ async function create(req, res) {
     if (err.name === 'SequelizeUniqueConstraintError') {
       return res.status(409).json({ error: 'A customer with that phone number already exists' });
     }
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * GET /api/customers/:id/ledger
+ * Returns the customer's credit transaction ledger (up to 50 latest).
+ */
+async function ledger(req, res) {
+  try {
+    const customer = await Customer.findByPk(req.params.id);
+    if (!customer) return res.status(404).json({ error: 'Customer not found' });
+
+    const { CustomerLedger } = require('../models');
+    const transactions = await CustomerLedger.findAll({
+      where: { customerId: customer.id },
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+
+    return res.json({
+      creditLimit: customer.creditLimit,
+      creditBalance: customer.creditBalance,
+      transactions
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+/**
+ * POST /api/customers/:id/payment
+ * Records a payment against the customer's debt.
+ */
+async function payDebt(req, res) {
+  const { amount, notes } = req.body;
+  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    return res.status(400).json({ error: 'Valid payment amount is required' });
+  }
+
+  const t = await sequelize.transaction();
+  try {
+    const customer = await Customer.findByPk(req.params.id, { transaction: t });
+    if (!customer) throw new Error('Customer not found');
+
+    const paymentAmount = Number(amount);
+    const newBalance = Number(customer.creditBalance) - paymentAmount;
+
+    await customer.update({ creditBalance: newBalance }, { transaction: t });
+
+    const { CustomerLedger } = require('../models');
+    await CustomerLedger.create({
+      customerId: customer.id,
+      tenantId: req.tenantId,
+      orderId: null,
+      type: 'payment',
+      amount: paymentAmount,
+      balanceAfter: newBalance,
+      notes: notes || 'Debt repayment'
+    }, { transaction: t });
+
+    await logAudit({
+      req,
+      action: 'customer.debt_payment',
+      entityType: 'customer',
+      entityId: customer.id,
+      metadata: { amount: paymentAmount, newBalance },
+      transaction: t
+    });
+
+    await t.commit();
+    return res.json({ success: true, newBalance });
+  } catch (err) {
+    await t.rollback();
     return res.status(400).json({ error: err.message });
   }
 }
@@ -124,8 +198,11 @@ function mapCustomer(c) {
     name: c.name,
     phone: c.phone,
     kraPin: c.kraPin,
-    loyaltyPoints: c.loyaltyPoints || 0
+    loyaltyPoints: c.loyaltyPoints,
+    creditLimit: c.creditLimit,
+    creditBalance: c.creditBalance,
+    createdAt: c.createdAt
   };
 }
 
-module.exports = { create, getOne, loyaltyBalance, search };
+module.exports = { create, getOne, loyaltyBalance, search, ledger, payDebt };

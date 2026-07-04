@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard.jsx';
 import Analytics from './components/Analytics.jsx';
 import Login from './components/Login.jsx';
 import Operations from './components/Operations.jsx';
+import CustomerAdmin from './components/CustomerAdmin.jsx';
 import Signup from './components/Signup.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
 import styles from './App.module.css';
@@ -14,6 +15,7 @@ const ROUTES = {
   '/checkout': 'checkout',
   '/inventory': 'inventory',
   '/analytics': 'analytics',
+  '/customers': 'customers',
   '/operations': 'operations'
 };
 
@@ -22,6 +24,7 @@ const NAV_ITEMS = [
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
   { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] },
+  { id: 'customers', label: 'Customers', path: '/customers', roles: ['admin', 'manager'] },
   { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] },
   { id: 'saas_owner', label: '👑 Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
@@ -82,6 +85,8 @@ export default function App() {
     if (!role) return [];
     return NAV_ITEMS.filter((item) => item.roles.includes(role));
   }, [bootstrap.user]);
+
+  const allowedIds = visibleNavItems.map((i) => i.id);
 
   useEffect(() => {
     if (!visibleNavItems.length) return;
@@ -212,6 +217,9 @@ export default function App() {
         )}
         {view === 'operations' && allowedIds.includes('operations') && (
           <Operations authToken={authToken} user={bootstrap.user} />
+        )}
+        {view === 'customers' && allowedIds.includes('customers') && (
+          <CustomerAdmin authToken={authToken} user={bootstrap.user} />
         )}
         {view === 'saas_owner' && allowedIds.includes('saas_owner') && (
           <SuperAdmin authToken={authToken} />

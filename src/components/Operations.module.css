@@ -281,6 +281,73 @@
   cursor: pointer;
 }
 
+.formBlock button {
+  min-height: 40px;
+  background: var(--ink);
+  color: var(--pos-bg);
+  border: none;
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.expenseForm {
+  padding: 16px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.expenseForm h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.expenseInputs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.expenseInputs select,
+.expenseInputs input {
+  flex: 1;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.expenseForm > input {
+  width: 100%;
+  min-height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--ink);
+  margin-bottom: 10px;
+}
+
+.expenseBtn {
+  width: 100%;
+  min-height: 40px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink);
+  border-radius: 8px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.expenseBtn:hover {
+  background: #ef4444;
+  color: white;
+  border-color: #ef4444;
+}
+
 /* Multi-Till Shift Summary Styles */
 .summaryPanel {
   grid-column: 1 / -1;

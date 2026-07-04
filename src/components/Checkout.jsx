@@ -124,7 +124,7 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
 }
 
 // ─── Split-tender payments panel ──────────────────────────────────────────────
-function PaymentsPanel({ total, payments, onChange }) {
+function PaymentsPanel({ total, payments, onChange, customer }) {
   function addRow(method) {
     const existingSum = payments.filter((p) => p.method !== method).reduce((s, p) => s + Number(p.amount || 0), 0);
     const remaining = Math.max(total - existingSum, 0);
@@ -149,6 +149,7 @@ function PaymentsPanel({ total, payments, onChange }) {
 
   const canAddCash  = !payments.find((p) => p.method === 'cash');
   const canAddMpesa = !payments.find((p) => p.method === 'mpesa');
+  const canAddCredit = customer && !payments.find((p) => p.method === 'credit');
 
   return (
     <div className={styles.paymentsPanel}>
@@ -162,7 +163,7 @@ function PaymentsPanel({ total, payments, onChange }) {
       {payments.map((p, idx) => (
         <div key={idx} className={styles.paymentRow}>
           <span className={`${styles.paymentMethodBadge} ${styles[p.method]}`}>
-            {p.method === 'cash' ? '💵 Cash' : '📱 M-Pesa'}
+            {p.method === 'cash' ? '💵 Cash' : p.method === 'mpesa' ? '📱 M-Pesa' : '📝 Credit'}
           </span>
           <input
             className={styles.paymentAmountInput}
@@ -187,17 +188,17 @@ function PaymentsPanel({ total, payments, onChange }) {
         </div>
       ))}
 
-      <div className={styles.paymentAddRow}>
-        {canAddCash  && <button className={styles.paymentAddBtn} onClick={() => addRow('cash')}  type="button">+ Cash</button>}
-        {canAddMpesa && <button className={styles.paymentAddBtn} onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
-      </div>
-
-      {Math.abs(remaining) > 0.01 && (
-        <div className={`${styles.paymentBalance} ${remaining > 0 ? styles.short : styles.over}`}>
-          {remaining > 0
-            ? `Short KES ${remaining.toFixed(2)}`
-            : `Over by KES ${Math.abs(remaining).toFixed(2)}`}
+      {remaining > 0 && (
+        <div className={styles.addPaymentOptions}>
+          {canAddCash && <button onClick={() => addRow('cash')} type="button">+ Cash</button>}
+          {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
+          {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
         </div>
+      )}
+
+      {remaining > 0 && <div className={styles.remainingWarn}>Remaining: {formatKes(remaining)}</div>}
+      {remaining < 0 && payments.some(p => p.method === 'cash') && (
+        <div className={styles.changeDue}>Change due: {formatKes(Math.abs(remaining))}</div>
       )}
 
       {/* Cash-specific: cash chips + change */}
@@ -247,6 +248,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]);
+  const [isWholesale, setIsWholesale] = useState(false);
   const [customer, setCustomer] = useState(null);
 
   // Payments: array of { method, amount, mpesaPhone }
@@ -355,7 +357,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       return [...prev, {
         productId: product.id,
         name: product.name,
-        unitPrice: Number(product.sellingPrice),
+        unitPrice: isWholesale ? Number(product.wholesalePrice || product.sellingPrice) : Number(product.sellingPrice),
         quantity: 1,
         taxCategory: product.Category?.taxCategory || 'standard'
       }];
@@ -527,6 +529,16 @@ export default function Checkout({ authToken, cashierId, user }) {
             autoFocus
           />
         </div>
+        <div className={styles.priceToggleRow}>
+          <label className={styles.toggleLabel}>
+            <input 
+              type="checkbox" 
+              checked={isWholesale} 
+              onChange={(e) => setIsWholesale(e.target.checked)} 
+            />
+            Wholesale Pricing Mode
+          </label>
+        </div>
 
         {results.length === 0 ? (
           <p className={styles.emptyState}>
@@ -540,7 +552,11 @@ export default function Checkout({ authToken, cashierId, user }) {
                   <img src={product.imageUrl} alt={product.name} className={styles.productImg} />
                 )}
                 <div className={styles.productName}>{product.name}</div>
-                <div className={styles.productMeta}>{formatKes(product.sellingPrice)} / {product.unit}</div>
+                <div className={styles.productMeta}>
+                  {isWholesale && product.wholesalePrice
+                    ? <><del style={{fontSize: '10px'}}>{formatKes(product.sellingPrice)}</del> {formatKes(product.wholesalePrice)}</>
+                    : formatKes(product.sellingPrice)} / {product.unit}
+                </div>
                 <div className={styles.stockMeta}>Stock: {Number(product.stockQuantity)} {product.unit}</div>
               </button>
             ))}
@@ -642,7 +658,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
 
         {/* Split-tender payments */}
-        <PaymentsPanel total={total} payments={payments} onChange={setPayments} />
+        <PaymentsPanel total={total} payments={payments} onChange={setPayments} customer={customer} />
 
         {/* Manager approval for discounts */}
         {discountNeedsApproval && (

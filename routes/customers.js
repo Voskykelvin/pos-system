@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { authenticate, requireRoles } = require('../middleware/auth');
-const { create, getOne, loyaltyBalance, search } = require('../controllers/customerController');
+const { create, getOne, loyaltyBalance, search, ledger, payDebt } = require('../controllers/customerController');
 const { validate, schemas } = require('../middleware/validate');
 
 router.use(authenticate);
@@ -17,5 +17,11 @@ router.get('/:id/loyalty', requireRoles('admin', 'manager', 'cashier'), loyaltyB
 
 // POST /api/customers  — cashier creates customer at checkout
 router.post('/', requireRoles('admin', 'manager', 'cashier'), validate(schemas.createCustomer), create);
+
+// GET /api/customers/:id/ledger
+router.get('/:id/ledger', requireRoles('admin', 'manager'), ledger);
+
+// POST /api/customers/:id/payment
+router.post('/:id/payment', requireRoles('admin', 'manager'), payDebt);
 
 module.exports = router;

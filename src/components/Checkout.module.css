@@ -632,6 +632,24 @@
   text-transform: uppercase;
 }
 
+.priceToggleRow {
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+}
+
+.toggleLabel {
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: var(--ink);
+}
+
 .promoApplyBtn {
   padding: 6px 12px;
   background: var(--surface);

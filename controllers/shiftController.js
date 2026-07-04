@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { Shift, Payment, Order, User } = require('../models');
+const { Shift, Payment, Order, User, Expense } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 
 function money(value) {
@@ -25,7 +25,9 @@ async function expectedCashForShift(shift, closedAt = new Date()) {
     }]
   });
 
-  return payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const expectedCashSales = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+  const totalExpenses = shift.totalExpenses || 0;
+  return expectedCashSales - totalExpenses;
 }
 
 function mapShift(shift, expectedCash = null) {
@@ -41,7 +43,8 @@ function mapShift(shift, expectedCash = null) {
     cashVariance: shift.cashVariance === null ? null : Number(shift.cashVariance),
     openedAt: shift.openedAt,
     closedAt: shift.closedAt,
-    note: shift.note
+    note: shift.note,
+    totalExpenses: Number(shift.totalExpenses || 0)
   };
 }
 
@@ -218,4 +221,45 @@ async function summary(req, res) {
   }
 }
 
-module.exports = { closeShift, current, list, openShift, summary };
+async function addExpense(req, res) {
+  const { amount, category, description } = req.body;
+  if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+    return res.status(400).json({ error: 'Valid expense amount is required' });
+  }
+
+  const shift = await Shift.findOne({
+    where: { cashierId: req.user.id, status: 'open' }
+  });
+
+  if (!shift) {
+    return res.status(400).json({ error: 'No open shift found to log expense against' });
+  }
+
+  try {
+    const expense = await Expense.create({
+      amount,
+      category,
+      description,
+      shiftId: shift.id,
+      cashierId: req.user.id,
+      tenantId: req.tenantId
+    });
+
+    const newTotalExpenses = Number(shift.totalExpenses) + Number(amount);
+    await shift.update({ totalExpenses: newTotalExpenses });
+
+    await logAudit({
+      req,
+      action: 'shift.expense',
+      entityType: 'shift',
+      entityId: shift.id,
+      metadata: { amount, category, description }
+    });
+
+    return res.status(201).json(expense);
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { closeShift, current, list, openShift, summary, addExpense };
