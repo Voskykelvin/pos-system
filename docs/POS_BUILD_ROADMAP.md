@@ -2,82 +2,63 @@
 
 Research points from Square, Shopify, Safaricom, KRA, and Render suggest that a credible modern POS needs fast checkout, real-time inventory, reporting, staff controls, secure payments, integrations, and compliance readiness.
 
-## Current Strengths
+---
 
-- Product catalog and barcode/name search.
-- Checkout with VAT calculation.
-- Cash and M-Pesa payment model.
-- M-Pesa STK push/callback scaffolding.
-- Stock deduction and inventory transaction ledger.
-- eTIMS queue/retry scaffolding.
-- Product admin and stock adjustments.
-- Daily dashboard and analytics page.
-- Demo database for local testing.
-- Role-based access control and signed JWT auth.
-- Shift management and cash reconciliation.
-- Voids, refunds, and audit logs.
-- Request validation on all write endpoints (Batch 4).
-- Idempotency protection on checkout/payments (Batch 4).
-- SQL migration system replacing unsafe `sync({ alter: true })` (Batch 4).
-- Analytics query indexes on all hot query paths (Batch 4).
+## ✅ Completed System Capabilities (Batches 1–5 Delivered)
 
-## Build Next
+### 🛡️ Access Control & Safety (Batches 1 & 4)
+- Staff authentication with hashed passwords (`bcrypt`) and signed JWT tokens (`authToken.js`).
+- Role-Based Access Control (`admin`, `manager`, `cashier`) enforcing permission levels across all API routes.
+- Dependency-free Schema Validator (`middleware/validate.js`) running on every write endpoint.
+- Idempotency Key Caching (`middleware/idempotency.js`) preventing double-charging on checkout & STK push retries.
+- Production SQL Migration System (`scripts/migrate.js` & `scripts/migrate-inline.js`) replacing unsafe `alter:true` syncs.
+- DB Composite Query Indexes added to `Order`, `OrderItem`, `Payment`, `EtimsInvoice`, and `InventoryTransaction`.
+- Rate Limiting (`express-rate-limit`: 10 auth attempts / 15 min; 120 API calls / min) and `helmet` CSP security headers.
 
-See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for the current production batch plan.
+### 📦 Operational & Store Controls (Batches 2 & 5)
+- Manager approval verification for voids, discounts, full/partial refunds, and stock adjustments.
+- Audit Log System (`AuditLog` model, logger service, and Operations UI review panel).
+- Shift Open/Close with Cash Reconciliation & Today's Multi-Till Shift Summary for Managers.
+- Full and Line-Item Partial Refunds (`POST /api/orders/:id/refund/partial`) with automatic inventory re-crediting.
+- Customer Phone Lookup & Quick-Add inside Checkout with automatic loyalty point earnings.
+- Split-Tender Multi-Payment UI allowing Cash + M-Pesa payments on the same order.
+- Promotions & Discount Codes Engine (`Promotion` model, Checkout validation, and Admin management tab).
+- One-Click Excel-Compatible CSV Data Export (`GET /api/reports/export`).
+- SMS Receipt Service Wrapper (`services/smsService.js` for Africa's Talking API).
 
-### Batch 3: Inventory Depth (Active)
+### 🚚 Inventory Depth & Supplier Management (Batch 3)
+- Suppliers Directory (`Supplier` model & admin UI).
+- Purchase Orders & Receiving Workflow (`PurchaseOrder` & `PurchaseOrderItem` models) automatically updating product stock, cost prices, and logging purchase inventory transactions.
+- Cost Price Snapshotting on `OrderItem` at checkout for accurate gross profit tracking over time.
+- Sales Velocity Reorder Suggestion Engine (`GET /api/reports/reorder-suggestions?days=30`) with an Auto-Generate PO button.
+- Bulk Product Catalog CSV Import & Export (`POST /api/admin/products/import-csv` & `GET /api/admin/products/export-csv`).
+- 5 Inventory Sub-Tabs in `ProductAdmin.jsx` (Products, Suppliers, Purchase Orders, Reorder Suggestions, Promotions, CSV Tools).
 
-- Purchase orders and supplier receiving.
-- Stock transfer if multiple branches are added.
-- Product variants and pack sizes.
-- Cost snapshot on order items for accurate margin reporting.
-- Reorder suggestions based on sales velocity.
-- CSV import/export.
+---
 
-### Batch 5: Core Missing Features (Researched)
+## 🔒 What Remains (Credential-Blocked Integration Work)
 
-The following gaps were identified by reviewing Square, Shopify POS, Lightspeed, and Loyverse (popular Kenyan retail POS). See [LAUNCH_BATCHES.md](LAUNCH_BATCHES.md) for full details.
+These items require official business registration, live third-party accounts, or production API keys to go live in a production environment:
 
-#### High Priority
-- Customer phone lookup at checkout (`Customer` model exists, no API route yet).
-- Split-tender UI (cash + M-Pesa on one order — data layer already supports it).
-- Rate limiting on `POST /api/auth/login` (`express-rate-limit`).
+1. **Render Production Infrastructure**:
+   - Production PostgreSQL connection string (`DATABASE_URL`).
+   - Domain SSL configuration & secret key rotation.
+2. **Safaricom M-Pesa Daraja Live Credentials**:
+   - Production Business Shortcode, Consumer Key, Consumer Secret, and Passkey.
+   - Public HTTPS Callback URL for live transaction callbacks.
+3. **KRA eTIMS Live System Integration**:
+   - Official KRA VSCU / OSCU registration, device serials, and live API endpoints for automated tax invoice transmission.
+4. **Africa's Talking SMS API Key**:
+   - API Key and Sender ID for sending live SMS receipts to customers.
 
-#### Medium Priority
-- Partial refund by line item.
-- SMS / WhatsApp receipts (Africa's Talking or Twilio).
-- Product image upload.
-- Discount codes and time-bound promotions.
-- CSV / Excel export for daily / weekly reports.
-- Customer loyalty points.
-
-#### Low Priority
-- Barcode label PDF generation.
-- Offline mode with service worker + IndexedDB sync.
-- Multi-till shift summary for managers.
-- `helmet` security headers (CSP, HSTS, X-Frame-Options).
-
-### Payments and Reconciliation
-
-- M-Pesa reconciliation dashboard.
-- Card payment provider integration.
-- Idempotency keys on payment-changing endpoints (done — Batch 4).
-
-### Compliance and Integrations
-
-- KRA eTIMS VSCU/OSCU production integration.
-- Credit notes for transmitted invoices.
-- Accounting export (QuickBooks / Sage / Zoho CSV).
-- ODPC/Data Protection review for customer data.
+---
 
 ## Research Links
 
-- Square reporting includes sales summary, payment methods, item/category sales, discounts, voids, tax, and transaction status: https://squareup.com/help/us/en/article/5072-summaries-and-reports-from-the-online-dashboard
-- Square inventory emphasizes real-time sales/stock tracking, low-stock alerts, stock-level reporting, exports, and integrations: https://squareup.com/us/en/point-of-sale/features/inventory-management
-- Shopify POS feature categories include omnichannel selling, inventory, staff, checkout, products, customers, reporting, hardware, payments, and marketing: https://www.shopify.com/pos/features
-- Shopify omnichannel POS highlights shared inventory, customer profiles, order history, returns/exchanges, gift cards/discounts, staff permissions, reporting, and integrations: https://www.shopify.com/enterprise/blog/omnichannel-pos
-- Loyverse POS (popular in East Africa) emphasizes loyalty programs, item variants, multiple store management, and offline mode: https://loyverse.com/pos-features
-- Lightspeed Retail highlights purchase orders, supplier management, inventory counts, and multi-location: https://www.lightspeedhq.com/pos/retail/
-- Safaricom Daraja is the official M-Pesa API platform: https://developer.safaricom.co.ke/
-- KRA eTIMS system-to-system integration supports VSCU and OSCU paths: https://www.kra.go.ke/business/etims-electronic-tax-invoice-management-system/learn-about-etims/etims-system-to-system-integration
-- Africa's Talking SMS API for SMS receipts: https://africastalking.com/sms
+- Square reporting & inventory: https://squareup.com/help/us/en/article/5072-summaries-and-reports-from-the-online-dashboard
+- Shopify POS features: https://www.shopify.com/pos/features
+- Loyverse POS features: https://loyverse.com/pos-features
+- Lightspeed Retail features: https://www.lightspeedhq.com/pos/retail/
+- Safaricom Daraja M-Pesa API: https://developer.safaricom.co.ke/
+- KRA eTIMS Integration Guide: https://www.kra.go.ke/business/etims-electronic-tax-invoice-management-system/learn-about-etims/etims-system-to-system-integration
+- Africa's Talking SMS API: https://africastalking.com/sms

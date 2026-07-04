@@ -1,25 +1,33 @@
 :root {
-  --pos-bg: #fbf4e8;
-  --pos-surface: #fff9f0;
-  --pos-panel: #fff7e6;
-  --pos-panel-strong: #f7e7bc;
-  --pos-line: rgba(216, 184, 94, 0.28);
-  --pos-line-strong: rgba(134, 92, 5, 0.35);
-  --pos-ink: #2a1f08;
-  --pos-ink-mid: #4f3f23;
-  --pos-ink-soft: #7d6b49;
-  --pos-accent: #d8b85e;
-  --pos-accent-light: #f0d37f;
-  --pos-accent-dark: #865c05;
-  --pos-accent-mid: #a8790e;
-  --pos-sidebar: #2a1f08;
-  --pos-sidebar-soft: #4f3f23;
-  --pos-success: #6d845d;
-  --pos-success-bg: #eef2e8;
-  --pos-danger: #96502a;
-  --pos-danger-bg: #f8ede2;
-  --pos-warn: #d98f06;
-  --pos-warn-bg: #fff2d5;
+  /* Modern High-End POS Color System */
+  --pos-bg: #f8fafc;
+  --pos-surface: #ffffff;
+  --pos-panel: #f1f5f9;
+  --pos-panel-strong: #e2e8f0;
+  --pos-line: #e2e8f0;
+  --pos-line-strong: #cbd5e1;
+  --pos-ink: #0f172a;
+  --pos-ink-mid: #334155;
+  --pos-ink-soft: #64748b;
+
+  /* Accent Color: Vibrant Emerald / Teal */
+  --pos-accent: #059669;
+  --pos-accent-light: #34d399;
+  --pos-accent-dark: #047857;
+  --pos-accent-mid: #10b981;
+
+  /* Sidebar Theme: Deep Navy Slate */
+  --pos-sidebar: #0f172a;
+  --pos-sidebar-soft: #1e293b;
+  --pos-sidebar-active: #059669;
+
+  /* Status Colors */
+  --pos-success: #16a34a;
+  --pos-success-bg: #dcfce7;
+  --pos-danger: #dc2626;
+  --pos-danger-bg: #fee2e2;
+  --pos-warn: #d97706;
+  --pos-warn-bg: #fef3c7;
 
   color: var(--pos-ink);
   background: var(--pos-bg);
@@ -37,18 +45,41 @@ body {
   margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  color: var(--pos-ink);
+  background: var(--pos-bg);
 }
 
 button,
 input,
-select {
-  font: inherit;
+select,
+textarea {
+  font-family: inherit;
 }
 
 button:focus-visible,
 input:focus-visible,
-select:focus-visible {
-  outline: 2px solid var(--pos-accent-dark);
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--pos-accent);
   outline-offset: 2px;
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
