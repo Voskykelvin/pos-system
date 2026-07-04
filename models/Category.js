@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     taxCategory: {
       // Kenyan VAT: standard 16%, zero-rated, exempt
-      type: DataTypes.ENUM('standard', 'zero_rated', 'exempt'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'standard'
     }

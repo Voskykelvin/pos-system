@@ -18,8 +18,9 @@ module.exports = (sequelize, DataTypes) => {
     type: {
       // percent = value is a percentage off total (e.g. 10 = 10%)
       // fixed   = value is a flat KES amount off total (e.g. 50 = KES 50 off)
-      type: DataTypes.ENUM('percent', 'fixed'),
-      allowNull: false
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'percent'
     },
     value: {
       // must be positive; interpreted based on type above

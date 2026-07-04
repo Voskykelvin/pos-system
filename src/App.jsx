@@ -5,6 +5,8 @@ import Dashboard from './components/Dashboard.jsx';
 import Analytics from './components/Analytics.jsx';
 import Login from './components/Login.jsx';
 import Operations from './components/Operations.jsx';
+import Signup from './components/Signup.jsx';
+import SuperAdmin from './components/SuperAdmin.jsx';
 import styles from './App.module.css';
 
 const ROUTES = {
@@ -20,7 +22,8 @@ const NAV_ITEMS = [
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
   { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] },
-  { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] }
+  { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] },
+  { id: 'saas_owner', label: '👑 Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
 
 function getInitialView() {
@@ -114,12 +117,45 @@ export default function App() {
     setView('dashboard');
   }
 
+  const [showSignup, setShowSignup] = useState(false);
+
   if (!authReady) {
-    return <div className={styles.loading}>Loading POS...</div>;
+    return <div className={styles.loading}>Loading application…</div>;
   }
 
-  if (!authToken || !bootstrap.user) {
-    return <Login onLogin={handleLogin} />;
+  if (showSignup && !authToken) {
+    return (
+      <Signup
+        onSignupSuccess={(token, user) => {
+          localStorage.setItem('pos_auth_token', token);
+          setAuthToken(token);
+          setShowSignup(false);
+          setView('dashboard');
+        }}
+        onNavigateLogin={() => setShowSignup(false)}
+      />
+    );
+  }
+
+  if (!authToken) {
+    return (
+      <div>
+        <Login
+          onLoginSuccess={(token) => {
+            localStorage.setItem('pos_auth_token', token);
+            setAuthToken(token);
+          }}
+        />
+        <div style={{ textAlign: 'center', padding: '16px', background: '#0f172a' }}>
+          <button
+            style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
+            onClick={() => setShowSignup(true)}
+          >
+            🚀 Want to launch your own store? Sign up for SaaS POS
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -160,9 +196,18 @@ export default function App() {
         {view === 'checkout' && (
           <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
         )}
-        {view === 'inventory' && <ProductAdmin authToken={authToken} userId={bootstrap.userId} />}
-        {view === 'analytics' && <Analytics authToken={authToken} />}
-        {view === 'operations' && <Operations authToken={authToken} user={bootstrap.user} />}
+        {view === 'inventory' && allowedIds.includes('inventory') && (
+          <ProductAdmin authToken={authToken} userId={bootstrap.userId} />
+        )}
+        {view === 'analytics' && allowedIds.includes('analytics') && (
+          <Analytics authToken={authToken} />
+        )}
+        {view === 'operations' && allowedIds.includes('operations') && (
+          <Operations authToken={authToken} user={bootstrap.user} />
+        )}
+        {view === 'saas_owner' && allowedIds.includes('saas_owner') && (
+          <SuperAdmin authToken={authToken} />
+        )}
       </main>
     </div>
   );

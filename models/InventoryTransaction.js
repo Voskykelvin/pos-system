@@ -12,7 +12,7 @@ module.exports = (sequelize, DataTypes) => {
     type: {
       // purchase = stock in, sale = stock out, adjustment = manual correction,
       // return = customer return back to stock, wastage = spoilage/shrinkage write-off
-      type: DataTypes.ENUM('purchase', 'sale', 'adjustment', 'return', 'wastage'),
+      type: DataTypes.STRING,
       allowNull: false
     },
     quantity: {
@@ -49,7 +49,6 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     updatedAt: false,
     indexes: [
-      { fields: ['productId'] },
       { fields: ['productId', 'createdAt'] }  // ledger history per product
     ]
   });

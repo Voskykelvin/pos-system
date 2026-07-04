@@ -15,7 +15,7 @@ module.exports = (sequelize, DataTypes) => {
       // transmitted = KRA accepted it, cuInvoiceNumber is set
       // failed = KRA rejected it or repeated retries failed
       // cancelled = the underlying order was voided before transmission
-      type: DataTypes.ENUM('queued', 'transmitted', 'failed', 'cancelled'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'queued'
     },

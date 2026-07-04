@@ -24,9 +24,13 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     role: {
-      type: DataTypes.ENUM('admin', 'manager', 'cashier'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'cashier'
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     },
     isActive: {
       type: DataTypes.BOOLEAN,

@@ -39,7 +39,7 @@ module.exports = (sequelize, DataTypes) => {
     status: {
       // voided orders keep the record but reverse all stock
       // partial_refund = some items returned, order still has active items
-      type: DataTypes.ENUM('completed', 'voided', 'refunded', 'partial_refund'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'completed'
     },

@@ -25,6 +25,7 @@ const customerRoutes = require('./routes/customers');
 const promotionRoutes = require('./routes/promotions');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
@@ -99,6 +100,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api', tenantRoutes);
 
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');
@@ -117,6 +119,9 @@ async function start({ port = PORT } = {}) {
   console.log(`Database connection established (${isUsingMemoryDatabase() ? 'memory demo' : 'postgres'})`);
 
   if (isUsingMemoryDatabase()) {
+    try {
+      await sequelize.drop();
+    } catch { /* ignore drop errors */ }
     await sequelize.sync({ force: true });
     await seedDemoData();
     console.log('Demo data loaded');

@@ -63,11 +63,7 @@ module.exports = (sequelize, DataTypes) => {
     }
   }, {
     tableName: 'products',
-    timestamps: true,
-    indexes: [
-      { fields: ['barcode'] },
-      { fields: ['sku'] }
-    ]
+    timestamps: true
   });
 
   Product.associate = (models) => {

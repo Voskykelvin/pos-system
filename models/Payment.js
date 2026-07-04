@@ -10,7 +10,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     method: {
-      type: DataTypes.ENUM('cash', 'mpesa', 'card'),
+      type: DataTypes.STRING,
       allowNull: false
     },
     amount: {
@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false
     },
     status: {
-      type: DataTypes.ENUM('pending', 'confirmed', 'failed', 'reversed'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'pending'
     },

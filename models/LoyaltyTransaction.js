@@ -18,7 +18,7 @@ module.exports = (sequelize, DataTypes) => {
       // earn = points awarded on a sale
       // redeem = points spent at checkout
       // adjust = manual correction by admin
-      type: DataTypes.ENUM('earn', 'redeem', 'adjust'),
+      type: DataTypes.STRING,
       allowNull: false
     },
     points: {

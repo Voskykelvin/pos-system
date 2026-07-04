@@ -19,7 +19,7 @@ module.exports = (sequelize, DataTypes) => {
       // ordered: sent to supplier
       // received: goods received into stock
       // cancelled: PO voided
-      type: DataTypes.ENUM('draft', 'ordered', 'received', 'cancelled'),
+      type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'draft'
     },
