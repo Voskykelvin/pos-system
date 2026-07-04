@@ -8,6 +8,7 @@ const {
 const { reverseOrder } = require('../services/orderReversal');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
+const { tenantWhere } = require('../utils/tenantScope');
 
 /**
  * POST /api/orders/:id/void
@@ -31,7 +32,8 @@ async function voidOrder(req, res) {
 
   try {
     const approval = await resolveManagerApproval(req, { reason: 'order void' });
-    const order = await Order.findByPk(id, {
+    const order = await Order.findOne({
+      where: tenantWhere(req, { id }),
       include: [
         { model: OrderItem },
         { model: Payment },

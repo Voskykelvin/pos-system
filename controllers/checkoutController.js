@@ -84,7 +84,7 @@ async function checkout(req, res) {
     let promoDiscount = 0;
     if (promotionCode) {
       const promo = await Promotion.findOne({
-        where: { code: String(promotionCode).trim().toUpperCase(), isActive: true }
+        where: tenantWhere(req, { code: String(promotionCode).trim().toUpperCase(), isActive: true })
       });
       if (!promo) throw Object.assign(new Error('Invalid or inactive promotion code'), { status: 400 });
       const now = new Date();
@@ -174,7 +174,7 @@ async function checkout(req, res) {
     const numRedeemPoints = Math.max(Number(redeemPoints || 0), 0);
     const ptsPerKes = Number(process.env.LOYALTY_POINTS_PER_KES) || 100;
     if (numRedeemPoints > 0 && customerId) {
-      const cust = await Customer.findByPk(customerId, { transaction: t });
+      const cust = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
       if (!cust || (cust.loyaltyPoints || 0) < numRedeemPoints) {
         throw Object.assign(new Error('Insufficient customer loyalty points'), { status: 400 });
       }
@@ -241,13 +241,15 @@ async function checkout(req, res) {
       createdPayments.push(paymentRow);
 
       if (isCredit && customerId) {
-        const customer = await Customer.findByPk(customerId, { transaction: t });
+        const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
         if (!customer) throw new Error('Customer not found for credit sale');
 
         const newBalance = Number(customer.creditBalance) + Number(p.amount);
         if (Number(customer.creditLimit) > 0 && newBalance > Number(customer.creditLimit)) {
-          // If we want to strictly enforce it:
-          // throw new Error(`Credit limit of ${customer.creditLimit} exceeded`);
+          throw Object.assign(
+            new Error(`Credit limit of ${customer.creditLimit} would be exceeded for this customer`),
+            { status: 400 }
+          );
         }
         await customer.update({ creditBalance: newBalance }, { transaction: t });
 
@@ -266,7 +268,7 @@ async function checkout(req, res) {
     // 6. Queue the eTIMS invoice for later transmission (offline-first)
     let customerKraPin = null;
     if (customerId) {
-      const customer = await Customer.findByPk(customerId, { transaction: t });
+      const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
       customerKraPin = customer ? customer.kraPin : null;
     }
 
@@ -303,7 +305,7 @@ async function checkout(req, res) {
     // -- Post-commit: award or redeem loyalty points (non-blocking) -----------------
     if (customerId) {
       try {
-        const customer = await Customer.findByPk(customerId);
+        const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }) });
         if (customer) {
           let currentPoints = customer.loyaltyPoints || 0;
 

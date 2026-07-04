@@ -1,5 +1,7 @@
+const { Op } = require('sequelize');
 const { User } = require('../models');
 const { verifyPassword } = require('../utils/passwords');
+const { tenantWhere } = require('../utils/tenantScope');
 
 function isManagerRole(role) {
   return role === 'admin' || role === 'manager';
@@ -23,13 +25,12 @@ async function resolveManagerApproval(req, { reason }) {
   }
 
   const identifier = approval.identifier.trim();
-  const normalized = identifier.toLowerCase();
-  const users = await User.findAll({ where: { isActive: true } });
-  const approver = users.find(
-    (candidate) =>
-      candidate.email?.toLowerCase() === normalized ||
-      candidate.phone === identifier
-  );
+  const approver = await User.findOne({
+    where: tenantWhere(req, {
+      isActive: true,
+      [Op.or]: [{ email: { [Op.iLike]: identifier } }, { phone: identifier }]
+    })
+  });
 
   if (!approver || !isManagerRole(approver.role) || !verifyPassword(approval.password, approver.passwordHash)) {
     const err = new Error('Invalid manager approval');

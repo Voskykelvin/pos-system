@@ -118,7 +118,7 @@ async function closeShift(req, res) {
   }
 
   try {
-    const shift = await Shift.findByPk(id);
+    const shift = await Shift.findOne({ where: tenantWhere(req, { id }) });
     if (!shift) return res.status(404).json({ error: 'Shift not found' });
     if (shift.status !== 'open') {
       return res.status(400).json({ error: 'Shift is already closed' });

@@ -47,7 +47,7 @@ async function create(req, res) {
 
 async function update(req, res) {
   try {
-    const supplier = await Supplier.findByPk(req.params.id);
+    const supplier = await Supplier.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!supplier) return res.status(404).json({ error: 'Supplier not found' });
 
     const { name, email, phone, address, contactPerson, kraPin, isActive } = req.body;

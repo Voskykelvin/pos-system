@@ -89,7 +89,8 @@ async function receive(req, res) {
 
   const t = await sequelize.transaction();
   try {
-    const po = await PurchaseOrder.findByPk(id, {
+    const po = await PurchaseOrder.findOne({
+      where: tenantWhere(req, { id }),
       include: [{ model: PurchaseOrderItem, as: 'items' }],
       transaction: t,
       lock: t.LOCK.UPDATE
@@ -122,7 +123,10 @@ async function receive(req, res) {
         }, { transaction: t });
 
         // Update product stock and cost price
-        const product = await Product.findByPk(poItem.productId, { transaction: t });
+        const product = await Product.findOne({
+          where: tenantWhere(req, { id: poItem.productId }),
+          transaction: t
+        });
         if (product) {
           const newStock = Number(product.stockQuantity) + recQty;
           await product.update({

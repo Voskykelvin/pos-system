@@ -1,6 +1,7 @@
 const { sequelize, Payment, Order, OrderItem, EtimsInvoice } = require('../models');
 const { initiateStkPush } = require('../utils/mpesa');
 const { reverseOrder } = require('../services/orderReversal');
+const { tenantWhere } = require('../utils/tenantScope');
 
 /**
  * POST /api/mpesa/stk-push
@@ -19,8 +20,9 @@ async function initiate(req, res) {
   }
 
   try {
-    const payment = await Payment.findByPk(paymentId, {
-      include: [{ model: Order }]
+    const payment = await Payment.findOne({
+      where: { id: paymentId },
+      include: [{ model: Order, where: tenantWhere(req) }]
     });
 
     if (!payment) {
@@ -144,6 +146,14 @@ async function callback(req, res) {
     const mpesaReceiptNumber = getValue('MpesaReceiptNumber');
     const amountPaid = getValue('Amount');
     const phoneNumber = getValue('PhoneNumber');
+    const paidAmount = Number(amountPaid);
+    const expectedAmount = Number(payment.amount);
+
+    if (!Number.isFinite(paidAmount) || Math.abs(paidAmount - expectedAmount) > 0.01) {
+      console.error(
+        `M-Pesa amount mismatch for payment ${payment.id}: expected ${expectedAmount}, got ${amountPaid}`
+      );
+    }
 
     await payment.update({
       status: 'confirmed',

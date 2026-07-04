@@ -11,6 +11,7 @@ const {
 } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
+const { tenantWhere } = require('../utils/tenantScope');
 
 /**
  * POST /api/orders/:id/refund/partial
@@ -37,7 +38,8 @@ async function partialRefund(req, res) {
   try {
     const approval = await resolveManagerApproval(req, { reason: 'partial refund' });
 
-    const order = await Order.findByPk(id, {
+    const order = await Order.findOne({
+      where: tenantWhere(req, { id }),
       include: [
         { model: OrderItem, include: [{ model: Product }] },
         { model: Payment },

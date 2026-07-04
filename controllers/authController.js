@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { User } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 const { verifyPassword } = require('../utils/passwords');
@@ -21,15 +22,13 @@ async function login(req, res) {
   }
 
   try {
-    const normalized = identifier.trim().toLowerCase();
-    const users = await User.findAll({
-      where: { isActive: true }
+    const trimmed = identifier.trim();
+    const user = await User.findOne({
+      where: {
+        isActive: true,
+        [Op.or]: [{ email: { [Op.iLike]: trimmed } }, { phone: trimmed }]
+      }
     });
-    const user = users.find(
-      (candidate) =>
-        candidate.email?.toLowerCase() === normalized ||
-        candidate.phone === identifier.trim()
-    );
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid login details' });

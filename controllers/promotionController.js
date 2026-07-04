@@ -119,7 +119,7 @@ async function create(req, res) {
  */
 async function update(req, res) {
   try {
-    const promo = await Promotion.findByPk(req.params.id);
+    const promo = await Promotion.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!promo) return res.status(404).json({ error: 'Promotion not found' });
 
     const { description, type, value, minOrderTotal, maxUses, startsAt, expiresAt, isActive } = req.body;

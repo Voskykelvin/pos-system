@@ -9,6 +9,7 @@ const { Order, Payment } = require('../models');
 const { authenticate, requireRoles } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const { idempotency } = require('../middleware/idempotency');
+const { tenantWhere } = require('../utils/tenantScope');
 
 const cashierAndAbove = requireRoles('admin', 'manager', 'cashier');
 
@@ -56,7 +57,8 @@ router.get('/:id/receipt', authenticate, cashierAndAbove, receipt);
 // waiting on an M-Pesa callback
 router.get('/:id/status', authenticate, async (req, res) => {
   try {
-    const order = await Order.findByPk(req.params.id, {
+    const order = await Order.findOne({
+      where: tenantWhere(req, { id: req.params.id }),
       include: [{ model: Payment }]
     });
     if (!order) {
