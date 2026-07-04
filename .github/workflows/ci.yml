@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build frontend
+        run: npm run build
+
+      - name: Smoke test API and workflows
+        run: npm run smoke
+        env:
+          ENABLE_ETIMS_SCHEDULER: "false"
+          AUTH_TOKEN_SECRET: ci-smoke-secret
+
+      - name: Dependency audit
+        run: npm audit --omit=dev
+        continue-on-error: true
