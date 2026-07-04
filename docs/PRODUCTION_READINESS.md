@@ -1,73 +1,85 @@
-# Production Readiness Guide
+# Production Readiness
 
-This document tracks system readiness for production deployment on Render with Postgres.
+Use this guide when deploying the POS system to Render with PostgreSQL.
 
----
+## Stack
 
-## 🚀 Recommended Production Stack
+- Host: Render Web Service.
+- Build command: `npm ci && npm run build`.
+- Pre-deploy command: `npm run db:migrate`.
+- Start command: `npm start`.
+- Health check: `GET /api/health`.
+- Database: Render PostgreSQL connected by `DATABASE_URL`.
+- Blueprint: [`render.yaml`](../render.yaml).
 
-- **Host**: Render Web Service (`npm install && npm run build` & `npm start`).
-- **Database**: Managed Render PostgreSQL connected via `DATABASE_URL`.
-- **Database Lifecycle**: Run `npm run db:migrate` at startup. (Safe transactional SQL migration runner).
-- **Health Check**: `GET /api/health` returns `200 OK` with database connection state.
-- **Provisioning Blueprint**: Included [`render.yaml`](file:///c:/Users/PC/OneDrive/Desktop/pos%20system/render.yaml) preconfigured for web service + managed database.
+## Environment Variables
 
----
+Required:
 
-## ✅ Software Requirements Checklist (100% Complete)
+- `NODE_ENV=production`
+- `DATABASE_URL`
+- `AUTH_TOKEN_SECRET` or `JWT_SECRET`
+- `BUSINESS_TIME_ZONE=Africa/Nairobi`
+- `BUSINESS_NAME`
+- `BUSINESS_KRA_PIN`
 
-| Requirement | Status | Solution Built |
-|---|---|---|
-| **Auth & RBAC** | ✅ Complete | JWT tokens, bcrypt hashing, role middleware (`admin`, `manager`, `cashier`) |
-| **Manager Approval Controls** | ✅ Complete | Pin/Password approval service for voids, refunds, discounts & stock adjustments |
-| **Database Migrations** | ✅ Complete | Transactional migration runner (`scripts/migrate.js`) replacing unsafe `alter:true` syncs |
-| **Database Indexes** | ✅ Complete | Composite query indexes on `Order`, `OrderItem`, `Payment`, `EtimsInvoice`, `InventoryTransaction` |
-| **Input Validation** | ✅ Complete | Schema validator (`middleware/validate.js`) on all write routes |
-| **Idempotency Keys** | ✅ Complete | In-memory cache (`middleware/idempotency.js`) for Checkout & STK push calls |
-| **Security Headers & Rate Limiting**| ✅ Complete | `helmet` CSP & `express-rate-limit` (10 auth attempts/15m, 120 API/m) |
-| **Shift Management & Reconciliations**| ✅ Complete | Single-cashier shift open/close + Today's Multi-Till Shift Summary for Managers |
-| **Supplier & Purchase Orders** | ✅ Complete | Supplier directory, PO receiving workflow, stock intake, cost price auto-updates |
-| **Sales Velocity Reorder Suggestions** | ✅ Complete | 30-day velocity algorithm & auto-generate PO button |
-| **CSV Data Import/Export** | ✅ Complete | One-click report export & bulk product catalog CSV import |
-| **Customer Loyalty Engine** | ✅ Complete | Phone lookup, customer quick-add, 1 pt / KES 100 earn, points ledger |
-| **Promotions & Promo Codes** | ✅ Complete | Percent/fixed promo codes, expiry limits, min order thresholds, admin management UI |
-| **Line-Item Partial Refunds** | ✅ Complete | Itemized return UI & stock restoration logic |
+M-Pesa:
 
----
+- `MPESA_ENV=production`
+- `MPESA_CONSUMER_KEY`
+- `MPESA_CONSUMER_SECRET`
+- `MPESA_SHORTCODE`
+- `MPESA_PASSKEY`
+- `MPESA_CALLBACK_URL=https://your-domain/api/mpesa/callback`
 
-## 🔒 Remaining Production Dependencies (Credential Setup)
+eTIMS:
 
-Before triggering `git push` to Render production, configure the following environment parameters:
+- `ETIMS_ENV=production`
+- `ETIMS_BASE_URL`
+- `ETIMS_API_KEY`
+- `ETIMS_DEVICE_SERIAL`
+- `ENABLE_ETIMS_SCHEDULER=true`
 
-### 1. Database & Security
-- `DATABASE_URL`: Production PostgreSQL connection string.
-- `JWT_SECRET`: Generate a 64-character random secret.
-- `BUSINESS_NAME`: e.g., "My Supermarket Ltd".
-- `BUSINESS_KRA_PIN`: e.g., "P051234567Z".
+Optional SMS receipts:
 
-### 2. M-Pesa Daraja Production (Safaricom)
-- `MPESA_ENV`: `production`
-- `MPESA_CONSUMER_KEY` & `MPESA_CONSUMER_SECRET`
-- `MPESA_SHORTCODE` & `MPESA_PASSKEY`
-- `MPESA_CALLBACK_URL`: `https://your-domain.onrender.com/api/mpesa/callback`
+- `AFRICASTALKING_USERNAME`
+- `AFRICASTALKING_API_KEY`
+- `AFRICASTALKING_SENDER_ID`
 
-### 3. KRA eTIMS Integration
-- `ETIMS_ENV`: `production`
-- `ETIMS_BASE_URL` & `ETIMS_API_KEY`
-- `ETIMS_DEVICE_SERIAL`: Device serial issued by KRA.
-- `ENABLE_ETIMS_SCHEDULER`: `true`
+## Go-Live Checklist
 
----
+- [ ] Provision Render PostgreSQL.
+- [ ] Create Render Web Service with `render.yaml`.
+- [ ] Configure all production secrets.
+- [ ] Run `npm run db:migrate`.
+- [ ] Create the first admin with `npm run admin:create`.
+- [ ] Confirm `/api/health` returns `{"ok":true,"database":"postgres"}`.
+- [ ] Log in as admin.
+- [ ] Import the product catalog or create products manually.
+- [ ] Open a shift.
+- [ ] Run a cash test sale.
+- [ ] Run an M-Pesa test sale after live credentials are configured.
+- [ ] Print a receipt from the browser print dialog.
+- [ ] Close the shift and verify expected cash, counted cash, and variance.
 
-## 📋 Production Deployment Runbook
+## Built Readiness Items
 
-1. **Provision Environment**:
-   - Link repository to Render and apply [`render.yaml`](file:///c:/Users/PC/OneDrive/Desktop/pos%20system/render.yaml).
-2. **Set Environment Variables**:
-   - Input production keys in Render Secrets dashboard.
-3. **Execute Initial Migration**:
-   - Run `npm run db:migrate` via Render Shell or build command.
-4. **Bootstrap Admin User**:
-   - Run `npm run admin:create` via Render Shell to create the initial super-admin credentials.
-5. **Verify Health**:
-   - Confirm `GET https://your-app.onrender.com/api/health` returns `{ "ok": true, "database": "postgres" }`.
+| Area | Status | Implementation |
+| --- | --- | --- |
+| Auth and RBAC | Complete | Token auth, password hashing, role middleware. |
+| Manager approvals | Complete | Approval service for voids, refunds, discounts, and stock adjustments. |
+| Migrations | Complete | Transactional SQL migration runner. |
+| Validation | Complete | `middleware/validate.js` on write paths. |
+| Idempotency | Complete | Checkout and M-Pesa STK push keys. |
+| Security headers | Complete | `helmet` CSP. |
+| Rate limits | Complete | Auth, general API, and tenant-aware limits. |
+| Inventory | Complete | Products, suppliers, POs, CSV, reorder suggestions. |
+| Operations | Complete | Shifts, expenses, receipt lookup, voids, refunds, audit logs. |
+| Reporting | Complete | Dashboard, analytics, reorder suggestions, CSV export. |
+
+## Production Blockers Outside The Repo
+
+- Live Safaricom Daraja credentials and callback approval.
+- Live KRA eTIMS credentials and device registration.
+- Business legal details for production receipts and tax payloads.
+- SMS provider credentials if receipt SMS is required.

@@ -8,6 +8,7 @@ const {
   User,
   EtimsInvoice
 } = require('../models');
+const { tenantWhere } = require('../utils/tenantScope');
 
 function mapPayment(payment) {
   return {
@@ -30,7 +31,7 @@ async function searchOrders(req, res) {
 
   try {
     const orders = await Order.findAll({
-      where,
+      where: tenantWhere(req, where),
       include: [
         { model: Payment },
         { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] }
@@ -56,7 +57,8 @@ async function searchOrders(req, res) {
 
 async function receipt(req, res) {
   try {
-    const order = await Order.findByPk(req.params.id, {
+    const order = await Order.findOne({
+      where: tenantWhere(req, { id: req.params.id }),
       include: [
         {
           model: OrderItem,

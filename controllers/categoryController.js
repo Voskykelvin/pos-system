@@ -1,9 +1,13 @@
 const { Category } = require('../models');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 // GET /api/admin/categories
 async function list(req, res) {
   try {
-    const categories = await Category.findAll({ order: [['name', 'ASC']] });
+    const categories = await Category.findAll({
+      where: tenantWhere(req),
+      order: [['name', 'ASC']]
+    });
     res.json(categories);
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -20,7 +24,8 @@ async function create(req, res) {
   try {
     const category = await Category.create({
       name,
-      taxCategory: taxCategory || 'standard'
+      taxCategory: taxCategory || 'standard',
+      ...withTenant(req)
     });
     res.status(201).json(category);
   } catch (err) {

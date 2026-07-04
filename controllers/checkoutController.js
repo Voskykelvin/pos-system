@@ -17,6 +17,7 @@ const { buildEtimsPayload } = require('../utils/etimsPayload');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { sendReceipt } = require('../services/smsService');
+const { tenantWhere } = require('../utils/tenantScope');
 
 // Loyalty: 1 point earned per KES 100 spent (configurable)
 const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
@@ -66,6 +67,9 @@ async function checkout(req, res) {
   if (!Array.isArray(payments) || payments.length === 0) {
     return res.status(400).json({ error: 'At least one payment is required' });
   }
+  if (payments.some((p) => p.method === 'credit') && !customerId) {
+    return res.status(400).json({ error: 'Credit payments require a selected customer' });
+  }
 
   const t = await sequelize.transaction();
 
@@ -99,7 +103,7 @@ async function checkout(req, res) {
     //    selling the last unit of the same item at the same time
     const productIds = items.map((i) => i.productId);
     const products = await Product.findAll({
-      where: { id: productIds },
+      where: tenantWhere(req, { id: productIds }),
       include: [{ model: Category }],
       transaction: t,
       lock: t.LOCK.UPDATE
@@ -188,7 +192,7 @@ async function checkout(req, res) {
     }
 
     // 3. Create the order
-    const anyPending = payments.some((p) => p.method !== 'cash');
+    const anyPending = payments.some((p) => !['cash', 'credit'].includes(p.method));
     const orderNumber = await generateOrderNumber();
     const order = await Order.create({
       orderNumber,
@@ -199,7 +203,8 @@ async function checkout(req, res) {
       discountTotal: combinedDiscount,
       total,
       status: 'completed',
-      paymentStatus: anyPending ? 'pending' : 'paid'
+      paymentStatus: anyPending ? 'pending' : 'paid',
+      tenantId: req.tenantId || null
     }, { transaction: t });
 
     // 4. Create order items, deduct stock, log inventory transactions
@@ -238,7 +243,7 @@ async function checkout(req, res) {
       if (isCredit && customerId) {
         const customer = await Customer.findByPk(customerId, { transaction: t });
         if (!customer) throw new Error('Customer not found for credit sale');
-        
+
         const newBalance = Number(customer.creditBalance) + Number(p.amount);
         if (Number(customer.creditLimit) > 0 && newBalance > Number(customer.creditLimit)) {
           // If we want to strictly enforce it:
@@ -248,7 +253,7 @@ async function checkout(req, res) {
 
         await CustomerLedger.create({
           customerId: customer.id,
-          tenantId: req.tenantId, // Requires req.tenantId
+          tenantId: req.tenantId || null,
           orderId: order.id,
           type: 'charge',
           amount: p.amount,
@@ -295,7 +300,7 @@ async function checkout(req, res) {
 
     await t.commit();
 
-    // ── Post-commit: award or redeem loyalty points (non-blocking) ─────────────────
+    // -- Post-commit: award or redeem loyalty points (non-blocking) -----------------
     if (customerId) {
       try {
         const customer = await Customer.findByPk(customerId);

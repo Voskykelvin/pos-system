@@ -29,6 +29,7 @@ function createAuthToken(user) {
     sub: user.id,
     role: user.role,
     name: user.name,
+    tenantId: user.tenantId || null,
     exp: Math.floor(Date.now() / 1000) + ttlHours * 60 * 60
   };
 

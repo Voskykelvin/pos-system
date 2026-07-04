@@ -1,6 +1,12 @@
 process.env.PORT = '0';
 process.env.ENABLE_ETIMS_SCHEDULER = 'false';
 
+try {
+  require('moment').suppressDeprecationWarnings = true;
+} catch {
+  // pg-mem pulls in moment; suppress its timestamp parsing warning in smoke only.
+}
+
 const { start } = require('../server');
 
 async function request(baseUrl, path, options) {
@@ -55,6 +61,24 @@ async function main() {
     });
     if (shift.status !== 'open') throw new Error('Shift did not open');
 
+    await request(baseUrl, '/api/shifts/expenses', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: 10, category: 'supplies', description: 'Smoke test petty cash' })
+    });
+
+    const promotion = await request(baseUrl, '/api/admin/promotions', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ code: 'SMOKE10', type: 'fixed', value: 10, minOrderTotal: 0 })
+    });
+    if (promotion.code !== 'SMOKE10') throw new Error('Promotion admin route did not create the code');
+
+    const validatedPromotion = await request(baseUrl, '/api/promotions/validate?code=SMOKE10&orderTotal=100', {
+      headers: authHeaders
+    });
+    if (validatedPromotion.discountAmount !== 10) throw new Error('Promotion validation returned the wrong discount');
+
     const products = await request(baseUrl, '/api/products/search?q=milk', {
       headers: authHeaders
     });
@@ -66,7 +90,11 @@ async function main() {
 
     const checkout = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
-      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'smoke-cash-checkout'
+      },
       body: JSON.stringify({
         cashierId: bootstrap.cashierId,
         items: [{ productId: product.id, quantity: 1 }],
@@ -99,10 +127,52 @@ async function main() {
     });
     if (report.orderCount < 1) throw new Error('Report did not include smoke order');
 
+    const reorder = await request(baseUrl, '/api/reports/reorder-suggestions?days=30', {
+      headers: authHeaders
+    });
+    if (!Array.isArray(reorder.suggestions)) throw new Error('Reorder suggestions did not return a list');
+
+    const customer = await request(baseUrl, '/api/customers', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Smoke Credit Customer', phone: '0700000001' })
+    });
+
+    const creditProducts = await request(baseUrl, '/api/products/search?q=bread', {
+      headers: authHeaders
+    });
+    const creditProduct = creditProducts[0];
+    const creditTaxRate = creditProduct.Category?.taxCategory === 'standard' ? 0.16 : 0;
+    const creditTotal = Number(creditProduct.sellingPrice) * (1 + creditTaxRate);
+    const creditCheckout = await request(baseUrl, '/api/orders/checkout', {
+      method: 'POST',
+      headers: {
+        ...authHeaders,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': 'smoke-credit-checkout'
+      },
+      body: JSON.stringify({
+        cashierId: bootstrap.cashierId,
+        customerId: customer.id,
+        items: [{ productId: creditProduct.id, quantity: 1 }],
+        payments: [{ method: 'credit', amount: creditTotal.toFixed(2) }]
+      })
+    });
+    if (creditCheckout.paymentStatus !== 'paid') {
+      throw new Error(`Expected paid credit checkout, got ${creditCheckout.paymentStatus}`);
+    }
+
+    const ledger = await request(baseUrl, `/api/customers/${customer.id}/ledger`, {
+      headers: authHeaders
+    });
+    if (!ledger.transactions.some((entry) => entry.type === 'charge')) {
+      throw new Error('Credit checkout did not create a customer ledger charge');
+    }
+
     const closedShift = await request(baseUrl, `/api/shifts/${shift.id}/close`, {
       method: 'POST',
       headers: { ...authHeaders, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ cashCounted: (1000 + total).toFixed(2) })
+      body: JSON.stringify({ cashCounted: (1000 + total - 10).toFixed(2) })
     });
     if (closedShift.status !== 'closed') throw new Error('Shift did not close');
     if (Math.abs(Number(closedShift.cashVariance)) > 0.01) {
@@ -128,6 +198,19 @@ async function main() {
       if (!auditLogs.some((entry) => entry.action === action)) {
         throw new Error(`Audit log missing ${action}`);
       }
+    }
+
+    const signup = await request(baseUrl, '/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        businessName: 'Smoke Tenant Store',
+        email: 'owner-smoke@example.local',
+        password: 'owner12345'
+      })
+    });
+    if (!signup.token || !signup.user?.tenantId) {
+      throw new Error('Signup did not return a tenant-aware owner session');
     }
 
     const cashierLogin = await request(baseUrl, '/api/auth/login', {

@@ -3,6 +3,7 @@
 const { Op } = require('sequelize');
 const { sequelize, Customer, LoyaltyTransaction } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 /**
  * GET /api/customers/search?q=0712345678
@@ -14,12 +15,12 @@ async function search(req, res) {
 
   try {
     const customers = await Customer.findAll({
-      where: {
+      where: tenantWhere(req, {
         [Op.or]: [
           { phone: { [Op.iLike]: `%${q}%` } },
           { name:  { [Op.iLike]: `%${q}%` } }
         ]
-      },
+      }),
       limit: 10,
       order: [['name', 'ASC']]
     });
@@ -35,7 +36,7 @@ async function search(req, res) {
  */
 async function getOne(req, res) {
   try {
-    const customer = await Customer.findByPk(req.params.id);
+    const customer = await Customer.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
     return res.json(mapCustomer(customer));
   } catch (err) {
@@ -46,7 +47,7 @@ async function getOne(req, res) {
 /**
  * POST /api/customers
  * Body: { name, phone, kraPin }
- * Creates a new customer — called from Checkout when cashier taps "Add as new customer".
+ * Creates a new customer - called from Checkout when cashier taps "Add as new customer".
  */
 async function create(req, res) {
   const { name, phone, kraPin } = req.body;
@@ -60,7 +61,8 @@ async function create(req, res) {
       name:   name   ? String(name).trim()   : null,
       phone:  phone  ? String(phone).trim()  : null,
       kraPin: kraPin ? String(kraPin).trim() : null,
-      loyaltyPoints: 0
+      loyaltyPoints: 0,
+      ...withTenant(req)
     });
 
     await logAudit({
@@ -87,7 +89,7 @@ async function create(req, res) {
  */
 async function ledger(req, res) {
   try {
-    const customer = await Customer.findByPk(req.params.id);
+    const customer = await Customer.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
     const { CustomerLedger } = require('../models');
@@ -119,7 +121,10 @@ async function payDebt(req, res) {
 
   const t = await sequelize.transaction();
   try {
-    const customer = await Customer.findByPk(req.params.id, { transaction: t });
+    const customer = await Customer.findOne({
+      where: tenantWhere(req, { id: req.params.id }),
+      transaction: t
+    });
     if (!customer) throw new Error('Customer not found');
 
     const paymentAmount = Number(amount);
@@ -130,7 +135,7 @@ async function payDebt(req, res) {
     const { CustomerLedger } = require('../models');
     await CustomerLedger.create({
       customerId: customer.id,
-      tenantId: req.tenantId,
+      tenantId: req.tenantId || null,
       orderId: null,
       type: 'payment',
       amount: paymentAmount,
@@ -161,7 +166,7 @@ async function payDebt(req, res) {
  */
 async function loyaltyBalance(req, res) {
   try {
-    const customer = await Customer.findByPk(req.params.id);
+    const customer = await Customer.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
     const transactions = await LoyaltyTransaction.findAll({

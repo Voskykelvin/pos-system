@@ -4,9 +4,9 @@ An enterprise-grade Point of Sale (POS) & Retail Management System built with No
 
 ---
 
-## ✨ Features Delivered
+## Features Delivered
 
-### 🛒 High-Speed Checkout & Payments
+### High-Speed Checkout & Payments
 - Barcode scanner & instant fuzzy text search.
 - Split-Tender Multi-Payment UI (Cash + M-Pesa on the same order).
 - Customer Phone Lookup & Quick-Add inside checkout with automated loyalty point earnings.
@@ -14,14 +14,14 @@ An enterprise-grade Point of Sale (POS) & Retail Management System built with No
 - M-Pesa STK push prompt trigger with real-time payment status polling.
 - Idempotency key protection preventing double-charges on network retries.
 
-### 📦 Inventory & Purchasing Depth
-- 5 Inventory Sub-Tabs: **Products**, **Suppliers**, **Purchase Orders**, **Reorder Suggestions**, and **CSV Tools**.
+### Inventory & Purchasing Depth
+- Inventory sub-tabs: **Products**, **Suppliers**, **Purchase Orders**, **Reorder Suggestions**, **Promotions**, and **CSV Tools**.
 - Supplier directory & Purchase Order receiving workflow (automatically updates product stock and cost prices).
 - Sales Velocity Reorder Algorithm (`GET /api/reports/reorder-suggestions?days=30`) with one-click PO auto-generation.
 - Bulk product catalog import & export via Excel-compatible CSVs.
 - `costPrice` snapshotting on every order line item for accurate gross profit tracking over time.
 
-### 🛡️ Security, Compliance & Data Safety
+### Security, Compliance & Data Safety
 - Hashed passwords (`bcrypt`) & signed JWT authentication with Role-Based Access Control (`admin`, `manager`, `cashier`).
 - Schema validation middleware on all write endpoints.
 - Rate limiting (`express-rate-limit`: 10 auth attempts/15 min, 120 API calls/min) and `helmet` CSP security headers.
@@ -29,7 +29,7 @@ An enterprise-grade Point of Sale (POS) & Retail Management System built with No
 - eTIMS invoice queueing, automated retry worker, and transmitted invoice lock protection.
 - Audit Log System recording all staff actions and manager approvals.
 
-### 📊 Operations & Multi-Till Analytics
+### Operations & Multi-Till Analytics
 - Shift open/close with cash reconciliation.
 - Today's Multi-Till Shift Summary for Managers aggregating floats, expected cash, counted cash, and variances across all registers.
 - Line-item partial refunds and full voids with stock restoration.
@@ -38,7 +38,7 @@ An enterprise-grade Point of Sale (POS) & Retail Management System built with No
 
 ---
 
-## 🚀 Quick Start (Local Demo)
+## Quick Start (Local Demo)
 
 ```bash
 # 1. Install dependencies
@@ -55,13 +55,13 @@ Open `http://localhost:4000`.
 
 > **Note**: If `DATABASE_URL` is omitted, the application automatically launches with an in-memory database pre-seeded with demo products, categories, suppliers, promo codes, and staff accounts!
 
-### 🔑 Demo Logins
+### Demo Logins
 - **Admin**: `admin@example.local` / `admin12345`
 - **Cashier**: `cashier@example.local` / `cashier12345`
 
 ---
 
-## 🛠️ Development & Testing
+## Development & Testing
 
 ```bash
 # Run API & Vite frontend concurrently in development mode
@@ -73,7 +73,7 @@ npm run smoke
 
 ---
 
-## 🗄️ Production Database Migrations
+## Production Database Migrations
 
 For PostgreSQL production deployments:
 
@@ -87,9 +87,9 @@ npm run db:migrate:dry
 
 ---
 
-## 📚 Project Documentation
+## Project Documentation
 
-- [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) — Production Deployment & Runbook
-- [docs/POS_BUILD_ROADMAP.md](docs/POS_BUILD_ROADMAP.md) — Architectural Overview & Feature Matrix
-- [docs/LAUNCH_BATCHES.md](docs/LAUNCH_BATCHES.md) — Delivery Batches 1–5 Checklist
-- [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md) — Security Audit & Hardening Notes
+- [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) - Production Deployment & Runbook
+- [docs/FEATURES_AND_ROADMAP.md](docs/FEATURES_AND_ROADMAP.md) - Built Features & Roadmap
+- [docs/SAAS_ARCHITECTURE.md](docs/SAAS_ARCHITECTURE.md) - SaaS Architecture Notes
+- [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md) - Security Audit & Hardening Notes

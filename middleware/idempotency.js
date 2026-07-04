@@ -5,14 +5,14 @@
  *   Idempotency-Key: <any string, typically a UUID>
  *
  * Behaviour:
- *   - First request  → passes through; response is stored in-memory.
- *   - Same key again → cached response is replayed instantly.
- *   - Same key while first is in-flight → 409 { error: 'Request is still processing' }.
- *   - No header      → passes through with no idempotency guarantee.
+ *   - First request  -> passes through; response is stored in-memory.
+ *   - Same key again -> cached response is replayed instantly.
+ *   - Same key while first is in-flight -> 409 { error: 'Request is still processing' }.
+ *   - No header      -> passes through with no idempotency guarantee.
  *
  * Storage:
  *   In-memory Map; entries expire after IDEMPOTENCY_TTL_MS (default 24 h).
- *   This is intentionally simple — no Redis dependency for now.
+ *   This is intentionally simple - no Redis dependency for now.
  *   On Render, a restart clears the cache, which is acceptable because the
  *   network client will get a timeout and can safely retry.
  *
@@ -37,7 +37,7 @@ function purgeExpired() {
   }
 }
 
-// Run purge every hour — lightweight, no setInterval leak risk in single-process.
+// Run purge every hour - lightweight, no setInterval leak risk in single-process.
 setInterval(purgeExpired, 60 * 60 * 1000).unref();
 
 /**
@@ -49,7 +49,7 @@ function idempotency() {
   return (req, res, next) => {
     const idempotencyKey = req.get('Idempotency-Key');
 
-    // No key → skip idempotency handling entirely.
+    // No key -> skip idempotency handling entirely.
     if (!idempotencyKey || idempotencyKey.trim() === '') {
       return next();
     }
@@ -90,7 +90,7 @@ function idempotency() {
           expiresAt: Date.now() + IDEMPOTENCY_TTL_MS
         });
       } else {
-        // Error responses should not be replayed — remove the in-flight marker.
+        // Error responses should not be replayed - remove the in-flight marker.
         store.delete(scopedKey);
       }
 
@@ -101,7 +101,7 @@ function idempotency() {
   };
 }
 
-/** Exposed for tests — allow inspecting/clearing the store. */
+/** Exposed for tests - allow inspecting/clearing the store. */
 function _clearStore() {
   store.clear();
 }

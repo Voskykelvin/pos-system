@@ -7,23 +7,30 @@ module.exports = (sequelize, DataTypes) => {
     },
     name: {
       type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
+      allowNull: false
     },
     taxCategory: {
       // Kenyan VAT: standard 16%, zero-rated, exempt
       type: DataTypes.STRING,
       allowNull: false,
       defaultValue: 'standard'
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'categories',
     timestamps: true,
-    paranoid: true
+    paranoid: true,
+    indexes: [
+      { fields: ['tenantId', 'name'] }
+    ]
   });
 
   Category.associate = (models) => {
     Category.hasMany(models.Product, { foreignKey: 'categoryId' });
+    Category.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
   };
 
   return Category;

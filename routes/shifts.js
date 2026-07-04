@@ -11,6 +11,6 @@ router.get('/summary', requireRoles('admin', 'manager'), summary);
 router.get('/', requireRoles('admin', 'manager'), list);
 router.post('/open', requireRoles('admin', 'manager', 'cashier'), validate(schemas.openShift), openShift);
 router.post('/:id/close', requireRoles('admin', 'manager', 'cashier'), validate(schemas.closeShift), closeShift);
-router.post('/expenses', requireRoles('admin', 'manager', 'cashier'), addExpense);
+router.post('/expenses', requireRoles('admin', 'manager', 'cashier'), validate(schemas.expense), addExpense);
 
 module.exports = router;

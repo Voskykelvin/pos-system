@@ -69,6 +69,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.JSON,
       allowNull: false,
       defaultValue: {}
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'products',
@@ -78,6 +82,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Product.associate = (models) => {
     Product.belongsTo(models.Category, { foreignKey: 'categoryId' });
+    Product.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     Product.hasMany(models.OrderItem, { foreignKey: 'productId' });
     Product.hasMany(models.InventoryTransaction, { foreignKey: 'productId' });
   };

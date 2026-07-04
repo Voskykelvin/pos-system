@@ -352,12 +352,12 @@ export default function ProductAdmin({ authToken, userId }) {
       {/* Sub-nav tabs */}
       <div className={styles.topBar}>
         <div className={styles.tabGroup}>
-          <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.active : ''}`} onClick={() => setActiveTab('products')}>📦 Products</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'suppliers' ? styles.active : ''}`} onClick={() => setActiveTab('suppliers')}>🚚 Suppliers</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'pos' ? styles.active : ''}`} onClick={() => setActiveTab('pos')}>📑 Purchase Orders</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'reorder' ? styles.active : ''}`} onClick={() => setActiveTab('reorder')}>💡 Reorder Suggestions</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'promotions' ? styles.active : ''}`} onClick={() => setActiveTab('promotions')}>🏷️ Promotions</button>
-          <button className={`${styles.tabBtn} ${activeTab === 'csv' ? styles.active : ''}`} onClick={() => setActiveTab('csv')}>📥 CSV Import/Export</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'products' ? styles.active : ''}`} onClick={() => setActiveTab('products')}>Products</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'suppliers' ? styles.active : ''}`} onClick={() => setActiveTab('suppliers')}>Suppliers</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'pos' ? styles.active : ''}`} onClick={() => setActiveTab('pos')}>Purchase Orders</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'reorder' ? styles.active : ''}`} onClick={() => setActiveTab('reorder')}>Reorder Suggestions</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'promotions' ? styles.active : ''}`} onClick={() => setActiveTab('promotions')}>Promotions</button>
+          <button className={`${styles.tabBtn} ${activeTab === 'csv' ? styles.active : ''}`} onClick={() => setActiveTab('csv')}>CSV Import/Export</button>
         </div>
       </div>
 
@@ -383,7 +383,7 @@ export default function ProductAdmin({ authToken, userId }) {
               />
               Low stock only
             </label>
-            <button className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(true)}>🏷️ Print Barcode Stickers</button>
+            <button className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(true)}>Print Barcode Stickers</button>
             <button className={styles.primaryBtn} onClick={openCreate}>+ Add Product</button>
           </div>
 
@@ -447,9 +447,9 @@ export default function ProductAdmin({ authToken, userId }) {
               {suppliers.map((s) => (
                 <tr key={s.id}>
                   <td><strong>{s.name}</strong></td>
-                  <td>{s.phone || '—'}</td>
-                  <td>{s.email || '—'}</td>
-                  <td>{s.contactPerson || '—'}</td>
+                  <td>{s.phone || '-'}</td>
+                  <td>{s.email || '-'}</td>
+                  <td>{s.contactPerson || '-'}</td>
                 </tr>
               ))}
             </tbody>
@@ -536,7 +536,7 @@ export default function ProductAdmin({ authToken, userId }) {
             </div>
             {reorderSuggestions.length > 0 && (
               <button className={styles.primaryBtn} onClick={generatePoFromReorder}>
-                ⚡ Auto-Generate PO with Suggested Items
+                Auto-Generate PO with Suggested Items
               </button>
             )}
           </div>
@@ -614,7 +614,7 @@ export default function ProductAdmin({ authToken, userId }) {
           <h2>Bulk CSV Catalog Management</h2>
           <div className={styles.csvBox}>
             <a href="/api/admin/products/export-csv" className={styles.primaryBtn} download>
-              📥 Export Product Catalog CSV
+              Export Product Catalog CSV
             </a>
           </div>
 
@@ -709,7 +709,7 @@ export default function ProductAdmin({ authToken, userId }) {
           <div className={styles.barcodeModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.tabHeaderAction}>
               <h3>Printable Barcode Sticker Sheets</h3>
-              <button className={styles.primaryBtn} onClick={() => window.print()}>🖨️ Print Labels</button>
+              <button className={styles.primaryBtn} onClick={() => window.print()}>Print Labels</button>
             </div>
             <p className={styles.subtitle}>Standard shelf & product barcode labels ready for thermal or A4 sticker paper.</p>
 

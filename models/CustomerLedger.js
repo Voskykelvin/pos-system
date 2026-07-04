@@ -11,7 +11,7 @@ module.exports = (sequelize, DataTypes) => {
     },
     tenantId: {
       type: DataTypes.UUID,
-      allowNull: false
+      allowNull: true
     },
     orderId: {
       // Null if it's a direct payment rather than a purchase

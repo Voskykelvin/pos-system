@@ -55,7 +55,7 @@ export default function SuperAdmin({ authToken }) {
           <span className={styles.badge}>SaaS Owner Master Control</span>
           <h1 className={styles.title}>Global Platform Dashboard</h1>
         </div>
-        <button className={styles.refreshBtn} onClick={loadDashboard}>🔄 Refresh Data</button>
+        <button className={styles.refreshBtn} onClick={loadDashboard}>Refresh Data</button>
       </div>
 
       {/* Analytics KPI Cards */}
@@ -109,7 +109,7 @@ export default function SuperAdmin({ authToken }) {
           {tenants.map((t) => (
             <tr key={t.id}>
               <td className={styles.tenantName}>{t.name}</td>
-              <td>{t.owner?.email || '—'}</td>
+              <td>{t.owner?.email || '-'}</td>
               <td>{t.currency}</td>
               <td>
                 <span className={`${styles.planBadge} ${styles[t.plan]}`}>{t.plan.toUpperCase()}</span>

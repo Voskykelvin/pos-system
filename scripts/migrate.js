@@ -6,12 +6,12 @@
  * runs exactly once.
  *
  * Usage:
- *   node scripts/migrate.js            — apply all pending migrations
- *   node scripts/migrate.js --dry-run  — list pending without applying
+ *   node scripts/migrate.js            - apply all pending migrations
+ *   node scripts/migrate.js --dry-run  - list pending without applying
  *
  * Environment:
- *   DATABASE_URL  — required (Postgres connection string)
- *   DB_SSL        — 'true' to enable SSL with no self-signed rejection
+ *   DATABASE_URL  - required (Postgres connection string)
+ *   DB_SSL        - 'true' to enable SSL with no self-signed rejection
  */
 
 'use strict';
@@ -57,14 +57,14 @@ async function getMigrationFiles() {
   return fs
     .readdirSync(MIGRATIONS_DIR)
     .filter((file) => file.endsWith('.sql'))
-    .sort(); // lexicographic sort — 001_*, 002_*, ... keeps order
+    .sort(); // lexicographic sort - 001_*, 002_*, ... keeps order
 }
 
 async function applyMigration(client, file) {
   const filePath = path.join(MIGRATIONS_DIR, file);
   const sql = fs.readFileSync(filePath, 'utf8');
 
-  console.log(`  ▶ Applying ${file} ...`);
+  console.log(`  > Applying ${file} ...`);
 
   // Run inside a transaction so a failed migration leaves no partial state.
   await client.query('BEGIN');
@@ -75,7 +75,7 @@ async function applyMigration(client, file) {
       [file]
     );
     await client.query('COMMIT');
-    console.log(`  ✓ ${file} applied`);
+    console.log(`  OK ${file} applied`);
   } catch (err) {
     await client.query('ROLLBACK');
     throw new Error(`Migration ${file} failed: ${err.message}`);
@@ -112,7 +112,7 @@ async function main() {
     }
 
     console.log(`\n${pending.length} pending migration(s):\n`);
-    pending.forEach((f) => console.log('  •', f));
+    pending.forEach((f) => console.log('  -', f));
 
     if (DRY_RUN) {
       console.log('\n[dry-run] No changes were applied.');
@@ -124,13 +124,13 @@ async function main() {
       await applyMigration(client, file);
     }
 
-    console.log(`\n✅ ${pending.length} migration(s) applied successfully.`);
+    console.log(`\nDone: ${pending.length} migration(s) applied successfully.`);
   } finally {
     await client.end();
   }
 }
 
 main().catch((err) => {
-  console.error('\n❌ Migration failed:', err.message);
+  console.error('\nMigration failed:', err.message);
   process.exit(1);
 });

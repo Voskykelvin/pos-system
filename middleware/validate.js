@@ -13,8 +13,8 @@
  *   min         : number  (numbers)
  *   max         : number  (numbers)
  *   enum        : array   (allowed values)
- *   items       : schema  (array item schema — validates every element)
- *   nonEmpty    : boolean (arrays must have ≥ 1 element)
+ *   items       : schema  (array item schema - validates every element)
+ *   nonEmpty    : boolean (arrays must have >= 1 element)
  */
 
 function typeOf(value) {
@@ -53,7 +53,7 @@ function validateField(key, value, descriptor) {
       return validateField(key, coerced, descriptor);
     }
     errors.push(`${key} must be a ${type} (got ${actual})`);
-    return errors; // type mismatch — skip deeper checks
+    return errors; // type mismatch - skip deeper checks
   }
 
   if (type === 'string') {
@@ -71,8 +71,8 @@ function validateField(key, value, descriptor) {
     if (!Number.isFinite(num)) {
       errors.push(`${key} must be a finite number`);
     } else {
-      if (min !== undefined && num < min) errors.push(`${key} must be ≥ ${min}`);
-      if (max !== undefined && num > max) errors.push(`${key} must be ≤ ${max}`);
+      if (min !== undefined && num < min) errors.push(`${key} must be >= ${min}`);
+      if (max !== undefined && num > max) errors.push(`${key} must be <= ${max}`);
     }
   }
 
@@ -126,7 +126,7 @@ function validate(schema) {
   };
 }
 
-// ── Reusable schemas ──────────────────────────────────────────────────────────
+// -- Reusable schemas ----------------------------------------------------------
 
 const schemas = {
   login: {
@@ -147,10 +147,15 @@ const schemas = {
       type: 'array',
       nonEmpty: true,
       items: {
-        method: { type: 'string', enumValues: ['cash', 'mpesa', 'card'] },
+        method: { type: 'string', enumValues: ['cash', 'mpesa', 'credit', 'card'] },
         amount: { type: 'number', min: 0.01 }
       }
     }
+  },
+
+  mpesaStkPush: {
+    paymentId: { type: 'string', minLength: 1 },
+    phone:     { type: 'string', minLength: 6, maxLength: 30 }
   },
 
   voidOrder: {
@@ -185,9 +190,20 @@ const schemas = {
   },
 
   adjustStock: {
-    type:     { type: 'string', enumValues: ['purchase', 'adjustment', 'wastage'] },
+    type:     { type: 'string', enumValues: ['purchase', 'adjustment', 'wastage', 'return'] },
     quantity: { type: 'number' }, // can be negative for wastage; controller validates final balance
     note:     { type: 'string', required: false, maxLength: 500 }
+  },
+
+  expense: {
+    amount:      { type: 'number', min: 0.01 },
+    category:    { type: 'string', minLength: 1, maxLength: 100 },
+    description: { type: 'string', required: false, maxLength: 255 }
+  },
+
+  customerPayment: {
+    amount: { type: 'number', min: 0.01 },
+    notes:  { type: 'string', required: false, maxLength: 255 }
   },
 
   openShift: {
@@ -230,6 +246,17 @@ const schemas = {
     description:   { type: 'string', required: false, maxLength: 255 },
     minOrderTotal: { type: 'number', required: false, min: 0 },
     maxUses:       { type: 'number', required: false, min: 0 }
+  },
+
+  updatePromotion: {
+    description:   { type: 'string', required: false, maxLength: 255 },
+    type:          { type: 'string', required: false, enumValues: ['percent', 'fixed'] },
+    value:         { type: 'number', required: false, min: 0.01 },
+    minOrderTotal: { type: 'number', required: false, min: 0 },
+    maxUses:       { type: 'number', required: false, min: 0 },
+    startsAt:      { type: 'string', required: false, maxLength: 50 },
+    expiresAt:     { type: 'string', required: false, maxLength: 50 },
+    isActive:      { type: 'boolean', required: false }
   }
 };
 

@@ -15,13 +15,13 @@ router.get('/:id', requireRoles('admin', 'manager', 'cashier'), getOne);
 // GET /api/customers/:id/loyalty
 router.get('/:id/loyalty', requireRoles('admin', 'manager', 'cashier'), loyaltyBalance);
 
-// POST /api/customers  — cashier creates customer at checkout
+// POST /api/customers  - cashier creates customer at checkout
 router.post('/', requireRoles('admin', 'manager', 'cashier'), validate(schemas.createCustomer), create);
 
 // GET /api/customers/:id/ledger
 router.get('/:id/ledger', requireRoles('admin', 'manager'), ledger);
 
 // POST /api/customers/:id/payment
-router.post('/:id/payment', requireRoles('admin', 'manager'), payDebt);
+router.post('/:id/payment', requireRoles('admin', 'manager'), validate(schemas.customerPayment), payDebt);
 
 module.exports = router;

@@ -118,7 +118,7 @@ export default function Signup({ onSignupSuccess, onNavigateLogin }) {
           </div>
 
           <button type="submit" className={styles.submitBtn} disabled={loading}>
-            {loading ? 'Provisioning Store...' : '🚀 Launch My POS Store'}
+            {loading ? 'Provisioning Store...' : 'Launch My POS Store'}
           </button>
         </form>
 

@@ -2,10 +2,12 @@
 
 const { Supplier } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 async function list(req, res) {
   try {
     const suppliers = await Supplier.findAll({
+      where: tenantWhere(req),
       order: [['name', 'ASC']]
     });
     return res.json(suppliers);
@@ -25,7 +27,8 @@ async function create(req, res) {
       phone: phone ? String(phone).trim() : null,
       address: address ? String(address).trim() : null,
       contactPerson: contactPerson ? String(contactPerson).trim() : null,
-      kraPin: kraPin ? String(kraPin).trim() : null
+      kraPin: kraPin ? String(kraPin).trim() : null,
+      ...withTenant(req)
     });
 
     await logAudit({

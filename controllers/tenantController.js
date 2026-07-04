@@ -1,11 +1,11 @@
 'use strict';
 
 const { hashPassword } = require('../utils/passwords');
-const { sequelize, Tenant, User, Category, Product } = require('../models');
-const { signToken } = require('../utils/authToken');
+const { sequelize, Tenant, User, Category } = require('../models');
+const { createAuthToken } = require('../utils/authToken');
 
 /**
- * POST /api/auth/signup
+ * POST /api/signup
  * Self-serve onboarding for store owners.
  * Body: { businessName, email, password, currency, country, plan }
  */
@@ -55,17 +55,12 @@ async function signup(req, res) {
     // 3. Auto-provision default product categories for the new store
     const defaultCats = ['General', 'Beverages', 'Groceries', 'Snacks', 'Electronics'];
     for (const catName of defaultCats) {
-      await Category.create({ name: catName, taxCategory: 'standard' }, { transaction: t });
+      await Category.create({ name: catName, taxCategory: 'standard', tenantId: tenant.id }, { transaction: t });
     }
 
     await t.commit();
 
-    const token = signToken({
-      id: owner.id,
-      email: owner.email,
-      role: owner.role,
-      tenantId: tenant.id
-    });
+    const token = createAuthToken(owner);
 
     return res.status(201).json({
       message: 'Store provisioned successfully!',
@@ -80,7 +75,8 @@ async function signup(req, res) {
         id: owner.id,
         name: owner.name,
         email: owner.email,
-        role: owner.role
+        role: owner.role,
+        tenantId: owner.tenantId
       }
     });
   } catch (err) {

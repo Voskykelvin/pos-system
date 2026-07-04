@@ -32,6 +32,10 @@ module.exports = (sequelize, DataTypes) => {
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'suppliers',
@@ -44,6 +48,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Supplier.associate = (models) => {
     Supplier.hasMany(models.PurchaseOrder, { foreignKey: 'supplierId' });
+    Supplier.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
   };
 
   return Supplier;

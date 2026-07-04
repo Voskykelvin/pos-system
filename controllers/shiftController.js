@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Shift, Payment, Order, User, Expense } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { tenantWhere } = require('../utils/tenantScope');
 
 function money(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -55,7 +56,7 @@ async function current(req, res) {
       : req.user.id;
 
     const shift = await Shift.findOne({
-      where: { cashierId, status: 'open' },
+      where: tenantWhere(req, { cashierId, status: 'open' }),
       include: [{ model: User, as: 'cashier', attributes: ['id', 'name'] }],
       order: [['openedAt', 'DESC']]
     });
@@ -79,7 +80,7 @@ async function openShift(req, res) {
 
   try {
     const existing = await Shift.findOne({
-      where: { cashierId: req.user.id, status: 'open' }
+      where: tenantWhere(req, { cashierId: req.user.id, status: 'open' })
     });
     if (existing) {
       return res.status(409).json({ error: 'This cashier already has an open shift' });
@@ -89,7 +90,8 @@ async function openShift(req, res) {
       cashierId: req.user.id,
       openedByUserId: req.user.id,
       openingFloat,
-      note
+      note,
+      tenantId: req.tenantId || null
     });
 
     await logAudit({
@@ -162,6 +164,7 @@ async function closeShift(req, res) {
 async function list(req, res) {
   try {
     const shifts = await Shift.findAll({
+      where: tenantWhere(req),
       include: [{ model: User, as: 'cashier', attributes: ['id', 'name'] }],
       order: [['openedAt', 'DESC']],
       limit: 50
@@ -189,6 +192,7 @@ async function summary(req, res) {
 
     const shifts = await Shift.findAll({
       where: {
+        ...tenantWhere(req),
         openedAt: { [Op.between]: [start, end] }
       },
       include: [{ model: User, as: 'cashier', attributes: ['id', 'name'] }],
@@ -228,7 +232,7 @@ async function addExpense(req, res) {
   }
 
   const shift = await Shift.findOne({
-    where: { cashierId: req.user.id, status: 'open' }
+    where: tenantWhere(req, { cashierId: req.user.id, status: 'open' })
   });
 
   if (!shift) {
@@ -242,7 +246,7 @@ async function addExpense(req, res) {
       description,
       shiftId: shift.id,
       cashierId: req.user.id,
-      tenantId: req.tenantId
+      tenantId: req.tenantId || null
     });
 
     const newTotalExpenses = Number(shift.totalExpenses) + Number(amount);

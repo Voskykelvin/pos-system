@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const { Product, Category } = require('../models');
+const { tenantWhere } = require('../utils/tenantScope');
 
 // GET /api/products/search?q=milk  or  ?barcode=5901234123457
 async function search(req, res) {
@@ -8,7 +9,7 @@ async function search(req, res) {
   try {
     if (barcode) {
       const product = await Product.findOne({
-        where: { barcode, isActive: true },
+        where: tenantWhere(req, { barcode, isActive: true }),
         include: [{ model: Category }]
       });
       return res.json(product ? [product] : []);
@@ -19,13 +20,13 @@ async function search(req, res) {
     }
 
     const products = await Product.findAll({
-      where: {
+      where: tenantWhere(req, {
         isActive: true,
         [Op.or]: [
           { name: { [Op.iLike]: `%${q}%` } },
           { sku: { [Op.iLike]: `%${q}%` } }
         ]
-      },
+      }),
       include: [{ model: Category }],
       limit: 20
     });

@@ -10,12 +10,13 @@ const { seedDemoData } = require('./services/demoSeed');
 const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
 
-// Routes — require the route files after app + limiter are configured
+// Routes require the route files after app and limiter are configured.
 const authRoutes = require('./routes/auth');
 const orderRoutes = require('./routes/orders');
 const productRoutes = require('./routes/products');
 const adminProductRoutes = require('./routes/adminProducts');
 const adminCategoryRoutes = require('./routes/adminCategories');
+const adminPromotionRoutes = require('./routes/adminPromotions');
 const reportRoutes = require('./routes/reports');
 const mpesaRoutes = require('./routes/mpesa');
 const shiftRoutes = require('./routes/shifts');
@@ -30,7 +31,7 @@ const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
-// ── Security headers ───────────────────────────────────────────────────
+// Security headers
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
@@ -45,7 +46,7 @@ app.use(helmet({
   crossOriginEmbedderPolicy: false // required when serving Vite on same origin
 }));
 
-// ── Rate limiting ───────────────────────────────────────────────────
+// Rate limiting
 // Auth brute-force protection: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs:         15 * 60 * 1000,
@@ -94,6 +95,7 @@ app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/admin/products', adminProductRoutes);
 app.use('/api/admin/categories', adminCategoryRoutes);
+app.use('/api/admin/promotions', adminPromotionRoutes);
 app.use('/api/reports', reportRoutes);
 app.use('/api/shifts', shiftRoutes);
 app.use('/api/etims', etimsRoutes);

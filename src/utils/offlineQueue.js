@@ -7,6 +7,11 @@ const STORE_CATALOG = 'catalog-cache';
 
 let dbPromise = null;
 
+function createIdempotencyKey(prefix = 'checkout') {
+  const randomPart = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${randomPart}`;
+}
+
 function getDb() {
   if (!dbPromise) {
     dbPromise = openDB(DB_NAME, DB_VERSION, {
@@ -23,12 +28,13 @@ function getDb() {
   return dbPromise;
 }
 
-// ─── Orders Queue ─────────────────────────────────────────────────────────────
+// Orders queue
 
 export async function addOrderToQueue(orderPayload) {
   const db = await getDb();
   await db.add(STORE_ORDERS, {
     ...orderPayload,
+    idempotencyKey: orderPayload.idempotencyKey || createIdempotencyKey(),
     queuedAt: new Date().toISOString()
   });
 }
@@ -48,7 +54,7 @@ export async function clearOrdersQueue() {
   await db.clear(STORE_ORDERS);
 }
 
-// ─── Catalog Cache ────────────────────────────────────────────────────────────
+// Catalog cache
 
 export async function cacheCatalog(products) {
   const db = await getDb();
@@ -64,11 +70,11 @@ export async function getCachedCatalog() {
   return await db.getAll(STORE_CATALOG);
 }
 
-// ─── Background Sync ──────────────────────────────────────────────────────────
+// Background sync
 
 export async function syncOfflineOrders(authToken) {
   if (!navigator.onLine) return { synced: 0, failed: 0 };
-  
+
   const queuedOrders = await getQueuedOrders();
   if (queuedOrders.length === 0) return { synced: 0, failed: 0 };
 
@@ -77,15 +83,17 @@ export async function syncOfflineOrders(authToken) {
 
   for (const order of queuedOrders) {
     try {
-      const response = await fetch('/api/orders', {
+      const { id, queuedAt, idempotencyKey, ...checkoutPayload } = order;
+      const response = await fetch('/api/orders/checkout', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${authToken}`
+          'Authorization': `Bearer ${authToken}`,
+          'Idempotency-Key': idempotencyKey || createIdempotencyKey()
         },
-        body: JSON.stringify(order)
+        body: JSON.stringify(checkoutPayload)
       });
-      
+
       if (response.ok) {
         await removeOrderFromQueue(order.id);
         synced++;

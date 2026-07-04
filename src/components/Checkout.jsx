@@ -10,7 +10,12 @@ function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
 }
 
-// ─── Customer search panel ────────────────────────────────────────────────────
+function createClientIdempotencyKey(prefix) {
+  const randomPart = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+  return `${prefix}-${randomPart}`;
+}
+
+// --- Customer search panel ----------------------------------------------------
 function CustomerPanel({ authToken, customer, onSelect, onClear }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -58,14 +63,13 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
   if (customer) {
     return (
       <div className={styles.customerChip}>
-        <span className={styles.customerIcon}>👤</span>
         <div className={styles.customerInfo}>
           <span className={styles.customerName}>{customer.name || customer.phone}</span>
           {customer.loyaltyPoints > 0 && (
-            <span className={styles.loyaltyBadge}>⭐ {customer.loyaltyPoints} pts</span>
+            <span className={styles.loyaltyBadge}>{customer.loyaltyPoints} pts</span>
           )}
         </div>
-        <button className={styles.customerClear} onClick={onClear} type="button">✕</button>
+        <button className={styles.customerClear} onClick={onClear} type="button">x</button>
       </div>
     );
   }
@@ -77,7 +81,7 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
           <input
             className={styles.customerSearch}
             type="text"
-            placeholder="Search customer by phone or name…"
+            placeholder="Search customer by phone or name..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -90,9 +94,9 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
                   onClick={() => { onSelect(c); setQuery(''); setResults([]); }}
                   type="button"
                 >
-                  <span>{c.name || '—'}</span>
+                  <span>{c.name || '-'}</span>
                   <span className={styles.customerPhone}>{c.phone}</span>
-                  {c.loyaltyPoints > 0 && <span className={styles.loyaltySmall}>⭐ {c.loyaltyPoints}</span>}
+                  {c.loyaltyPoints > 0 && <span className={styles.loyaltySmall}>{c.loyaltyPoints} pts</span>}
                 </button>
               ))}
               <button className={styles.customerNewBtn} onClick={() => setCreating(true)} type="button">
@@ -103,7 +107,7 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
           {query.trim().length >= 3 && results.length === 0 && (
             <div className={styles.customerResults}>
               <button className={styles.customerNewBtn} onClick={() => { setCreating(true); setNewPhone(query.trim()); }} type="button">
-                + No match — add as new customer
+                + No match - add as new customer
               </button>
             </div>
           )}
@@ -111,10 +115,10 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
       ) : (
         <div className={styles.customerCreate}>
           <input className={styles.customerSearch} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-          <input className={styles.customerSearch} placeholder="Phone (07XX…)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+          <input className={styles.customerSearch} placeholder="Phone (07XX...)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
           <div className={styles.customerCreateActions}>
             <button className={styles.customerSaveBtn} onClick={handleCreate} disabled={saving} type="button">
-              {saving ? 'Saving…' : 'Save customer'}
+              {saving ? 'Saving...' : 'Save customer'}
             </button>
             <button className={styles.customerCancelBtn} onClick={() => setCreating(false)} type="button">Cancel</button>
           </div>
@@ -124,7 +128,7 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
   );
 }
 
-// ─── Split-tender payments panel ──────────────────────────────────────────────
+// --- Split-tender payments panel ----------------------------------------------
 function PaymentsPanel({ total, payments, onChange, customer }) {
   function addRow(method) {
     const existingSum = payments.filter((p) => p.method !== method).reduce((s, p) => s + Number(p.amount || 0), 0);
@@ -164,7 +168,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
       {payments.map((p, idx) => (
         <div key={idx} className={styles.paymentRow}>
           <span className={`${styles.paymentMethodBadge} ${styles[p.method]}`}>
-            {p.method === 'cash' ? '💵 Cash' : p.method === 'mpesa' ? '📱 M-Pesa' : '📝 Credit'}
+            {p.method === 'cash' ? 'Cash' : p.method === 'mpesa' ? 'M-Pesa' : 'Credit'}
           </span>
           <input
             className={styles.paymentAmountInput}
@@ -184,7 +188,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
             />
           )}
           {payments.length > 1 && (
-            <button className={styles.paymentRemoveBtn} onClick={() => removeRow(idx)} type="button">✕</button>
+            <button className={styles.paymentRemoveBtn} onClick={() => removeRow(idx)} type="button">x</button>
           )}
         </div>
       ))}
@@ -244,7 +248,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
   );
 }
 
-// ─── Main Checkout component ──────────────────────────────────────────────────
+// --- Main Checkout component --------------------------------------------------
 export default function Checkout({ authToken, cashierId, user }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
@@ -280,12 +284,12 @@ export default function Checkout({ authToken, cashierId, user }) {
         const searchParams = /^\d{6,}$/.test(term)
           ? `barcode=${encodeURIComponent(term)}`
           : `q=${encodeURIComponent(term)}`;
-        
+
         let data = [];
         if (!navigator.onLine) {
           const cached = await getCachedCatalog();
-          data = cached.filter(p => 
-            p.name.toLowerCase().includes(term) || 
+          data = cached.filter(p =>
+            p.name.toLowerCase().includes(term) ||
             (p.barcode && p.barcode.includes(term)) ||
             (p.sku && p.sku.includes(term))
           );
@@ -306,7 +310,7 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   useEffect(() => () => { if (pollRef.current) clearInterval(pollRef.current); }, []);
 
-  // ─── Global Hardware Barcode Scanner Auto-Listener ─────────────────────────
+  // --- Global Hardware Barcode Scanner Auto-Listener -------------------------
   useEffect(() => {
     let buffer = '';
     let lastKeyTime = Date.now();
@@ -476,6 +480,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       redeemPoints: redeemLoyalty && customer ? customer.loyaltyPoints : 0,
       managerApproval: discountNeedsApproval ? { identifier: managerIdentifier, password: managerPassword } : undefined
     };
+    const checkoutIdempotencyKey = createClientIdempotencyKey('checkout');
 
     if (!navigator.onLine) {
       if (payments.some((p) => p.method === 'mpesa')) {
@@ -484,7 +489,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         return;
       }
       try {
-        await addOrderToQueue(orderPayload);
+        await addOrderToQueue({ ...orderPayload, idempotencyKey: checkoutIdempotencyKey });
         const cashPayment = payments.find((p) => p.method === 'cash');
         const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
@@ -501,7 +506,11 @@ export default function Checkout({ authToken, cashierId, user }) {
     try {
       const res = await fetch('/api/orders/checkout', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+          'Idempotency-Key': checkoutIdempotencyKey
+        },
         body: JSON.stringify(orderPayload)
       });
       const data = await res.json();
@@ -520,14 +529,18 @@ export default function Checkout({ authToken, cashierId, user }) {
         return;
       }
 
-      // Has M-Pesa payment(s) — trigger STK push
+      // Has M-Pesa payment(s) - trigger STK push
       setOrderStatus('waiting');
       const mpesaPayment = data.payments.find((p) => p.method === 'mpesa');
       const mpesaPhone = payments.find((p) => p.method === 'mpesa')?.mpesaPhone;
 
       const stkRes = await fetch('/api/mpesa/stk-push', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${authToken}`,
+          'Idempotency-Key': createClientIdempotencyKey('mpesa')
+        },
         body: JSON.stringify({ paymentId: mpesaPayment.id, phone: mpesaPhone })
       });
       const stkData = await stkRes.json();
@@ -566,7 +579,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     <div className={styles.page}>
       {!navigator.onLine && (
         <div style={{ background: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontWeight: 'bold', gridColumn: '1 / -1' }}>
-          ⚠️ OFFLINE MODE: Sales will be queued locally and synced when connection is restored. M-Pesa is disabled.
+          OFFLINE MODE: Sales will be queued locally and synced when connection is restored. M-Pesa is disabled.
         </div>
       )}
       {/* Product search + grid */}
@@ -575,7 +588,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           <input
             className={styles.searchInput}
             type="text"
-            placeholder="Scan barcode or search a product…"
+            placeholder="Scan barcode or search a product..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             autoFocus
@@ -583,10 +596,10 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
         <div className={styles.priceToggleRow}>
           <label className={styles.toggleLabel}>
-            <input 
-              type="checkbox" 
-              checked={isWholesale} 
-              onChange={(e) => setIsWholesale(e.target.checked)} 
+            <input
+              type="checkbox"
+              checked={isWholesale}
+              onChange={(e) => setIsWholesale(e.target.checked)}
             />
             Wholesale Pricing Mode
           </label>
@@ -696,12 +709,12 @@ export default function Checkout({ authToken, cashierId, user }) {
               disabled={promoChecking || !promoCode.trim()}
               type="button"
             >
-              {promoChecking ? '…' : 'Apply'}
+              {promoChecking ? '...' : 'Apply'}
             </button>
           </div>
           {promoResult && (
             <div className={styles.promoSuccess}>
-              🎉 {promoResult.code}: -{formatKes(promoResult.discountAmount)} {promoResult.description && `(${promoResult.description})`}
+              {promoResult.code}: -{formatKes(promoResult.discountAmount)} {promoResult.description && `(${promoResult.description})`}
             </div>
           )}
           {promoError && <div className={styles.promoError}>{promoError}</div>}
@@ -722,10 +735,10 @@ export default function Checkout({ authToken, cashierId, user }) {
         )}
 
         <button className={styles.confirmBtn} disabled={!canConfirm} onClick={handleConfirm}>
-          {submitting ? 'Processing…' : `Confirm sale — ${formatKes(total)}`}
+          {submitting ? 'Processing...' : `Confirm sale - ${formatKes(total)}`}
         </button>
 
-        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN…</div>}
+        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN...</div>}
         {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}
         {orderStatus === 'failed' && <div className={`${styles.statusBanner} ${styles.error}`}>Payment did not go through. Try again or use cash.</div>}
         {lastReceipt && (

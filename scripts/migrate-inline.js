@@ -63,7 +63,7 @@ async function runMigrations(sequelize) {
     const filePath = path.join(MIGRATIONS_DIR, file);
     const sql = fs.readFileSync(filePath, 'utf8');
 
-    console.log(`  ▶ ${file}`);
+    console.log(`  > ${file}`);
 
     // Use a transaction so a failed migration does not leave partial state.
     const t = await sequelize.transaction();
@@ -72,9 +72,12 @@ async function runMigrations(sequelize) {
       // statement individually because Sequelize's query() doesn't support
       // multi-statement strings natively.
       const statements = sql
+        .split(/\r?\n/)
+        .filter((line) => !line.trim().startsWith('--'))
+        .join('\n')
         .split(';')
         .map((s) => s.trim())
-        .filter((s) => s.length > 0 && !s.startsWith('--'));
+        .filter((s) => s.length > 0);
 
       for (const statement of statements) {
         await sequelize.query(statement, { transaction: t });
@@ -86,7 +89,7 @@ async function runMigrations(sequelize) {
       );
 
       await t.commit();
-      console.log(`  ✓ ${file}`);
+      console.log(`  OK ${file}`);
     } catch (err) {
       await t.rollback();
       throw new Error(`Migration ${file} failed: ${err.message}`);

@@ -53,6 +53,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.ENUM('pending', 'paid', 'partial', 'failed', 'reversed'),
       allowNull: false,
       defaultValue: 'pending'
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'orders',
@@ -68,6 +72,7 @@ module.exports = (sequelize, DataTypes) => {
   Order.associate = (models) => {
     Order.belongsTo(models.User, { foreignKey: 'cashierId', as: 'cashier' });
     Order.belongsTo(models.Customer, { foreignKey: 'customerId' });
+    Order.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     Order.hasMany(models.OrderItem, { foreignKey: 'orderId' });
     Order.hasMany(models.Payment, { foreignKey: 'orderId' });
     Order.hasOne(models.EtimsInvoice, { foreignKey: 'orderId' });

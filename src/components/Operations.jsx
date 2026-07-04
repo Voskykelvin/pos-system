@@ -23,7 +23,7 @@ export default function Operations({ authToken, user }) {
   const [receipt, setReceipt] = useState(null);
   const [orderError, setOrderError] = useState(null);
   const [actionReason, setActionReason] = useState('');
-  
+
   // Expenses state
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseCategory, setExpenseCategory] = useState('wages');
@@ -245,20 +245,20 @@ export default function Operations({ authToken, user }) {
                         <option value="supplies">Store Supplies</option>
                         <option value="other">Other</option>
                       </select>
-                      <input 
-                        type="number" 
-                        placeholder="Amount" 
-                        value={expenseAmount} 
-                        onChange={e => setExpenseAmount(e.target.value)} 
-                        required 
+                      <input
+                        type="number"
+                        placeholder="Amount"
+                        value={expenseAmount}
+                        onChange={e => setExpenseAmount(e.target.value)}
+                        required
                         min="1"
                       />
                     </div>
-                    <input 
-                      type="text" 
-                      placeholder="Description (Optional)" 
-                      value={expenseDesc} 
-                      onChange={e => setExpenseDesc(e.target.value)} 
+                    <input
+                      type="text"
+                      placeholder="Description (Optional)"
+                      value={expenseDesc}
+                      onChange={e => setExpenseDesc(e.target.value)}
                     />
                     <button type="submit" disabled={expenseLogging} className={styles.expenseBtn}>
                       {expenseLogging ? 'Logging...' : 'Log Expense'}
@@ -323,9 +323,9 @@ export default function Operations({ authToken, user }) {
                       <td><span className={s.status === 'open' ? styles.statusOpen : styles.statusClosed}>{s.status.toUpperCase()}</span></td>
                       <td>{formatKes(s.openingFloat)}</td>
                       <td>{formatKes(s.currentCashSalesExpected ?? s.cashSalesExpected)}</td>
-                      <td>{s.cashCounted !== null ? formatKes(s.cashCounted) : '—'}</td>
+                      <td>{s.cashCounted !== null ? formatKes(s.cashCounted) : '-'}</td>
                       <td className={Number(s.cashVariance) < 0 ? styles.varNeg : styles.varOk}>
-                        {s.cashVariance !== null ? formatKes(s.cashVariance) : '—'}
+                        {s.cashVariance !== null ? formatKes(s.cashVariance) : '-'}
                       </td>
                     </tr>
                   ))}
@@ -421,7 +421,7 @@ export default function Operations({ authToken, user }) {
                     <button type="button" onClick={() => orderAction('void')}>Full Void</button>
                     <button type="button" onClick={() => orderAction('refund')}>Full Refund</button>
                   </div>
-                  
+
                   {/* Partial Refund Section */}
                   <div className={styles.partialRefundBox}>
                     <small>Select line items to return:</small>

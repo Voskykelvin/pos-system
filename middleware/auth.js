@@ -22,8 +22,12 @@ async function authenticate(req, res, next) {
       name: user.name,
       email: user.email,
       phone: user.phone,
-      role: user.role
+      role: user.role,
+      tenantId: user.tenantId || null
     };
+    req.tenantId = user.role === 'super_admin' && req.get('x-tenant-id')
+      ? req.get('x-tenant-id')
+      : user.tenantId || null;
 
     return next();
   } catch (err) {

@@ -27,7 +27,7 @@ const NAV_ITEMS = [
   { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'] },
   { id: 'customers', label: 'Customers', path: '/customers', roles: ['admin', 'manager'] },
   { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] },
-  { id: 'saas_owner', label: '👑 Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
+  { id: 'saas_owner', label: 'Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
 
 function getInitialView() {
@@ -78,7 +78,7 @@ export default function App() {
 
   useEffect(() => {
     if (!authToken) return;
-    
+
     async function handleOnline() {
       console.log('Back online! Syncing offline orders...');
       const { synced, failed } = await syncOfflineOrders(authToken);
@@ -89,13 +89,13 @@ export default function App() {
         alert(`Failed to sync ${failed} offline order(s). They will be retried later.`);
       }
     }
-    
+
     window.addEventListener('online', handleOnline);
     // Also try syncing when the app loads (if already online)
     if (navigator.onLine) {
       handleOnline();
     }
-    
+
     return () => window.removeEventListener('online', handleOnline);
   }, [authToken]);
 
@@ -149,7 +149,7 @@ export default function App() {
   const [showSignup, setShowSignup] = useState(false);
 
   if (!authReady) {
-    return <div className={styles.loading}>Loading application…</div>;
+    return <div className={styles.loading}>Loading application...</div>;
   }
 
   if (showSignup && !authToken) {
@@ -188,7 +188,7 @@ export default function App() {
             style={{ background: 'none', border: 'none', color: '#10b981', fontWeight: 700, cursor: 'pointer', fontSize: '14px' }}
             onClick={() => setShowSignup(true)}
           >
-            🚀 Want to launch your own store? Sign up for SaaS POS
+            Want to launch your own store? Sign up for SaaS POS
           </button>
         </div>
       </div>

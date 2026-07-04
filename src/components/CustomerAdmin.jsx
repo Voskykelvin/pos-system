@@ -17,7 +17,7 @@ export default function CustomerAdmin({ authToken, user }) {
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState(null);
-  
+
   // Ledger Modal State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [ledgerData, setLedgerData] = useState(null);
@@ -99,12 +99,12 @@ export default function CustomerAdmin({ authToken, user }) {
 
       <div className={styles.panel}>
         <form className={styles.searchBar} onSubmit={searchCustomers}>
-          <input 
+          <input
             className={styles.searchInput}
-            type="text" 
-            placeholder="Search by name or phone..." 
-            value={query} 
-            onChange={e => setQuery(e.target.value)} 
+            type="text"
+            placeholder="Search by name or phone..."
+            value={query}
+            onChange={e => setQuery(e.target.value)}
           />
           <button className={styles.searchBtn} type="submit">Search</button>
         </form>
@@ -125,7 +125,7 @@ export default function CustomerAdmin({ authToken, user }) {
           <tbody>
             {customers.map(c => (
               <tr key={c.id}>
-                <td>{c.name || '—'}</td>
+                <td>{c.name || '-'}</td>
                 <td>{c.phone}</td>
                 <td>{c.loyaltyPoints}</td>
                 <td>
@@ -156,7 +156,7 @@ export default function CustomerAdmin({ authToken, user }) {
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
             <h2>{selectedCustomer.name || selectedCustomer.phone}'s Ledger</h2>
-            
+
             {!ledgerData ? (
               <p>Loading ledger...</p>
             ) : (
@@ -167,19 +167,19 @@ export default function CustomerAdmin({ authToken, user }) {
                 </div>
 
                 <form className={styles.paymentForm} onSubmit={handlePayment}>
-                  <input 
-                    type="number" 
-                    placeholder="Payment Amount" 
-                    value={paymentAmount} 
+                  <input
+                    type="number"
+                    placeholder="Payment Amount"
+                    value={paymentAmount}
                     onChange={e => setPaymentAmount(e.target.value)}
                     required
                     min="1"
                     max={ledgerData.creditBalance}
                   />
-                  <input 
-                    type="text" 
-                    placeholder="Notes (optional)" 
-                    value={paymentNotes} 
+                  <input
+                    type="text"
+                    placeholder="Notes (optional)"
+                    value={paymentNotes}
                     onChange={e => setPaymentNotes(e.target.value)}
                   />
                   <button className={styles.paymentBtn} type="submit" disabled={isPaying || Number(ledgerData.creditBalance) <= 0}>
@@ -193,7 +193,7 @@ export default function CustomerAdmin({ authToken, user }) {
                   <div className={styles.ledgerHeader}>Amount</div>
                   <div className={styles.ledgerHeader}>Balance</div>
                 </div>
-                
+
                 {ledgerData.transactions.length === 0 ? (
                   <div style={{ padding: '20px', textAlign: 'center', color: 'var(--ink-soft)' }}>
                     No credit history
@@ -203,7 +203,7 @@ export default function CustomerAdmin({ authToken, user }) {
                     <div className={styles.ledgerRow} key={t.id}>
                       <div>{formatDate(t.createdAt).split(',')[0]}</div>
                       <div>
-                        {t.type === 'charge' ? '🛍️ Credit Sale' : '💰 Repayment'} 
+                        {t.type === 'charge' ? ' Credit Sale' : ' Repayment'}
                         {t.orderId && ` (Order #${t.orderId})`}
                         {t.notes && <div style={{ fontSize: '11px', color: 'var(--ink-soft)' }}>{t.notes}</div>}
                       </div>

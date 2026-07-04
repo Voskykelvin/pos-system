@@ -1,12 +1,12 @@
 'use strict';
 
-const { Op } = require('sequelize');
 const { Promotion } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 /**
  * GET /api/promotions/validate?code=SAVE10&orderTotal=5000
- * Public endpoint — cashier types code, returns discount amount or error.
+ * Public endpoint - cashier types code, returns discount amount or error.
  */
 async function validate(req, res) {
   const code = (req.query.code || '').trim().toUpperCase();
@@ -16,7 +16,7 @@ async function validate(req, res) {
 
   try {
     const promo = await Promotion.findOne({
-      where: { code, isActive: true }
+      where: tenantWhere(req, { code, isActive: true })
     });
 
     if (!promo) {
@@ -64,6 +64,7 @@ async function validate(req, res) {
 async function list(req, res) {
   try {
     const promos = await Promotion.findAll({
+      where: tenantWhere(req),
       order: [['createdAt', 'DESC']]
     });
     return res.json(promos.map(mapPromo));
@@ -92,7 +93,8 @@ async function create(req, res) {
       maxUses: maxUses || 0,
       startsAt: startsAt || null,
       expiresAt: expiresAt || null,
-      createdByUserId: req.user?.id || null
+      createdByUserId: req.user?.id || null,
+      ...withTenant(req)
     });
 
     await logAudit({

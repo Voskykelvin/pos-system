@@ -1,11 +1,12 @@
 const { sequelize, Product, Category, InventoryTransaction } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 // GET /api/admin/products?includeInactive=true
 async function list(req, res) {
   try {
-    const where = req.query.includeInactive === 'true' ? {} : { isActive: true };
+    const where = tenantWhere(req, req.query.includeInactive === 'true' ? {} : { isActive: true });
     const products = await Product.findAll({
       where,
       include: [{ model: Category }],
@@ -43,7 +44,8 @@ async function create(req, res) {
       sellingPrice,
       reorderLevel: reorderLevel ?? 5,
       stockQuantity: stockQuantity || 0,
-      categoryId
+      categoryId,
+      ...withTenant(req)
     }, { transaction: t });
 
     // Log the opening stock as a purchase transaction so the ledger is complete
@@ -84,7 +86,7 @@ async function update(req, res) {
   } = req.body;
 
   try {
-    const product = await Product.findByPk(id);
+    const product = await Product.findOne({ where: tenantWhere(req, { id }) });
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -113,7 +115,7 @@ async function update(req, res) {
 // DELETE /api/admin/products/:id  (soft delete, keeps sales history intact)
 async function deactivate(req, res) {
   try {
-    const product = await Product.findByPk(req.params.id);
+    const product = await Product.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
     }
@@ -132,8 +134,8 @@ async function deactivate(req, res) {
 }
 
 // POST /api/admin/products/:id/adjust-stock
-// Body: { type: 'purchase' | 'adjustment' | 'wastage', quantity, note, userId }
-// quantity should be positive for purchase/adjustment-in, negative for wastage/adjustment-out
+// Body: { type: 'purchase' | 'adjustment' | 'wastage' | 'return', quantity, note }
+// Quantity should be positive for stock in and negative for stock out.
 async function adjustStock(req, res) {
   const { id } = req.params;
   const { type, quantity, note } = req.body;
@@ -141,14 +143,15 @@ async function adjustStock(req, res) {
   if (!type || quantity === undefined) {
     return res.status(400).json({ error: 'type and quantity are required' });
   }
-  if (!['purchase', 'adjustment', 'wastage'].includes(type)) {
+  if (!['purchase', 'adjustment', 'wastage', 'return'].includes(type)) {
     return res.status(400).json({ error: 'Invalid adjustment type' });
   }
 
   const t = await sequelize.transaction();
   try {
     const approval = await resolveManagerApproval(req, { reason: 'stock adjustment' });
-    const product = await Product.findByPk(id, {
+    const product = await Product.findOne({
+      where: tenantWhere(req, { id }),
       transaction: t,
       lock: t.LOCK.UPDATE
     });
@@ -206,7 +209,7 @@ async function adjustStock(req, res) {
 async function lowStock(req, res) {
   try {
     const products = await Product.findAll({
-      where: { isActive: true },
+      where: tenantWhere(req, { isActive: true }),
       include: [{ model: Category }]
     });
     const low = products.filter(

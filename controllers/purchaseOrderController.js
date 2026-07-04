@@ -10,10 +10,12 @@ const {
   User
 } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 async function list(req, res) {
   try {
     const pos = await PurchaseOrder.findAll({
+      where: tenantWhere(req),
       include: [
         { model: Supplier, attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'createdBy', attributes: ['id', 'name'] },
@@ -44,7 +46,8 @@ async function create(req, res) {
       status: 'ordered',
       expectedDelivery: expectedDelivery || null,
       notes: notes || null,
-      createdById: req.user?.id || null
+      createdById: req.user?.id || null,
+      ...withTenant(req)
     }, { transaction: t });
 
     for (const item of items) {

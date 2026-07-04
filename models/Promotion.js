@@ -6,7 +6,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true
     },
     code: {
-      // e.g. SAVE10, WEEKEND20 — stored and matched uppercase
+      // e.g. SAVE10, WEEKEND20 - stored and matched uppercase
       type: DataTypes.STRING(50),
       allowNull: false,
       unique: true
@@ -57,6 +57,10 @@ module.exports = (sequelize, DataTypes) => {
     createdByUserId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'promotions',
@@ -69,6 +73,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Promotion.associate = (models) => {
     Promotion.belongsTo(models.User, { foreignKey: 'createdByUserId', as: 'createdBy' });
+    Promotion.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
   };
 
   return Promotion;

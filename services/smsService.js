@@ -8,9 +8,9 @@
  * app runs normally in development without sending real messages.
  *
  * Environment variables:
- *   AFRICASTALKING_API_KEY      — API key from Africa's Talking dashboard
- *   AFRICASTALKING_USERNAME     — username (use 'sandbox' for testing)
- *   AFRICASTALKING_SENDER_ID    — short code or alphanumeric sender (optional)
+ *   AFRICASTALKING_API_KEY      - API key from Africa's Talking dashboard
+ *   AFRICASTALKING_USERNAME     - username (use 'sandbox' for testing)
+ *   AFRICASTALKING_SENDER_ID    - short code or alphanumeric sender (optional)
  *
  * Usage:
  *   const { sendReceipt } = require('./smsService');
@@ -32,7 +32,7 @@ async function sendReceipt(phone, { orderNumber, total, businessName }) {
   }
 
   try {
-    // Dynamic import — only requires the HTTP call when credentials are present
+    // Dynamic import - only requires the HTTP call when credentials are present
     const message =
       `${businessName}: Receipt ${orderNumber}, ` +
       `Total KES ${Number(total).toFixed(2)}. ` +
@@ -68,7 +68,7 @@ async function sendReceipt(phone, { orderNumber, total, businessName }) {
 
     return { sent: true, data };
   } catch (err) {
-    // Never throw — SMS failure must not break checkout
+    // Never throw - SMS failure must not break checkout
     console.warn('[SMS] Failed to send receipt:', err.message);
     return { sent: false, reason: err.message };
   }

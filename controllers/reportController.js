@@ -1,5 +1,6 @@
 const { Op } = require('sequelize');
 const {
+  sequelize,
   Product,
   Category,
   Order,
@@ -9,6 +10,7 @@ const {
   User
 } = require('../models');
 const { getBusinessDayRange } = require('../utils/businessTime');
+const { tenantWhere } = require('../utils/tenantScope');
 
 function money(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -46,12 +48,12 @@ async function today(req, res) {
     const { start, end, businessDate, timeZone } = getBusinessDayRange();
 
     const orders = await Order.findAll({
-      where: {
+      where: tenantWhere(req, {
         createdAt: {
           [Op.gte]: start,
           [Op.lt]: end
         }
-      },
+      }),
       include: [{ model: Payment }, { model: EtimsInvoice }],
       order: [['createdAt', 'DESC']]
     });
@@ -71,7 +73,7 @@ async function today(req, res) {
     }, {});
 
     const lowStockProducts = await Product.findAll({
-      where: { isActive: true },
+      where: tenantWhere(req, { isActive: true }),
       include: [{ model: Category }],
       order: [['name', 'ASC']]
     });
@@ -89,12 +91,10 @@ async function today(req, res) {
         category: product.Category?.name || null
       }));
 
-    const pendingEtimsCount = await EtimsInvoice.count({
-      where: { status: 'queued' }
-    });
+    const pendingEtimsCount = await EtimsInvoice.count({ where: { status: 'queued' } });
 
     const activeProductCount = await Product.count({
-      where: { isActive: true }
+      where: tenantWhere(req, { isActive: true })
     });
 
     const completedOrders = orders.filter((order) => order.status === 'completed');
@@ -136,12 +136,12 @@ async function analytics(req, res) {
 
     const [orders, products, pendingEtimsCount, failedEtimsCount] = await Promise.all([
       Order.findAll({
-        where: {
+        where: tenantWhere(req, {
           createdAt: {
             [Op.gte]: start,
             [Op.lte]: end
           }
-        },
+        }),
         include: [
           {
             model: OrderItem,
@@ -152,7 +152,7 @@ async function analytics(req, res) {
         order: [['createdAt', 'DESC']]
       }),
       Product.findAll({
-        where: { isActive: true },
+        where: tenantWhere(req, { isActive: true }),
         include: [{ model: Category }],
         order: [['name', 'ASC']]
       }),
@@ -189,7 +189,7 @@ async function analytics(req, res) {
         const categoryName = product?.Category?.name || 'Uncategorized';
         const quantity = number(item.quantity);
         const revenue = number(item.lineTotal);
-        const cost = number(product?.costPrice) * quantity;
+        const cost = number(item.costPrice ?? product?.costPrice) * quantity;
 
         unitsSold += quantity;
         estimatedCost += cost;
@@ -327,7 +327,7 @@ async function analytics(req, res) {
       },
       slowMovers,
       notes: [
-        'Estimated gross profit uses the current product cost price because order items do not yet store cost snapshots.',
+        'Estimated gross profit uses the cost price snapshot stored on each order item.',
         'Sell-through rate is estimated from period units sold divided by period units sold plus current on-hand stock.'
       ]
     });
@@ -346,10 +346,10 @@ async function exportCsv(req, res) {
     const { start, end, days } = parseAnalyticsRange(req.query);
 
     const orders = await Order.findAll({
-      where: {
+      where: tenantWhere(req, {
         status: 'completed',
         createdAt: { [Op.gte]: start, [Op.lte]: end }
-      },
+      }),
       include: [
         { model: OrderItem, include: [{ model: Product }] },
         { model: Payment },
@@ -412,7 +412,7 @@ async function reorderSuggestions(req, res) {
     const start = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
     const products = await Product.findAll({
-      where: { isActive: true },
+      where: tenantWhere(req, { isActive: true }),
       include: [{ model: Category, attributes: ['name'] }]
     });
 
@@ -422,10 +422,10 @@ async function reorderSuggestions(req, res) {
       include: [{
         model: Order,
         attributes: [],
-        where: {
+        where: tenantWhere(req, {
           status: 'completed',
           createdAt: { [Op.gte]: start }
-        }
+        })
       }],
       group: ['productId'],
       raw: true

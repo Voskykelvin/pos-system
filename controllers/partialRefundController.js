@@ -55,7 +55,7 @@ async function partialRefund(req, res) {
     if (!['completed', 'partial_refund'].includes(order.status)) {
       await t.rollback();
       return res.status(400).json({
-        error: `Order is ${order.status} — cannot partially refund`
+        error: `Order is ${order.status} - cannot partially refund`
       });
     }
 

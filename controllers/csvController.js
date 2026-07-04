@@ -1,10 +1,12 @@
 'use strict';
 
 const { Product, Category } = require('../models');
+const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 async function exportCatalogCsv(req, res) {
   try {
     const products = await Product.findAll({
+      where: tenantWhere(req),
       include: [{ model: Category, attributes: ['name'] }],
       order: [['name', 'ASC']]
     });
@@ -68,15 +70,15 @@ async function importCatalogCsv(req, res) {
       // Find category or default
       let categoryId = row.categoryid;
       if (!categoryId && row.category) {
-        const cat = await Category.findOne({ where: { name: row.category } });
+        const cat = await Category.findOne({ where: tenantWhere(req, { name: row.category }) });
         if (cat) categoryId = cat.id;
       }
       if (!categoryId) {
-        const defaultCat = await Category.findOne();
+        const defaultCat = await Category.findOne({ where: tenantWhere(req) });
         categoryId = defaultCat?.id;
       }
 
-      const existing = await Product.findOne({ where: { sku: row.sku } });
+      const existing = await Product.findOne({ where: tenantWhere(req, { sku: row.sku }) });
 
       const payload = {
         sku: row.sku,
@@ -88,7 +90,8 @@ async function importCatalogCsv(req, res) {
         sellingPrice: Number(row.sellingprice || 0),
         reorderLevel: Number(row.reorderlevel || 5),
         stockQuantity: Number(row.stockquantity || 0),
-        categoryId
+        categoryId,
+        ...withTenant(req)
       };
 
       if (existing) {
