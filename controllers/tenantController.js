@@ -1,8 +1,66 @@
 'use strict';
 
+const { Op } = require('sequelize');
 const { hashPassword } = require('../utils/passwords');
-const { sequelize, Tenant, User, Category } = require('../models');
+const { sequelize, Tenant, User, Category, Order, Payment } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
+const { getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
+
+function money(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+function percent(value) {
+  return Number(Number(value || 0).toFixed(1));
+}
+
+function ratio(numerator, denominator) {
+  return denominator > 0 ? percent((numerator / denominator) * 100) : 0;
+}
+
+function dateKey(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function parseRange(query) {
+  const days = Math.min(Math.max(Number(query.days || 30), 1), 365);
+  const end = query.end ? new Date(query.end) : new Date();
+  const start = query.start ? new Date(query.start) : new Date(end);
+
+  if (Number.isNaN(end.getTime()) || Number.isNaN(start.getTime())) {
+    throw new Error('Invalid start or end date');
+  }
+
+  if (!query.start) {
+    start.setDate(start.getDate() - days + 1);
+  }
+
+  start.setHours(0, 0, 0, 0);
+  end.setHours(23, 59, 59, 999);
+
+  return { start, end, days };
+}
+
+function buildDailySeries(start, end) {
+  const series = [];
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  const last = new Date(end);
+  last.setHours(0, 0, 0, 0);
+
+  while (cursor <= last) {
+    series.push({
+      date: dateKey(cursor),
+      signups: 0,
+      activated: 0,
+      paidOrders: 0,
+      revenue: 0
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return series;
+}
 
 /**
  * POST /api/signup
@@ -14,6 +72,10 @@ async function signup(req, res) {
 
   if (!businessName || !email || !password) {
     return res.status(400).json({ error: 'businessName, email, and password are required' });
+  }
+
+  if (!isKnownPlan(plan)) {
+    return res.status(400).json({ error: 'Unknown subscription plan' });
   }
 
   const t = await sequelize.transaction();
@@ -87,33 +149,198 @@ async function signup(req, res) {
 
 /**
  * GET /api/super-admin/dashboard
- * SaaS Owner platform analytics (MRR, Total Stores, Active Subscribers).
+ * SaaS Owner platform analytics (MRR, tenants, activation, and activity).
  */
 async function superAdminDashboard(req, res) {
   try {
-    const totalTenants = await Tenant.count();
-    const activeTenants = await Tenant.count({ where: { status: 'active' } });
-    const starterCount = await Tenant.count({ where: { plan: 'starter', status: 'active' } });
-    const growthCount = await Tenant.count({ where: { plan: 'growth', status: 'active' } });
-    const enterpriseCount = await Tenant.count({ where: { plan: 'enterprise', status: 'active' } });
+    const { start, end, days } = parseRange(req.query);
 
-    // Calculate MRR (Monthly Recurring Revenue in USD)
-    const mrrUsd = (starterCount * 29) + (growthCount * 79) + (enterpriseCount * 199);
+    const [tenants, users, orders] = await Promise.all([
+      Tenant.findAll({
+        include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
+        order: [['createdAt', 'DESC']]
+      }),
+      User.findAll({ attributes: ['id', 'tenantId', 'role', 'isActive'] }),
+      Order.findAll({
+        where: {
+          createdAt: {
+            [Op.gte]: start,
+            [Op.lte]: end
+          }
+        },
+        include: [{ model: Payment }],
+        order: [['createdAt', 'DESC']]
+      })
+    ]);
 
-    const tenants = await Tenant.findAll({
-      include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
-      order: [['createdAt', 'DESC']]
+    const activeTenants = tenants.filter((tenant) => tenant.status === 'active');
+    const suspendedTenants = tenants.filter((tenant) => tenant.status === 'suspended');
+    const pastDueTenants = tenants.filter((tenant) => tenant.status === 'past_due');
+    const newTenants = tenants.filter((tenant) => tenant.createdAt >= start && tenant.createdAt <= end);
+    const activeNewTenants = newTenants.filter((tenant) => tenant.status === 'active');
+
+    const planBreakdown = { starter: 0, growth: 0, enterprise: 0 };
+    const planRevenue = { starter: 0, growth: 0, enterprise: 0 };
+
+    for (const tenant of activeTenants) {
+      if (!Object.prototype.hasOwnProperty.call(planBreakdown, tenant.plan)) {
+        continue;
+      }
+      planBreakdown[tenant.plan] += 1;
+      planRevenue[tenant.plan] += getPlanPrice(tenant.plan);
+    }
+
+    const mrrUsd = Object.values(planRevenue).reduce((sum, value) => sum + value, 0);
+    const usersByTenant = new Map();
+    for (const user of users) {
+      if (!user.tenantId) continue;
+      const count = usersByTenant.get(user.tenantId) || { totalUsers: 0, activeUsers: 0 };
+      count.totalUsers += 1;
+      if (user.isActive) count.activeUsers += 1;
+      usersByTenant.set(user.tenantId, count);
+    }
+
+    const tenantActivity = new Map();
+    const dailySeries = buildDailySeries(start, end);
+    const dailyMap = new Map(dailySeries.map((day) => [day.date, day]));
+
+    for (const tenant of tenants) {
+      const signupDay = dailyMap.get(dateKey(tenant.createdAt));
+      if (signupDay) {
+        signupDay.signups += 1;
+        if (tenant.status === 'active') signupDay.activated += 1;
+      }
+    }
+
+    for (const order of orders) {
+      if (!order.tenantId) continue;
+
+      const current = tenantActivity.get(order.tenantId) || {
+        attemptedOrders: 0,
+        paidOrders: 0,
+        voidedOrders: 0,
+        sales: 0,
+        confirmedPayments: 0,
+        lastOrderAt: null
+      };
+
+      current.attemptedOrders += 1;
+      if (order.status === 'voided') current.voidedOrders += 1;
+
+      if (order.status === 'completed' && order.paymentStatus === 'paid') {
+        current.paidOrders += 1;
+        current.sales += Number(order.total || 0);
+        current.confirmedPayments += (order.Payments || [])
+          .filter((payment) => payment.status === 'confirmed')
+          .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+
+        const day = dailyMap.get(dateKey(order.createdAt));
+        if (day) {
+          day.paidOrders += 1;
+          day.revenue += Number(order.total || 0);
+        }
+      }
+
+      if (!current.lastOrderAt || order.createdAt > current.lastOrderAt) {
+        current.lastOrderAt = order.createdAt;
+      }
+
+      tenantActivity.set(order.tenantId, current);
+    }
+
+    const activeStoresWithSales = Array.from(tenantActivity.entries())
+      .filter(([tenantId, activity]) => {
+        const tenant = tenants.find((item) => item.id === tenantId);
+        return tenant?.status === 'active' && activity.paidOrders > 0;
+      }).length;
+
+    const tenantRows = tenants.map((tenant) => {
+      const plain = tenant.get({ plain: true });
+      const activity = tenantActivity.get(tenant.id) || {
+        attemptedOrders: 0,
+        paidOrders: 0,
+        voidedOrders: 0,
+        sales: 0,
+        confirmedPayments: 0,
+        lastOrderAt: null
+      };
+      const userCounts = usersByTenant.get(tenant.id) || { totalUsers: 0, activeUsers: 0 };
+      const daysSinceSignup = Math.max(
+        Math.ceil((Date.now() - new Date(tenant.createdAt).getTime()) / (24 * 60 * 60 * 1000)),
+        0
+      );
+
+      let health = 'healthy';
+      if (tenant.status !== 'active') health = tenant.status;
+      else if (activity.paidOrders === 0 && daysSinceSignup > 7) health = 'no_sales';
+      else if (daysSinceSignup <= 7) health = 'new_store';
+
+      const upgradeSignal = tenant.plan === 'starter' && (
+        activity.paidOrders >= 100 ||
+        activity.sales >= 250000 ||
+        userCounts.activeUsers >= 3
+      );
+
+      return {
+        ...plain,
+        activity: {
+          attemptedOrders: activity.attemptedOrders,
+          paidOrders: activity.paidOrders,
+          voidedOrders: activity.voidedOrders,
+          sales: money(activity.sales),
+          confirmedPayments: money(activity.confirmedPayments),
+          conversionRate: ratio(activity.paidOrders, activity.attemptedOrders),
+          lastOrderAt: activity.lastOrderAt,
+          daysSinceSignup,
+          health,
+          upgradeSignal,
+          totalUsers: userCounts.totalUsers,
+          activeUsers: userCounts.activeUsers
+        }
+      };
     });
 
     return res.json({
+      range: {
+        start: start.toISOString(),
+        end: end.toISOString(),
+        days
+      },
       metrics: {
-        totalTenants,
-        activeTenants,
+        totalTenants: tenants.length,
+        activeTenants: activeTenants.length,
+        suspendedTenants: suspendedTenants.length,
+        pastDueTenants: pastDueTenants.length,
+        newTenants: newTenants.length,
+        activeNewTenants: activeNewTenants.length,
+        signupToActiveConversionRate: ratio(activeTenants.length, tenants.length),
+        newSignupActivationRate: ratio(activeNewTenants.length, newTenants.length),
+        activeStoresWithSales,
+        storeActivityRate: ratio(activeStoresWithSales, activeTenants.length),
         mrrUsd,
         mrrKes: mrrUsd * 130, // approx KES conversion
-        planBreakdown: { starter: starterCount, growth: growthCount, enterprise: enterpriseCount }
+        arpaUsd: activeTenants.length ? money(mrrUsd / activeTenants.length) : 0,
+        planBreakdown,
+        planRevenue
       },
-      tenants
+      charts: {
+        signupTrend: dailySeries.map((day) => ({
+          ...day,
+          revenue: money(day.revenue)
+        })),
+        planMix: getPlanCatalog().map((plan) => ({
+          plan: plan.id,
+          name: plan.name,
+          stores: planBreakdown[plan.id] || 0,
+          mrrUsd: planRevenue[plan.id] || 0
+        })),
+        tenantHealth: ['healthy', 'new_store', 'no_sales', 'past_due', 'suspended'].map((health) => ({
+          health,
+          stores: tenantRows.filter((tenant) => tenant.activity.health === health).length
+        }))
+      },
+      plans: getPlanCatalog(),
+      tenants: tenantRows
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -130,7 +357,27 @@ async function updateTenant(req, res) {
     if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
 
     const { status, plan, currency } = req.body;
-    await tenant.update({ status, plan, currency });
+    const updates = {};
+
+    if (status !== undefined) {
+      if (!['active', 'past_due', 'suspended'].includes(status)) {
+        return res.status(400).json({ error: 'Unknown tenant status' });
+      }
+      updates.status = status;
+    }
+
+    if (plan !== undefined) {
+      if (!isKnownPlan(plan)) {
+        return res.status(400).json({ error: 'Unknown subscription plan' });
+      }
+      updates.plan = plan;
+    }
+
+    if (currency !== undefined) {
+      updates.currency = String(currency).toUpperCase();
+    }
+
+    await tenant.update(updates);
 
     return res.json(tenant);
   } catch (err) {

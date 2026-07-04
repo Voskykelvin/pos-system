@@ -31,7 +31,7 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 - Audit log review in the Operations screen.
 
 ### Reporting And Compliance
-- Daily dashboard and analytics reports.
+- Daily dashboard and advanced analytics reports with sales trends, payment mix, category mix, conversion, staff performance, stock health, and restock recommendations.
 - CSV sales export.
 - eTIMS invoice queue, retry worker, scheduler hook, and transmitted-invoice reversal lock.
 - SMS receipt service wrapper for Africa's Talking credentials.
@@ -40,7 +40,8 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 ### SaaS Foundation
 - Public store signup at `POST /api/signup`.
 - Tenant-aware auth tokens and request context.
-- Platform owner dashboard at `/super-admin`.
+- Platform owner dashboard at `/super-admin` with MRR, signup activation, store activity, tenant health, and plan packaging.
+- Shared Starter, Growth, and Enterprise tier catalog for plan pricing and feature packaging.
 - Tenant-aware model fields and scoped admin/customer/operations queries where tenant context is present.
 
 ## Credential-Blocked Work

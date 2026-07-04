@@ -40,6 +40,21 @@
   gap: 10px;
 }
 
+.exportBtn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 14px;
+  font-size: 13px;
+  font-weight: 800;
+  text-decoration: none;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(78px, 1fr));
@@ -132,8 +147,8 @@
 
 .healthCard {
   padding: 14px 16px;
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: 1fr auto;
   gap: 12px;
   align-items: center;
 }
@@ -143,10 +158,25 @@
   font-size: 18px;
 }
 
+.healthCard small {
+  grid-column: 1 / -1;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.chartGrid,
 .grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
+}
+
+.chartGrid {
+  margin-bottom: 12px;
+}
+
+.widePanel {
+  grid-column: 1 / -1;
 }
 
 .panel {
@@ -173,6 +203,12 @@
   color: var(--ink-soft);
   font-size: 12px;
   font-weight: 800;
+}
+
+.chartFrame {
+  width: 100%;
+  height: 286px;
+  padding: 14px;
 }
 
 .table {
@@ -238,6 +274,77 @@
   white-space: nowrap;
 }
 
+.recommendationList {
+  display: grid;
+}
+
+.recommendationRow {
+  min-height: 92px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.recommendationRow:last-child {
+  border-bottom: 0;
+}
+
+.recommendationRow b {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.recommendationRow span,
+.recommendationRow small {
+  display: block;
+  margin-top: 4px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.rowTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.rowTitle strong {
+  font-size: 13px;
+}
+
+.urgency {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.out_of_stock {
+  background: var(--pos-danger-bg);
+  color: var(--pos-danger);
+}
+
+.low_stock,
+.lead_time_risk {
+  background: var(--pos-warn-bg);
+  color: var(--pos-warn);
+}
+
+.watch {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .empty,
 .loading,
 .errorPanel {
@@ -267,6 +374,7 @@
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .chartGrid,
   .grid {
     grid-template-columns: 1fr;
   }
@@ -286,5 +394,22 @@
   .metrics,
   .healthGrid {
     grid-template-columns: 1fr;
+  }
+
+  .segmented {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .chartFrame {
+    height: 250px;
+    padding: 10px;
+  }
+
+  .recommendationRow {
+    grid-template-columns: 1fr;
+  }
+
+  .recommendationRow b {
+    white-space: normal;
   }
 }

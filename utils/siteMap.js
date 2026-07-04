@@ -18,7 +18,7 @@ module.exports = {
     {
       path: '/analytics',
       name: 'Analytics',
-      purpose: 'Best sellers, sales mix, stock health, slow movers, and inventory value'
+      purpose: 'Sales trends, conversion, staff performance, payment mix, stock health, and reorder recommendations'
     },
     {
       path: '/customers',
@@ -33,7 +33,7 @@ module.exports = {
     {
       path: '/super-admin',
       name: 'Platform SaaS',
-      purpose: 'Platform owner tenant metrics and tenant status management'
+      purpose: 'Platform owner MRR, activation, store activity, tenant health, tiers, and tenant controls'
     }
   ],
   api: [
@@ -41,7 +41,7 @@ module.exports = {
     { method: 'GET', path: '/api/bootstrap', purpose: 'Current authenticated user and cashier identifiers' },
     { method: 'GET', path: '/api/site-map', purpose: 'Machine-readable site map' },
     { method: 'POST', path: '/api/signup', purpose: 'Self-serve tenant signup' },
-    { method: 'GET', path: '/api/super-admin/dashboard', purpose: 'Platform owner tenant metrics' },
+    { method: 'GET', path: '/api/super-admin/dashboard', purpose: 'Platform owner MRR, activation, tenant health, plan tiers, and activity metrics' },
     { method: 'PUT', path: '/api/super-admin/tenants/:id', purpose: 'Platform owner tenant update' },
     { method: 'POST', path: '/api/auth/login', purpose: 'Staff login and auth token issue' },
     { method: 'GET', path: '/api/auth/me', purpose: 'Current authenticated staff user' },
@@ -65,7 +65,7 @@ module.exports = {
     { method: 'POST', path: '/api/shifts/:id/close', purpose: 'Close shift and record cash variance' },
     { method: 'POST', path: '/api/shifts/expenses', purpose: 'Log petty cash expense' },
     { method: 'GET', path: '/api/reports/today', purpose: 'Dashboard metrics' },
-    { method: 'GET', path: '/api/reports/analytics', purpose: 'Sales, inventory, and stock health analytics' },
+    { method: 'GET', path: '/api/reports/analytics', purpose: 'Sales trends, conversion, staff, inventory, and stock health analytics' },
     { method: 'GET', path: '/api/reports/export', purpose: 'CSV sales export' },
     { method: 'GET', path: '/api/reports/reorder-suggestions', purpose: 'Sales velocity reorder suggestions' },
     { method: 'GET', path: '/api/admin/products', purpose: 'List products for back office' },

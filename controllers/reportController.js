@@ -3,6 +3,7 @@ const {
   sequelize,
   Product,
   Category,
+  Customer,
   Order,
   OrderItem,
   Payment,
@@ -22,6 +23,39 @@ function number(value) {
 
 function percent(value) {
   return Number(Number(value || 0).toFixed(1));
+}
+
+function ratio(numerator, denominator) {
+  return denominator > 0 ? percent((numerator / denominator) * 100) : 0;
+}
+
+function dateKey(value) {
+  return new Date(value).toISOString().slice(0, 10);
+}
+
+function buildDailySeries(start, end) {
+  const series = [];
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  const last = new Date(end);
+  last.setHours(0, 0, 0, 0);
+
+  while (cursor <= last) {
+    const date = dateKey(cursor);
+    series.push({
+      date,
+      sales: 0,
+      grossProfit: 0,
+      orders: 0,
+      attemptedOrders: 0,
+      voidedOrders: 0,
+      unitsSold: 0,
+      averageOrderValue: 0
+    });
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return series;
 }
 
 function parseAnalyticsRange(query) {
@@ -133,8 +167,9 @@ async function today(req, res) {
 async function analytics(req, res) {
   try {
     const { start, end, days } = parseAnalyticsRange(req.query);
+    const leadTimeDays = Math.min(Math.max(Number(req.query.leadTimeDays || 7), 1), 90);
 
-    const [orders, products, pendingEtimsCount, failedEtimsCount] = await Promise.all([
+    const [orders, products, customers, pendingEtimsCount, failedEtimsCount] = await Promise.all([
       Order.findAll({
         where: tenantWhere(req, {
           createdAt: {
@@ -147,7 +182,8 @@ async function analytics(req, res) {
             model: OrderItem,
             include: [{ model: Product, include: [{ model: Category }] }]
           },
-          { model: Payment }
+          { model: Payment },
+          { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] }
         ],
         order: [['createdAt', 'DESC']]
       }),
@@ -155,6 +191,10 @@ async function analytics(req, res) {
         where: tenantWhere(req, { isActive: true }),
         include: [{ model: Category }],
         order: [['name', 'ASC']]
+      }),
+      Customer.findAll({
+        where: tenantWhere(req),
+        order: [['createdAt', 'DESC']]
       }),
       EtimsInvoice.count({ where: { status: 'queued' } }),
       EtimsInvoice.count({ where: { status: 'failed' } })
@@ -167,17 +207,69 @@ async function analytics(req, res) {
 
     const productSales = new Map();
     const categorySales = new Map();
+    const customerOrderCounts = new Map();
+    const staffPerformance = new Map();
+    const dailySeries = buildDailySeries(start, end);
+    const dailyMap = new Map(dailySeries.map((day) => [day.date, day]));
     const paymentMix = {};
     let unitsSold = 0;
     let grossSales = 0;
     let taxTotal = 0;
     let discountTotal = 0;
     let estimatedCost = 0;
+    let capturedCustomerOrders = 0;
+    let customerSales = 0;
+
+    for (const order of orders) {
+      const day = dailyMap.get(dateKey(order.createdAt));
+      if (day) {
+        day.attemptedOrders += 1;
+        if (order.status === 'voided') day.voidedOrders += 1;
+      }
+
+      const cashierId = order.cashierId || 'unknown';
+      const staff = staffPerformance.get(cashierId) || {
+        id: cashierId,
+        name: order.cashier?.name || 'Unknown cashier',
+        role: order.cashier?.role || 'cashier',
+        attemptedOrders: 0,
+        orders: 0,
+        voidedOrders: 0,
+        sales: 0,
+        unitsSold: 0,
+        averageOrderValue: 0,
+        conversionRate: 0
+      };
+      staff.attemptedOrders += 1;
+      if (order.status === 'voided') staff.voidedOrders += 1;
+      staffPerformance.set(cashierId, staff);
+    }
 
     for (const order of paidOrders) {
       grossSales += number(order.total);
       taxTotal += number(order.taxTotal);
       discountTotal += number(order.discountTotal);
+
+      const day = dailyMap.get(dateKey(order.createdAt));
+      if (day) {
+        day.sales += number(order.total);
+        day.orders += 1;
+      }
+
+      if (order.customerId) {
+        capturedCustomerOrders += 1;
+        customerSales += number(order.total);
+        customerOrderCounts.set(
+          order.customerId,
+          (customerOrderCounts.get(order.customerId) || 0) + 1
+        );
+      }
+
+      const staff = staffPerformance.get(order.cashierId);
+      if (staff) {
+        staff.orders += 1;
+        staff.sales += number(order.total);
+      }
 
       for (const payment of order.Payments || []) {
         if (payment.status !== 'confirmed') continue;
@@ -193,6 +285,16 @@ async function analytics(req, res) {
 
         unitsSold += quantity;
         estimatedCost += cost;
+
+        if (day) {
+          day.unitsSold += quantity;
+          day.grossProfit += revenue - cost;
+        }
+
+        const staff = staffPerformance.get(order.cashierId);
+        if (staff) {
+          staff.unitsSold += quantity;
+        }
 
         const productId = product?.id || item.productId;
         const currentProduct = productSales.get(productId) || {
@@ -216,10 +318,12 @@ async function analytics(req, res) {
         const category = categorySales.get(categoryName) || {
           category: categoryName,
           unitsSold: 0,
-          revenue: 0
+          revenue: 0,
+          estimatedGrossProfit: 0
         };
         category.unitsSold += quantity;
         category.revenue += revenue;
+        category.estimatedGrossProfit += revenue - cost;
         categorySales.set(categoryName, category);
       }
     }
@@ -240,6 +344,22 @@ async function analytics(req, res) {
       (sum, product) => sum + number(product.stockQuantity) * number(product.sellingPrice),
       0
     );
+    const stockOnHandUnits = products.reduce(
+      (sum, product) => sum + number(product.stockQuantity),
+      0
+    );
+    const stockoutRate = ratio(outOfStock.length, activeProductCount);
+    const lowStockRate = ratio(lowStock.length, activeProductCount);
+    const aggregateSellThroughRate = ratio(unitsSold, unitsSold + stockOnHandUnits);
+    const newCustomers = customers.filter(
+      (customer) => customer.createdAt >= start && customer.createdAt <= end
+    );
+    const creditCustomers = customers.filter((customer) => number(customer.creditBalance) > 0);
+    const creditOutstanding = customers.reduce(
+      (sum, customer) => sum + number(customer.creditBalance),
+      0
+    );
+    const repeatCustomers = Array.from(customerOrderCounts.values()).filter((count) => count > 1).length;
 
     const bestSellers = Array.from(productSales.values())
       .map((product) => {
@@ -257,6 +377,24 @@ async function analytics(req, res) {
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 10);
 
+    const categorySalesList = Array.from(categorySales.values())
+      .map((category) => ({
+        ...category,
+        unitsSold: number(category.unitsSold),
+        revenue: money(category.revenue),
+        estimatedGrossProfit: money(category.estimatedGrossProfit),
+        salesShare: ratio(category.revenue, grossSales)
+      }))
+      .sort((a, b) => b.revenue - a.revenue);
+
+    const paymentMixChart = Object.entries(paymentMix)
+      .map(([method, amount]) => ({
+        method,
+        amount: money(amount),
+        share: ratio(amount, grossSales)
+      }))
+      .sort((a, b) => b.amount - a.amount);
+
     const soldProductIds = new Set(productSales.keys());
     const slowMovers = products
       .filter((product) => !soldProductIds.has(product.id) && number(product.stockQuantity) > 0)
@@ -273,11 +411,102 @@ async function analytics(req, res) {
       .sort((a, b) => b.inventoryRetailValue - a.inventoryRetailValue)
       .slice(0, 10);
 
+    const severityRank = {
+      out_of_stock: 5,
+      low_stock: 4,
+      lead_time_risk: 3,
+      watch: 2,
+      healthy: 1
+    };
+    const stockRecommendations = products
+      .map((product) => {
+        const sales = productSales.get(product.id);
+        const totalSold = number(sales?.unitsSold);
+        const dailyVelocity = totalSold / days;
+        const currentStock = number(product.stockQuantity);
+        const reorderLevel = number(product.reorderLevel);
+        const leadTimeDemand = dailyVelocity * leadTimeDays;
+        const daysOfStockRemaining = dailyVelocity > 0 ? currentStock / dailyVelocity : null;
+        const targetStock = Math.ceil(reorderLevel + leadTimeDemand);
+        const minimumReorderQty = currentStock <= reorderLevel ? Math.max(reorderLevel, 1) : 0;
+        const suggestedReorderQty = Math.max(targetStock - currentStock, minimumReorderQty, 0);
+
+        let urgency = 'healthy';
+        if (currentStock <= 0) urgency = 'out_of_stock';
+        else if (currentStock <= reorderLevel) urgency = 'low_stock';
+        else if (daysOfStockRemaining !== null && daysOfStockRemaining <= leadTimeDays) {
+          urgency = 'lead_time_risk';
+        } else if (daysOfStockRemaining !== null && daysOfStockRemaining <= leadTimeDays * 2) {
+          urgency = 'watch';
+        }
+
+        let recommendation = 'Stock cover is healthy.';
+        if (urgency === 'out_of_stock') {
+          recommendation = 'Out of stock. Reorder immediately.';
+        } else if (urgency === 'low_stock') {
+          recommendation = 'Below reorder level. Replenish before checkout stalls.';
+        } else if (urgency === 'lead_time_risk') {
+          recommendation = `Only ${Math.ceil(daysOfStockRemaining)} days of stock remain against a ${leadTimeDays}-day lead time.`;
+        } else if (urgency === 'watch') {
+          recommendation = 'Stock cover is tightening. Prepare the next purchase order.';
+        }
+
+        return {
+          productId: product.id,
+          sku: product.sku,
+          name: product.name,
+          category: product.Category?.name || 'Uncategorized',
+          unit: product.unit,
+          currentStock,
+          reorderLevel,
+          totalSoldInPeriod: number(totalSold.toFixed(2)),
+          dailyVelocity: number(dailyVelocity.toFixed(2)),
+          daysOfStockRemaining: daysOfStockRemaining === null
+            ? null
+            : number(daysOfStockRemaining.toFixed(1)),
+          leadTimeDays,
+          targetStock,
+          suggestedReorderQty: Math.ceil(suggestedReorderQty),
+          estimatedReorderCost: money(Math.ceil(suggestedReorderQty) * number(product.costPrice)),
+          urgency,
+          recommendation
+        };
+      })
+      .filter((item) => item.urgency !== 'healthy' || item.suggestedReorderQty > 0)
+      .sort((a, b) => {
+        if (severityRank[b.urgency] !== severityRank[a.urgency]) {
+          return severityRank[b.urgency] - severityRank[a.urgency];
+        }
+        return b.suggestedReorderQty - a.suggestedReorderQty;
+      })
+      .slice(0, 12);
+
+    const salesTrend = dailySeries.map((day) => ({
+      ...day,
+      sales: money(day.sales),
+      grossProfit: money(day.grossProfit),
+      unitsSold: number(day.unitsSold),
+      averageOrderValue: day.orders ? money(day.sales / day.orders) : 0,
+      paidOrderConversionRate: ratio(day.orders, day.attemptedOrders)
+    }));
+
+    const staffPerformanceList = Array.from(staffPerformance.values())
+      .map((staff) => ({
+        ...staff,
+        sales: money(staff.sales),
+        unitsSold: number(staff.unitsSold),
+        averageOrderValue: staff.orders ? money(staff.sales / staff.orders) : 0,
+        conversionRate: ratio(staff.orders, staff.attemptedOrders)
+      }))
+      .sort((a, b) => b.sales - a.sales)
+      .slice(0, 10);
+
     res.json({
       range: {
         start: start.toISOString(),
         end: end.toISOString(),
-        days
+        days,
+        leadTimeDays
       },
       summary: {
         grossSales: money(grossSales),
@@ -294,18 +523,37 @@ async function analytics(req, res) {
         outOfStockCount: outOfStock.length,
         inventoryValueAtCost: money(inventoryValueAtCost),
         inventoryRetailValue: money(inventoryRetailValue),
+        stockOnHandUnits: number(stockOnHandUnits),
+        stockoutRate,
+        lowStockRate,
+        aggregateSellThroughRate,
         pendingEtimsCount,
         failedEtimsCount
       },
+      conversion: {
+        attemptedOrders: orders.length,
+        paidOrders: paidOrders.length,
+        paidOrderConversionRate: ratio(paidOrders.length, orders.length),
+        voidRate: ratio(voidedOrders.length, orders.length),
+        capturedCustomerOrders,
+        customerCaptureRate: ratio(capturedCustomerOrders, paidOrders.length),
+        uniqueCustomers: customerOrderCounts.size,
+        repeatCustomers,
+        repeatCustomerRate: ratio(repeatCustomers, customerOrderCounts.size),
+        newCustomers: newCustomers.length,
+        walkInOrderCount: paidOrders.length - capturedCustomerOrders,
+        customerSales: money(customerSales),
+        walkInSales: money(grossSales - customerSales),
+        creditCustomerCount: creditCustomers.length,
+        creditOutstanding: money(creditOutstanding)
+      },
+      salesTrend,
       paymentMix,
+      paymentMixChart,
       bestSellers,
-      categorySales: Array.from(categorySales.values())
-        .map((category) => ({
-          ...category,
-          unitsSold: number(category.unitsSold),
-          revenue: money(category.revenue)
-        }))
-        .sort((a, b) => b.revenue - a.revenue),
+      categorySales: categorySalesList,
+      staffPerformance: staffPerformanceList,
+      stockRecommendations,
       stockAlerts: {
         lowStock: lowStock.slice(0, 12).map((product) => ({
           id: product.id,
@@ -328,7 +576,8 @@ async function analytics(req, res) {
       slowMovers,
       notes: [
         'Estimated gross profit uses the cost price snapshot stored on each order item.',
-        'Sell-through rate is estimated from period units sold divided by period units sold plus current on-hand stock.'
+        'Sell-through rate is estimated from period units sold divided by period units sold plus current on-hand stock.',
+        'Conversion rates use POS events already captured by the app: attempted orders, paid orders, customer-linked orders, and repeat customers.'
       ]
     });
   } catch (err) {

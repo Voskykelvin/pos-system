@@ -34,7 +34,8 @@ Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management sys
 - Today's Multi-Till Shift Summary for Managers aggregating floats, expected cash, counted cash, and variances across all registers.
 - Line-item partial refunds and full voids with stock restoration.
 - Printable thermal receipt view.
-- Real-time analytics dashboard with gross margin and stock alert reports.
+- Chart-driven analytics dashboard with sales trends, conversion, payment mix, staff performance, gross margin, stock alerts, and reorder recommendations.
+- Platform owner dashboard with MRR, signup activation, store activity, tenant health, and Starter/Growth/Enterprise plan packaging.
 
 ---
 

@@ -7,10 +7,10 @@
 | `/` | Dashboard | Daily sales, payment mix, queued eTIMS invoices, low-stock watchlist, and recent orders. |
 | `/checkout` | Checkout | Product search, barcode scanner input, cart, VAT totals, split payments, and M-Pesa initiation. |
 | `/inventory` | Inventory | Products, categories, suppliers, purchase orders, reorder suggestions, promotions, CSV tools, and barcode labels. |
-| `/analytics` | Analytics | Sales summaries, stock health, best sellers, category mix, slow movers, and export links. |
+| `/analytics` | Analytics | Sales trends, conversion, payment mix, category mix, staff performance, stock health, restock recommendations, and export links. |
 | `/customers` | Customers | Customer profiles, loyalty balances, credit ledgers, and debt repayments. |
 | `/operations` | Operations | Shift control, petty cash expenses, cash reconciliation, receipt lookup, voids, refunds, printing, and audit review. |
-| `/super-admin` | Platform SaaS | Platform owner tenant dashboard and tenant status management. |
+| `/super-admin` | Platform SaaS | Platform owner MRR, activation, store activity, tenant health, plan tiers, and tenant controls. |
 
 ## API
 
@@ -20,7 +20,7 @@
 | `GET` | `/api/bootstrap` | Current authenticated user and cashier identifiers. |
 | `GET` | `/api/site-map` | Machine-readable site map. |
 | `POST` | `/api/signup` | Self-serve tenant signup. |
-| `GET` | `/api/super-admin/dashboard` | Platform owner tenant metrics. |
+| `GET` | `/api/super-admin/dashboard` | Platform owner MRR, activation, tenant health, plan tiers, and activity metrics. |
 | `PUT` | `/api/super-admin/tenants/:id` | Platform owner tenant status or plan update. |
 | `POST` | `/api/auth/login` | Staff login and auth token issue. |
 | `GET` | `/api/auth/me` | Current authenticated staff user. |
@@ -44,7 +44,7 @@
 | `POST` | `/api/shifts/:id/close` | Close a shift and record counted cash variance. |
 | `POST` | `/api/shifts/expenses` | Log petty cash expense against an open shift. |
 | `GET` | `/api/reports/today` | Dashboard metrics. |
-| `GET` | `/api/reports/analytics` | Sales, inventory, and stock health analytics. |
+| `GET` | `/api/reports/analytics` | Sales trends, conversion, staff, inventory, and stock health analytics. |
 | `GET` | `/api/reports/export` | CSV sales export. |
 | `GET` | `/api/reports/reorder-suggestions` | Sales velocity reorder suggestions. |
 | `GET` | `/api/admin/products` | List products for back office. |
