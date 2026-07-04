@@ -4,9 +4,9 @@ import { useEffect, useState } from 'react';
 import styles from './Signup.module.css';
 
 const fallbackPlans = [
-  { id: 'starter', name: 'Starter', priceUsd: 29 },
-  { id: 'growth', name: 'Growth', priceUsd: 79 },
-  { id: 'enterprise', name: 'Enterprise', priceUsd: 199 }
+  { id: 'starter', name: 'Starter', priceUsd: 20 },
+  { id: 'growth', name: 'Growth', priceUsd: 70 },
+  { id: 'enterprise', name: 'Enterprise', priceUsd: 115 }
 ];
 
 function planLabel(plan) {

@@ -391,6 +391,13 @@
     flex-direction: column;
   }
 
+  .actions,
+  .segmented,
+  .exportBtn,
+  .refreshBtn {
+    width: 100%;
+  }
+
   .metrics,
   .healthGrid {
     grid-template-columns: 1fr;
@@ -411,5 +418,39 @@
 
   .recommendationRow b {
     white-space: normal;
+  }
+
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .table {
+    display: block;
+    overflow-x: auto;
+    min-width: 100%;
+    white-space: nowrap;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table th,
+  .table td {
+    min-width: 132px;
+  }
+}
+
+@media (max-width: 480px) {
+  .chartFrame {
+    height: 220px;
+  }
+
+  .healthCard,
+  .listRow {
+    align-items: flex-start;
+    grid-template-columns: 1fr;
+  }
+
+  .listRow {
+    flex-direction: column;
   }
 }

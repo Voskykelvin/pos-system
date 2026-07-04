@@ -4,7 +4,7 @@ const PLAN_CATALOG = {
   starter: {
     id: 'starter',
     name: 'Starter',
-    priceUsd: 29,
+    priceUsd: 20,
     registerLimit: 1,
     staffLimit: 3,
     featureSummary: 'Fast checkout, catalog control, daily reporting, CSV tools, and low-stock alerts.',
@@ -19,7 +19,7 @@ const PLAN_CATALOG = {
   growth: {
     id: 'growth',
     name: 'Growth',
-    priceUsd: 79,
+    priceUsd: 70,
     registerLimit: 5,
     staffLimit: 15,
     featureSummary: 'Advanced analytics, reorder intelligence, suppliers, customer credit, loyalty, and staff reports.',
@@ -34,7 +34,7 @@ const PLAN_CATALOG = {
   enterprise: {
     id: 'enterprise',
     name: 'Enterprise',
-    priceUsd: 199,
+    priceUsd: 115,
     registerLimit: null,
     staffLimit: null,
     featureSummary: 'Multi-branch controls, deeper audit visibility, platform support, API exports, and custom rollout help.',

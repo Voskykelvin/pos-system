@@ -1,6 +1,12 @@
 module.exports = {
   screens: [
     {
+      path: '/home',
+      name: 'Master Homepage',
+      purpose: 'Public product homepage, signup entry, pricing, and feature map back into the app',
+      public: true
+    },
+    {
       path: '/',
       name: 'Dashboard',
       purpose: 'Daily sales, payment mix, eTIMS queue, and low-stock watchlist'

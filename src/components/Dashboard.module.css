@@ -186,17 +186,37 @@
 
 .routeRow {
   justify-content: flex-start;
+  color: inherit;
+  text-decoration: none;
+}
+
+.routeRow:hover {
+  background: #f6faf7;
 }
 
 .routeRow strong {
   width: 110px;
+  flex: 0 0 110px;
   font-family: "IBM Plex Mono", Consolas, monospace;
   font-size: 13px;
 }
 
 .routeRow span {
+  display: grid;
+  gap: 3px;
   color: var(--ink-soft);
   font-size: 13px;
+}
+
+.routeRow b {
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.routeRow small {
+  color: var(--ink-soft);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 @media (max-width: 1100px) {
@@ -221,5 +241,15 @@
 
   .metrics {
     grid-template-columns: 1fr;
+  }
+
+  .routeRow {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .routeRow strong {
+    width: auto;
+    flex-basis: auto;
   }
 }

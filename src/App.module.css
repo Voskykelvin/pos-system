@@ -31,6 +31,15 @@
   align-items: center;
   gap: 12px;
   padding: 0 4px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.brand:hover .brandMark {
+  transform: translateY(-1px);
 }
 
 .brandMark {
@@ -45,6 +54,7 @@
   font-weight: 700;
   font-size: 20px;
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  transition: transform 0.2s ease;
 }
 
 .brandName {
@@ -154,4 +164,102 @@
   font-size: 18px;
   color: var(--pos-ink-soft);
   background: var(--pos-bg);
+}
+
+@media (max-width: 900px) {
+  .shell {
+    display: block;
+    min-height: 100vh;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    min-height: 0;
+    padding: 12px;
+    gap: 12px;
+    border-right: 0;
+    border-bottom: 1px solid #1e293b;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.14);
+  }
+
+  .brand {
+    padding: 0;
+  }
+
+  .brandMark {
+    width: 34px;
+    height: 34px;
+    border-radius: 8px;
+    font-size: 17px;
+  }
+
+  .brandName {
+    font-size: 14px;
+  }
+
+  .brandMeta {
+    font-size: 10px;
+  }
+
+  .nav {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .navButton {
+    flex: 0 0 auto;
+    min-height: 38px;
+    border-radius: 8px;
+    padding: 0 13px;
+    white-space: nowrap;
+    font-size: 13px;
+  }
+
+  .navButton:hover {
+    transform: none;
+  }
+
+  .statusBox {
+    margin-top: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    column-gap: 10px;
+    row-gap: 2px;
+    border-radius: 8px;
+    padding: 10px;
+  }
+
+  .statusLabel,
+  .statusValue {
+    min-width: 0;
+  }
+
+  .logoutBtn {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    width: auto;
+    min-height: 34px;
+    margin-top: 0;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 520px) {
+  .sidebar {
+    padding: 10px;
+  }
+
+  .statusBox {
+    display: none;
+  }
 }

@@ -195,3 +195,60 @@
 .amountPayment {
   color: #10b981;
 }
+
+@media (max-width: 760px) {
+  .page {
+    padding: 16px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .searchBar,
+  .paymentForm {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .searchBtn,
+  .paymentBtn {
+    width: 100%;
+  }
+
+  .table {
+    display: block;
+    min-width: 720px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .modalOverlay {
+    align-items: stretch;
+    padding: 12px;
+  }
+
+  .modal {
+    max-height: none;
+    padding: 18px;
+  }
+
+  .ledgerRow {
+    grid-template-columns: 90px minmax(160px, 1fr) 90px 90px;
+    min-width: 560px;
+  }
+}
+
+@media (max-width: 520px) {
+  .page {
+    padding: 12px;
+  }
+
+  .modal {
+    border-radius: 8px;
+  }
+}

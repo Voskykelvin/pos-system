@@ -39,7 +39,7 @@ const fallbackPlans = [
   {
     id: 'starter',
     name: 'Starter',
-    priceUsd: 29,
+    priceUsd: 20,
     registerLimit: 1,
     staffLimit: 3,
     featureSummary: 'For a single shop that wants clean checkout, stock control, and daily numbers.',
@@ -48,7 +48,7 @@ const fallbackPlans = [
   {
     id: 'growth',
     name: 'Growth',
-    priceUsd: 79,
+    priceUsd: 70,
     registerLimit: 5,
     staffLimit: 15,
     featureSummary: 'For a growing shop that needs purchasing, customer credit, loyalty, and deeper reporting.',
@@ -57,7 +57,7 @@ const fallbackPlans = [
   {
     id: 'enterprise',
     name: 'Enterprise',
-    priceUsd: 199,
+    priceUsd: 115,
     registerLimit: null,
     staffLimit: null,
     featureSummary: 'For larger operators with many users, branches, audits, and rollout support.',
@@ -102,7 +102,7 @@ const setupSteps = [
   },
   {
     title: 'Connect live services',
-    text: 'Add each shop’s M-Pesa, KRA eTIMS, SMS, domain, and production hosting credentials before going live.'
+    text: "Add each shop's M-Pesa, KRA eTIMS, SMS, domain, and production hosting credentials before going live."
   }
 ];
 
@@ -132,7 +132,12 @@ function screenIntro(screen) {
   return copy[screen.name] || 'Part of the operating system';
 }
 
-export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
+export default function Homepage({
+  isAuthenticated = false,
+  accountActionLabel = 'Sign in',
+  onNavigateLogin,
+  onNavigateSignup
+}) {
   const [siteMap, setSiteMap] = useState(null);
   const [plans, setPlans] = useState(fallbackPlans);
   const [openMenu, setOpenMenu] = useState(null);
@@ -172,7 +177,7 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
         name: screen.name === 'Dashboard' ? 'Dashboard' : screen.name,
         purpose: screen.purpose || fallbackScreens.find((item) => item.name === screen.name)?.purpose
       }))
-      .filter((screen) => screen.path !== '/');
+      .filter((screen) => !screen.public && screen.path !== '/' && screen.path !== '/home');
 
     const seen = new Set();
     return normalized.filter((screen) => {
@@ -184,9 +189,16 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
   }, [siteMap]);
 
   const featuredPlan = plans.find((plan) => plan.id === 'growth') || plans[1] || plans[0];
+  const navCtaLabel = isAuthenticated ? 'Open app' : 'Get started';
+  const primaryCtaLabel = isAuthenticated ? 'Open my workspace' : 'Create my store';
+  const secondaryCtaLabel = isAuthenticated ? 'Back to app' : 'I already have an account';
 
   function startSignup(planId = 'starter') {
     onNavigateSignup(planId);
+  }
+
+  function featureHref(screen) {
+    return screen.path || '#features';
   }
 
   function menuButton(id, label) {
@@ -211,7 +223,7 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
         <div className={styles.heroShade} />
 
         <nav className={styles.topbar} aria-label="Homepage">
-          <a className={styles.brand} href="#top" aria-label="Jijenge POS home">
+          <a className={styles.brand} href="/home" aria-label="Jijenge POS home">
             <span className={styles.brandMark}>J</span>
             <span>Jijenge POS</span>
           </a>
@@ -227,7 +239,7 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
                   </div>
                   <div className={styles.dropdownGrid}>
                     {featureScreens.slice(0, 6).map((screen) => (
-                      <a href="#features" key={screen.path}>
+                      <a href={featureHref(screen)} key={screen.path}>
                         <strong>{screen.name === 'Platform SaaS' ? 'Platform' : screen.name}</strong>
                         <span>{screenIntro(screen)}</span>
                       </a>
@@ -297,8 +309,11 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
               )}
             </div>
 
+            <button className={styles.navCta} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>
+              {navCtaLabel}
+            </button>
             <button className={styles.signInBtn} type="button" onClick={onNavigateLogin}>
-              Sign in
+              {accountActionLabel}
             </button>
           </div>
         </nav>
@@ -307,18 +322,20 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
           <p className={styles.kicker}>POS, inventory, payments, and reports</p>
           <h1>Run your shop without guessing.</h1>
           <p className={styles.heroCopy}>
-            Jijenge POS helps a shop owner sell at the counter, track stock, manage staff actions, handle customer credit, and see the day’s numbers clearly.
+            Jijenge POS helps a shop owner sell at the counter, track stock, manage staff actions, handle customer credit, and see the day's numbers clearly.
           </p>
           <div className={styles.heroActions}>
             <button className={styles.primaryBtn} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>
-              Create my store
+              {primaryCtaLabel}
             </button>
             <button className={styles.secondaryBtn} type="button" onClick={onNavigateLogin}>
-              I already have an account
+              {secondaryCtaLabel}
             </button>
           </div>
           <p className={styles.loginNote}>
-            New owner? Create a store. Staff member? Ask the owner or manager to add you, then sign in.
+            {isAuthenticated
+              ? 'You are signed in. Use the map below to jump into the live app pages, or go back to your workspace.'
+              : 'New owner? Create a store. Staff member? Ask the owner or manager to add you, then sign in.'}
           </p>
         </div>
       </section>
@@ -343,11 +360,11 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
 
         <div className={styles.moduleGrid}>
           {featureScreens.map((screen) => (
-            <article className={styles.moduleCard} key={screen.path}>
+            <a className={styles.moduleCard} href={featureHref(screen)} key={screen.path}>
               <div className={styles.moduleEyebrow}>{screen.path}</div>
               <h3>{screen.name === 'Platform SaaS' ? 'Platform' : screen.name}</h3>
               <p>{screen.purpose}</p>
-            </article>
+            </a>
           ))}
         </div>
       </section>
@@ -395,7 +412,7 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
                 ))}
               </ul>
               <button type="button" onClick={() => startSignup(plan.id)}>
-                Start with {plan.name}
+                {isAuthenticated ? 'Open workspace' : `Start with ${plan.name}`}
               </button>
             </article>
           ))}
@@ -425,10 +442,10 @@ export default function Homepage({ onNavigateLogin, onNavigateSignup }) {
         </div>
         <div className={styles.ctaActions}>
           <button className={styles.primaryBtn} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>
-            Create my store
+            {primaryCtaLabel}
           </button>
           <button className={styles.secondaryDarkBtn} type="button" onClick={onNavigateLogin}>
-            Sign in
+            {accountActionLabel}
           </button>
         </div>
       </section>

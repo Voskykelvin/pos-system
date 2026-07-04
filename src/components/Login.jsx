@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from './Login.module.css';
 
-export default function Login({ onLogin, onLoginSuccess, onNavigateHome }) {
+export default function Login({ onLogin, onNavigateHome }) {
   const [identifier, setIdentifier] = useState('admin@example.local');
   const [password, setPassword] = useState('admin12345');
   const [error, setError] = useState(null);
@@ -20,8 +20,7 @@ export default function Login({ onLogin, onLoginSuccess, onNavigateHome }) {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Login failed');
-      const callback = onLogin || onLoginSuccess;
-      if (callback) callback(payload);
+      onLogin?.(payload);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -37,7 +36,7 @@ export default function Login({ onLogin, onLoginSuccess, onNavigateHome }) {
         </button>
       )}
       <section className={styles.panel}>
-        <div className={styles.brandMark}>P</div>
+        <div className={styles.brandMark}>J</div>
         <h1>Jijenge POS</h1>
         <p>Sign in with your staff account.</p>
 

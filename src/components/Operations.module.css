@@ -456,6 +456,56 @@
   }
 }
 
+@media (max-width: 640px) {
+  .page {
+    padding: 12px;
+  }
+
+  .header h1 {
+    font-size: 22px;
+  }
+
+  .panelHeader {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .searchBar,
+  .actionBox,
+  .expenseInputs {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .actionButtons,
+  .auditRow,
+  .orderList button,
+  .summaryTotalsRow {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .actionButtons button,
+  .searchBar button,
+  .actionBox button {
+    width: 100%;
+  }
+
+  .summaryPanel {
+    overflow-x: auto;
+  }
+
+  .summaryTable {
+    min-width: 760px;
+  }
+
+  .receiptLine,
+  .totals div,
+  .row {
+    align-items: flex-start;
+  }
+}
+
 @media print {
   .page {
     background: #fff;

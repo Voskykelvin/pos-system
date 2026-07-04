@@ -165,10 +165,13 @@ export default function Dashboard({ authToken }) {
           </div>
           <div className={styles.routeList}>
             {(siteMap?.screens || []).map((screen) => (
-              <div className={styles.routeRow} key={screen.path}>
+              <a className={styles.routeRow} href={screen.path} key={screen.path}>
                 <strong>{screen.path}</strong>
-                <span>{screen.name}</span>
-              </div>
+                <span>
+                  <b>{screen.name}</b>
+                  <small>{screen.purpose}</small>
+                </span>
+              </a>
             ))}
           </div>
         </section>

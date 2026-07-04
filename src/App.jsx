@@ -13,12 +13,14 @@ import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
 
 const ROUTES = {
+  '/home': 'home',
   '/': 'dashboard',
   '/checkout': 'checkout',
   '/inventory': 'inventory',
   '/analytics': 'analytics',
   '/customers': 'customers',
-  '/operations': 'operations'
+  '/operations': 'operations',
+  '/super-admin': 'saas_owner'
 };
 
 const NAV_ITEMS = [
@@ -33,6 +35,11 @@ const NAV_ITEMS = [
 
 function getInitialView() {
   return ROUTES[window.location.pathname] || 'dashboard';
+}
+
+function isProtectedAppPath(pathname) {
+  const route = ROUTES[pathname];
+  return Boolean(route && route !== 'home' && pathname !== '/');
 }
 
 export default function App() {
@@ -100,11 +107,6 @@ export default function App() {
     return () => window.removeEventListener('online', handleOnline);
   }, [authToken]);
 
-  const activePath = useMemo(() => {
-    const item = NAV_ITEMS.find((navItem) => navItem.id === view);
-    return item?.path || '/';
-  }, [view]);
-
   const visibleNavItems = useMemo(() => {
     const role = bootstrap.user?.role;
     if (!role) return [];
@@ -115,6 +117,7 @@ export default function App() {
 
   useEffect(() => {
     if (!visibleNavItems.length) return;
+    if (view === 'home') return;
     const current = visibleNavItems.find((item) => item.id === view);
     if (!current) {
       navigate(visibleNavItems[0]);
@@ -128,15 +131,18 @@ export default function App() {
     }
   }
 
-  function handleLogin({ token, user }) {
-    localStorage.setItem('pos_auth_token', token);
-    setAuthToken(token);
-    setBootstrap({
-      userId: user.id,
-      cashierId: user.id,
-      user,
-      demoMode: window.location.hostname === '127.0.0.1' || window.location.hostname === 'localhost'
-    });
+  function goToMasterHomepage() {
+    setShowSignup(false);
+    setShowLogin(false);
+    setView('home');
+    if (window.location.pathname !== '/home') {
+      window.history.pushState({}, '', '/home');
+    }
+  }
+
+  function goToAppLanding() {
+    const landing = visibleNavItems[0] || NAV_ITEMS[0];
+    navigate(landing);
   }
 
   function handleLogout() {
@@ -150,6 +156,7 @@ export default function App() {
   const [showSignup, setShowSignup] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
   const [signupPlan, setSignupPlan] = useState('starter');
+  const requestedProtectedLogin = !authToken && !showSignup && isProtectedAppPath(window.location.pathname);
 
   if (!authReady) {
     return <div className={styles.loading}>Loading application...</div>;
@@ -171,14 +178,13 @@ export default function App() {
           setShowLogin(true);
         }}
         onNavigateHome={() => {
-          setShowSignup(false);
-          setShowLogin(false);
+          goToMasterHomepage();
         }}
       />
     );
   }
 
-  if (showLogin && !authToken) {
+  if ((showLogin || requestedProtectedLogin) && !authToken) {
     return (
       <Login
         onLogin={(payload) => {
@@ -194,7 +200,7 @@ export default function App() {
             });
           }
         }}
-        onNavigateHome={() => setShowLogin(false)}
+        onNavigateHome={goToMasterHomepage}
       />
     );
   }
@@ -211,16 +217,27 @@ export default function App() {
     );
   }
 
+  if (view === 'home') {
+    return (
+      <Homepage
+        isAuthenticated
+        accountActionLabel="Back to app"
+        onNavigateLogin={goToAppLanding}
+        onNavigateSignup={goToAppLanding}
+      />
+    );
+  }
+
   return (
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
-        <div className={styles.brand}>
-          <span className={styles.brandMark}>P</span>
+        <button className={styles.brand} type="button" onClick={goToMasterHomepage} aria-label="Open master homepage">
+          <span className={styles.brandMark}>J</span>
           <div>
             <div className={styles.brandName}>Jijenge POS</div>
             <div className={styles.brandMeta}>{bootstrap.demoMode ? 'Demo store' : 'Live store'}</div>
           </div>
-        </div>
+        </button>
 
         <nav className={styles.nav} aria-label="Primary">
           {visibleNavItems.map((item) => (

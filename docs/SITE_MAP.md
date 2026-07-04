@@ -4,6 +4,7 @@
 
 | Path | Screen | Purpose |
 | --- | --- | --- |
+| `/home` | Master Homepage | Public product homepage, signup entry, pricing, and feature map back into the app. |
 | `/` | Dashboard | Daily sales, payment mix, queued eTIMS invoices, low-stock watchlist, and recent orders. |
 | `/checkout` | Checkout | Product search, barcode scanner input, cart, VAT totals, split payments, and M-Pesa initiation. |
 | `/inventory` | Inventory | Products, categories, suppliers, purchase orders, reorder suggestions, promotions, CSV tools, and barcode labels. |
@@ -19,6 +20,7 @@
 | `GET` | `/api/health` | Runtime health check. |
 | `GET` | `/api/bootstrap` | Current authenticated user and cashier identifiers. |
 | `GET` | `/api/site-map` | Machine-readable site map. |
+| `GET` | `/api/plans` | Public plan and pricing catalog for homepage and signup. |
 | `POST` | `/api/signup` | Self-serve tenant signup. |
 | `GET` | `/api/super-admin/dashboard` | Platform owner MRR, activation, tenant health, plan tiers, and activity metrics. |
 | `PUT` | `/api/super-admin/tenants/:id` | Platform owner tenant status or plan update. |

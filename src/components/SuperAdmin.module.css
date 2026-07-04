@@ -392,4 +392,48 @@
     height: 250px;
     padding: 10px;
   }
+
+  .kpiCard {
+    min-height: 88px;
+  }
+
+  .kpiValue {
+    font-size: 21px;
+  }
+
+  .tableWrap {
+    border-top: 1px solid var(--pos-line);
+  }
+
+  .table {
+    min-width: 920px;
+  }
+}
+
+@media (max-width: 520px) {
+  .container {
+    padding: 12px;
+  }
+
+  .title {
+    font-size: 22px;
+  }
+
+  .segmented {
+    grid-template-columns: 1fr;
+  }
+
+  .segmented button {
+    border-right: 0;
+    border-bottom: 1px solid var(--pos-line);
+  }
+
+  .segmented button:last-child {
+    border-bottom: 0;
+  }
+
+  .planTopline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
 }

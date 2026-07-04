@@ -471,5 +471,90 @@
   margin-top: 4px;
 }
 
+@media (max-width: 900px) {
+  .page {
+    min-height: auto;
+    padding: 16px;
+  }
+
+  .topBar {
+    margin-bottom: 14px;
+  }
+
+  .tabGroup {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding-bottom: 4px;
+    scrollbar-width: none;
+  }
+
+  .tabGroup::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tabBtn {
+    flex: 0 0 auto;
+    min-height: 38px;
+    white-space: nowrap;
+  }
+
+  .controls,
+  .inlineForm,
+  .adjustRow,
+  .drawerActions,
+  .categorySelectRow {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .searchInput,
+  .primaryBtn,
+  .secondaryBtn,
+  .toggleBtn {
+    width: 100%;
+  }
+
+  .tabContent {
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .table {
+    display: block;
+    min-width: 760px;
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+
+  .drawer {
+    width: 100%;
+    padding: 18px;
+  }
+
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+
+  .barcodeModal {
+    width: calc(100vw - 24px);
+    padding: 16px;
+  }
+}
+
+@media (max-width: 560px) {
+  .page {
+    padding: 12px;
+  }
+
+  .table {
+    min-width: 680px;
+  }
+
+  .stickerGrid {
+    grid-template-columns: 1fr;
+  }
+}
 
 
