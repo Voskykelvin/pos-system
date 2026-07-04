@@ -141,9 +141,17 @@ export default function App() {
     return (
       <div>
         <Login
-          onLoginSuccess={(token) => {
+          onLogin={(payload) => {
+            const token = typeof payload === 'string' ? payload : payload.token;
             localStorage.setItem('pos_auth_token', token);
             setAuthToken(token);
+            if (payload.user) {
+              setBootstrap({
+                userId: payload.user.id,
+                cashierId: payload.user.id,
+                user: payload.user
+              });
+            }
           }}
         />
         <div style={{ textAlign: 'center', padding: '16px', background: '#0f172a' }}>

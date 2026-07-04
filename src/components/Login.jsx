@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import styles from './Login.module.css';
 
-export default function Login({ onLogin }) {
+export default function Login({ onLogin, onLoginSuccess }) {
   const [identifier, setIdentifier] = useState('admin@example.local');
   const [password, setPassword] = useState('admin12345');
   const [error, setError] = useState(null);
@@ -20,7 +20,8 @@ export default function Login({ onLogin }) {
       });
       const payload = await response.json();
       if (!response.ok) throw new Error(payload.error || 'Login failed');
-      onLogin(payload);
+      const callback = onLogin || onLoginSuccess;
+      if (callback) callback(payload);
     } catch (err) {
       setError(err.message);
     } finally {
