@@ -429,6 +429,17 @@
   justify-content: flex-start !important;
 }
 
+.receiptPrintBtn {
+  width: 100%;
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 800;
+}
+
 .toast {
   position: fixed;
   right: 20px;

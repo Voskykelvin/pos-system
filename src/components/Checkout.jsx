@@ -30,6 +30,15 @@ function createClientIdempotencyKey(prefix) {
   return `${prefix}-${randomPart}`;
 }
 
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 // --- Customer search panel ----------------------------------------------------
 function CustomerPanel({ authToken, customer, onSelect, onClear }) {
   const [query, setQuery] = useState('');
@@ -476,6 +485,12 @@ export default function Checkout({ authToken, cashierId, user }) {
         if (data.paymentStatus === 'paid') {
           clearInterval(pollRef.current);
           setOrderStatus('paid');
+          setLastReceipt({
+            orderId,
+            orderNumber: data.orderNumber,
+            total: payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+            changeDue: 0
+          });
           resetSale();
           setStatusMessage('Sale completed successfully.');
           showToast('Sale completed successfully.');
@@ -588,7 +603,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         const cashPayment = payments.find((p) => p.method === 'cash');
         const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
-        setLastReceipt({ orderNumber: data.orderNumber, total: data.total, changeDue });
+        setLastReceipt({ orderId: data.orderId, orderNumber: data.orderNumber, total: data.total, changeDue });
         setStatusMessage('Sale completed successfully.');
         showToast('Sale completed successfully.');
         resetSale();
@@ -649,6 +664,114 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   function showToast(message, tone = 'success') {
     setToast({ message, tone });
+  }
+
+  async function printLastReceipt() {
+    if (!lastReceipt) return;
+
+    let receipt = null;
+    if (lastReceipt.orderId && navigator.onLine) {
+      try {
+        const res = await fetch(`/api/orders/${lastReceipt.orderId}/receipt`, {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        const data = await res.json();
+        if (res.ok) receipt = data;
+      } catch {
+        receipt = null;
+      }
+    }
+
+    const receiptNumber = receipt?.orderNumber || lastReceipt.orderNumber;
+    const totalPaid = receipt?.total ?? lastReceipt.total;
+    const rows = receipt?.items?.length
+      ? receipt.items.map((item) => `
+          <tr>
+            <td>${escapeHtml(item.name)} x ${Number(item.quantity)}</td>
+            <td>${formatKes(item.lineTotal)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td>Sale total</td><td>${formatKes(totalPaid)}</td></tr>`;
+
+    const paymentRows = receipt?.payments?.length
+      ? receipt.payments.map((payment) => `
+          <tr>
+            <td>${escapeHtml(payment.method)} ${escapeHtml(payment.status)}</td>
+            <td>${formatKes(payment.amount)}</td>
+          </tr>
+        `).join('')
+      : `<tr><td>Payment</td><td>${formatKes(totalPaid)}</td></tr>`;
+
+    const printWindow = window.open('', '_blank', 'width=420,height=640');
+    if (!printWindow) {
+      setError('Allow pop-ups for this site, then try printing the receipt again.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${escapeHtml(receiptNumber)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              padding: 14px;
+              font-family: "Courier New", monospace;
+              color: #111827;
+              background: #ffffff;
+              font-size: 12px;
+            }
+            .receipt { width: 76mm; max-width: 100%; margin: 0 auto; }
+            .center { text-align: center; }
+            h1 { font-size: 16px; margin: 0 0 4px; }
+            .muted { color: #4b5563; }
+            table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            td { padding: 3px 0; vertical-align: top; }
+            td:last-child { text-align: right; white-space: nowrap; }
+            .line { border-top: 1px dashed #111827; margin: 8px 0; }
+            .total { font-size: 15px; font-weight: 800; }
+            @media print {
+              body { padding: 0; }
+              .receipt { width: 76mm; }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="receipt">
+            <div class="center">
+              <h1>${escapeHtml(receipt?.business?.name || 'Jijenge POS')}</h1>
+              ${receipt?.business?.kraPin ? `<div class="muted">KRA PIN: ${escapeHtml(receipt.business.kraPin)}</div>` : ''}
+              <div class="muted">${escapeHtml(receiptNumber)}</div>
+              <div class="muted">${escapeHtml(new Date(receipt?.createdAt || Date.now()).toLocaleString())}</div>
+            </div>
+            <div class="line"></div>
+            <table>${rows}</table>
+            <div class="line"></div>
+            <table>
+              <tr><td>Subtotal</td><td>${formatKes(receipt?.subtotal ?? totalPaid)}</td></tr>
+              <tr><td>VAT</td><td>${formatKes(receipt?.taxTotal || 0)}</td></tr>
+              <tr><td>Discount</td><td>${formatKes(receipt?.discountTotal || 0)}</td></tr>
+              <tr class="total"><td>Total</td><td>${formatKes(totalPaid)}</td></tr>
+              <tr><td>Change</td><td>${formatKes(lastReceipt.changeDue || 0)}</td></tr>
+            </table>
+            <div class="line"></div>
+            <table>${paymentRows}</table>
+            ${receipt?.etims?.cuInvoiceNumber ? `<div class="center muted">CU: ${escapeHtml(receipt.etims.cuInvoiceNumber)}</div>` : ''}
+            <div class="line"></div>
+            <div class="center">Thank you</div>
+          </main>
+          <script>
+            window.addEventListener('load', () => {
+              window.print();
+              window.setTimeout(() => window.close(), 300);
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   return (
@@ -832,7 +955,9 @@ export default function Checkout({ authToken, cashierId, user }) {
             <div className={styles.receiptDivider} />
             <div><span>Amount paid</span><strong>{formatKes(lastReceipt.total)}</strong></div>
             <div><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
-            <div className={styles.receiptFooter}>Captured successfully - ready for print</div>
+            <button className={styles.receiptPrintBtn} type="button" onClick={printLastReceipt}>
+              Print receipt
+            </button>
           </div>
         )}
         {error && <p className={styles.errorText}>{error}</p>}

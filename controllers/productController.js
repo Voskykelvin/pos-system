@@ -24,7 +24,8 @@ async function search(req, res) {
         isActive: true,
         [Op.or]: [
           { name: { [Op.iLike]: `%${q}%` } },
-          { sku: { [Op.iLike]: `%${q}%` } }
+          { sku: { [Op.iLike]: `%${q}%` } },
+          { barcode: { [Op.iLike]: `%${q}%` } }
         ]
       }),
       include: [{ model: Category }],

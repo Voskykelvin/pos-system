@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
+import JsBarcode from 'jsbarcode';
 import styles from './ProductAdmin.module.css';
 
 const EMPTY_FORM = {
@@ -26,6 +27,58 @@ const PRODUCT_TABS = [
   { id: 'csv', label: 'CSV Import/Export' }
 ];
 
+function labelCode(product) {
+  return String(product.barcode || product.sku || '').trim();
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function createBarcodeSvg(value) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  JsBarcode(svg, value, {
+    format: 'CODE128',
+    displayValue: false,
+    margin: 0,
+    width: 1.45,
+    height: 46
+  });
+  return svg.outerHTML;
+}
+
+function BarcodePreview({ value }) {
+  const svgRef = useRef(null);
+  const [invalid, setInvalid] = useState(false);
+
+  useEffect(() => {
+    if (!svgRef.current || !value) return;
+    try {
+      JsBarcode(svgRef.current, value, {
+        format: 'CODE128',
+        displayValue: false,
+        margin: 0,
+        width: 1.35,
+        height: 42
+      });
+      setInvalid(false);
+    } catch {
+      setInvalid(true);
+    }
+  }, [value]);
+
+  if (invalid) {
+    return <div className={styles.barcodeError}>Invalid code</div>;
+  }
+
+  return <svg ref={svgRef} className={styles.barcodeSvg} aria-label={`Barcode ${value}`} />;
+}
+
 export default function ProductAdmin({ authToken, userId, tenant }) {
   const [activeTab, setActiveTab] = useState('products'); // products | suppliers | pos | reorder | promotions | csv
 
@@ -50,6 +103,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
   // Barcode sticker printing modal
   const [showBarcodeModal, setShowBarcodeModal] = useState(false);
+  const [barcodeScope, setBarcodeScope] = useState('all');
+  const [barcodeCopies, setBarcodeCopies] = useState(1);
 
   // Suppliers & POs state
   const [suppliers, setSuppliers] = useState([]);
@@ -152,6 +207,22 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       return matchesSearch && matchesLow;
     });
   }, [products, search, lowStockOnly]);
+
+  const barcodeProducts = useMemo(() => {
+    const source = barcodeScope === 'filtered' ? filtered : products;
+    return source.filter((product) => product.isActive && labelCode(product));
+  }, [barcodeScope, filtered, products]);
+
+  const printableLabels = useMemo(() => {
+    const copies = Math.min(Math.max(Number(barcodeCopies || 1), 1), 50);
+    return barcodeProducts.flatMap((product) => (
+      Array.from({ length: copies }, (_, index) => ({
+        key: `${product.id}-${index}`,
+        product,
+        code: labelCode(product)
+      }))
+    ));
+  }, [barcodeCopies, barcodeProducts]);
 
   function openCreate() {
     setEditingId(null);
@@ -398,6 +469,109 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       setCsvText('');
       await loadProducts();
     } catch (err) { setError(err.message); }
+  }
+
+  function printBarcodeLabels() {
+    if (printableLabels.length === 0) {
+      setError('Add at least one active product before printing barcode labels.');
+      return;
+    }
+
+    let labelHtml = '';
+    try {
+      labelHtml = printableLabels.map(({ product, code }) => `
+        <article class="label">
+          <div class="name">${escapeHtml(product.name)}</div>
+          <div class="barcode">${createBarcodeSvg(code)}</div>
+          <div class="code">${escapeHtml(code)}</div>
+          <div class="price">KES ${Number(product.sellingPrice).toFixed(2)}</div>
+        </article>
+      `).join('');
+    } catch (err) {
+      setError(`Could not generate barcode labels: ${err.message}`);
+      return;
+    }
+
+    const printWindow = window.open('', '_blank', 'width=900,height=700');
+    if (!printWindow) {
+      setError('Allow pop-ups for this site, then try printing labels again.');
+      return;
+    }
+
+    printWindow.document.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>Barcode labels</title>
+          <style>
+            * { box-sizing: border-box; }
+            body {
+              margin: 0;
+              padding: 10mm;
+              font-family: Arial, sans-serif;
+              color: #111827;
+              background: #ffffff;
+            }
+            .sheet {
+              display: grid;
+              grid-template-columns: repeat(3, 64mm);
+              gap: 3mm;
+              align-items: start;
+            }
+            .label {
+              width: 64mm;
+              min-height: 32mm;
+              padding: 3mm;
+              border: 1px solid #d1d5db;
+              break-inside: avoid;
+              page-break-inside: avoid;
+              display: grid;
+              gap: 1.4mm;
+              align-content: start;
+            }
+            .name {
+              font-size: 10px;
+              font-weight: 700;
+              line-height: 1.2;
+              white-space: nowrap;
+              overflow: hidden;
+              text-overflow: ellipsis;
+            }
+            .barcode svg {
+              width: 100%;
+              height: 13mm;
+              display: block;
+            }
+            .code {
+              font-family: "Courier New", monospace;
+              font-size: 9px;
+              text-align: center;
+              letter-spacing: 0;
+            }
+            .price {
+              font-size: 11px;
+              font-weight: 800;
+              text-align: center;
+            }
+            @media print {
+              body { padding: 0; }
+              .sheet { gap: 2mm; }
+              .label { border-color: #e5e7eb; }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="sheet">${labelHtml}</main>
+          <script>
+            window.addEventListener('load', () => {
+              window.print();
+              window.setTimeout(() => window.close(), 300);
+            });
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   return (
@@ -698,7 +872,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit} className={styles.form}>
               <label>SKU * <input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} required /></label>
-              <label>Barcode <input inputMode="numeric" value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
+              <label>Barcode <input value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
               <label className={styles.fullWidth}>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
               <label className={styles.fullWidth}>Category *
                 <div className={styles.categorySelectRow}>
@@ -779,19 +953,47 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
           <div className={styles.barcodeModal} onClick={(e) => e.stopPropagation()}>
             <div className={styles.tabHeaderAction}>
               <h3>Printable Barcode Sticker Sheets</h3>
-              <button className={styles.primaryBtn} onClick={() => window.print()}>Print Labels</button>
+              <button className={styles.primaryBtn} onClick={printBarcodeLabels} disabled={printableLabels.length === 0}>
+                Print Labels
+              </button>
             </div>
-            <p className={styles.subtitle}>Standard shelf & product barcode labels ready for thermal or A4 sticker paper.</p>
+
+            <div className={styles.barcodeControls}>
+              <label>
+                Products
+                <select value={barcodeScope} onChange={(e) => setBarcodeScope(e.target.value)}>
+                  <option value="all">All active products</option>
+                  <option value="filtered">Current filtered list</option>
+                </select>
+              </label>
+              <label>
+                Copies per product
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={barcodeCopies}
+                  onChange={(e) => setBarcodeCopies(e.target.value)}
+                />
+              </label>
+              <div className={styles.labelCount}>{printableLabels.length} labels</div>
+            </div>
 
             <div className={styles.stickerGrid}>
-              {products.filter(p => p.isActive).map((p) => (
-                <div key={p.id} className={styles.stickerCard}>
-                  <div className={styles.stickerTitle}>{p.name}</div>
-                  <div className={styles.barcodeLines}>||| | |||| || | ||| ||||</div>
-                  <div className={styles.barcodeCode}>{p.barcode || p.sku}</div>
-                  <div className={styles.stickerPrice}>KES {Number(p.sellingPrice).toFixed(2)}</div>
+              {printableLabels.slice(0, 60).map(({ key, product, code }) => (
+                <div key={key} className={styles.stickerCard}>
+                  <div className={styles.stickerTitle}>{product.name}</div>
+                  <BarcodePreview value={code} />
+                  <div className={styles.barcodeCode}>{code}</div>
+                  <div className={styles.stickerPrice}>KES {Number(product.sellingPrice).toFixed(2)}</div>
                 </div>
               ))}
+              {printableLabels.length === 0 && (
+                <div className={styles.stickerEmpty}>No active products are ready for labels.</div>
+              )}
+              {printableLabels.length > 60 && (
+                <div className={styles.stickerEmpty}>Preview shows the first 60 labels.</div>
+              )}
             </div>
 
             <div className={styles.drawerActions}>
