@@ -58,7 +58,19 @@ These items cannot be completed entirely in code without live accounts, secrets,
 - Africa's Talking live SMS username, API key, and sender ID.
 - Subscription billing provider credentials and webhook setup if the SaaS offering moves beyond manual plan management.
 
+## Launch Credential Approach
+
+- Client signup should stay lightweight and create the tenant/store account first.
+- Payment and KRA credentials should be configured after signup by a platform/admin operator during the first launch phase.
+- Shops can start with cash and manual M-Pesa sales before Daraja or eTIMS credentials are ready.
+- STK Push should be enabled only for tenants that provide their own Daraja credentials or use an approved payment provider/aggregator.
+- KRA/eTIMS sync should be enabled only after the tenant provides its own business KRA PIN, eTIMS device serial, base URL, and API key.
+- Platform/super-admin credentials should not be used for client M-Pesa settlement or client KRA tax invoices.
+
 ## Known Follow-Up
 
 - Add a real payment subscription integration for SaaS billing.
 - Add tenant export/import and restore workflows for store-level operational support.
+- Add a self-service Store Setup screen after signup for business profile, payment mode, Daraja credentials, and KRA/eTIMS credentials.
+- Add secure secret storage/encryption before allowing tenants to enter live Daraja or eTIMS credentials directly in the app.
+- Add payment-mode support per tenant: cash only, manual M-Pesa, Daraja STK Push, and payment provider/aggregator.

@@ -7,6 +7,7 @@ const { rateLimit } = require('express-rate-limit');
 const { sequelize, isUsingMemoryDatabase } = require('./models');
 const { startEtimsScheduler } = require('./services/etimsScheduler');
 const { seedDemoData } = require('./services/demoSeed');
+const { bootstrapSuperAdmin } = require('./services/superAdminBootstrap');
 const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
 const { getPlan } = require('./utils/planCatalog');
@@ -163,6 +164,8 @@ async function start({ port = PORT, host = HOST } = {}) {
       console.log('Demo data loaded into configured database');
     }
   }
+
+  await bootstrapSuperAdmin();
 
   if (process.env.ENABLE_ETIMS_SCHEDULER === 'true') {
     startEtimsScheduler();

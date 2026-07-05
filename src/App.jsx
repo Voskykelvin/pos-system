@@ -7,6 +7,7 @@ import Login from './components/Login.jsx';
 import Operations from './components/Operations.jsx';
 import CustomerAdmin from './components/CustomerAdmin.jsx';
 import Signup from './components/Signup.jsx';
+import SuperAdmin from './components/SuperAdmin.jsx';
 import Homepage from './components/Homepage.jsx';
 import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
@@ -18,7 +19,8 @@ const ROUTES = {
   '/inventory': 'inventory',
   '/analytics': 'analytics',
   '/customers': 'customers',
-  '/operations': 'operations'
+  '/operations': 'operations',
+  '/super-admin': 'saas_owner'
 };
 
 const NAV_ITEMS = [
@@ -27,7 +29,8 @@ const NAV_ITEMS = [
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
   { id: 'analytics', label: 'Analytics', path: '/analytics', roles: ['admin', 'manager'], feature: 'advanced_analytics' },
   { id: 'customers', label: 'Customers', path: '/customers', roles: ['admin', 'manager'], feature: 'customer_credit' },
-  { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] }
+  { id: 'operations', label: 'Operations', path: '/operations', roles: ['admin', 'manager', 'cashier'] },
+  { id: 'saas_owner', label: 'Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
 
 function getInitialView() {
@@ -280,6 +283,9 @@ export default function App() {
         )}
         {view === 'customers' && allowedIds.includes('customers') && (
           <CustomerAdmin authToken={authToken} user={bootstrap.user} />
+        )}
+        {view === 'saas_owner' && allowedIds.includes('saas_owner') && (
+          <SuperAdmin authToken={authToken} />
         )}
       </main>
     </div>
