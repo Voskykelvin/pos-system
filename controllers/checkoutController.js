@@ -215,7 +215,8 @@ async function checkout(req, res) {
       total,
       status: 'completed',
       paymentStatus: anyPending ? 'pending' : 'paid',
-      tenantId: req.tenantId || null
+      tenantId: req.tenantId || null,
+      branchId: req.user?.branchId || null
     }, { transaction: t });
 
     // 4. Create order items, deduct stock, log inventory transactions

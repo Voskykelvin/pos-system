@@ -32,6 +32,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
@@ -43,6 +47,7 @@ module.exports = (sequelize, DataTypes) => {
 
   User.associate = (models) => {
     User.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
+    User.belongsTo(models.Branch, { foreignKey: 'branchId' });
     User.hasMany(models.Order, { foreignKey: 'cashierId' });
     User.hasMany(models.InventoryTransaction, { foreignKey: 'userId' });
     User.hasMany(models.AuditLog, { foreignKey: 'userId', as: 'auditActions' });

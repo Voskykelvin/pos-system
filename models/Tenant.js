@@ -58,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
   Tenant.associate = (models) => {
     Tenant.belongsTo(models.User, { foreignKey: 'ownerUserId', as: 'owner' });
     Tenant.hasMany(models.User, { foreignKey: 'tenantId' });
+    Tenant.hasMany(models.Branch, { foreignKey: 'tenantId' });
     Tenant.hasMany(models.Category, { foreignKey: 'tenantId' });
     Tenant.hasMany(models.Product, { foreignKey: 'tenantId' });
     Tenant.hasMany(models.Order, { foreignKey: 'tenantId' });

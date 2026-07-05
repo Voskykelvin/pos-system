@@ -36,6 +36,7 @@ const fallbackPlans = [
     name: 'Starter',
     priceUsd: 20,
     registerLimit: 1,
+    branchLimit: 1,
     staffLimit: 3,
     featureSummary: 'For a single shop that wants clean checkout, stock control, and daily numbers.',
     features: ['Checkout and split payments', 'Product catalog and categories', 'Daily dashboard and CSV export', 'Low-stock alerts']
@@ -45,6 +46,7 @@ const fallbackPlans = [
     name: 'Growth',
     priceUsd: 70,
     registerLimit: 5,
+    branchLimit: 5,
     staffLimit: 15,
     featureSummary: 'For a growing shop that needs purchasing, customer credit, loyalty, and deeper reporting.',
     features: ['Everything in Starter', 'Purchase orders and suppliers', 'Customer credit and loyalty', 'Staff and stock reports']
@@ -54,6 +56,7 @@ const fallbackPlans = [
     name: 'Enterprise',
     priceUsd: 115,
     registerLimit: null,
+    branchLimit: null,
     staffLimit: null,
     featureSummary: 'For larger operators with many users, branches, audits, and rollout support.',
     features: ['Everything in Growth', 'Unlimited registers and staff', 'Multi-branch readiness', 'Priority support']
@@ -111,9 +114,10 @@ function formatPlanPrice(plan) {
 }
 
 function formatPlanLimits(plan) {
+  const branches = plan.branchLimit ? `${plan.branchLimit} branch${plan.branchLimit === 1 ? '' : 'es'}` : 'Unlimited branches';
   const registers = plan.registerLimit ? `${plan.registerLimit} register${plan.registerLimit === 1 ? '' : 's'}` : 'Unlimited registers';
   const staff = plan.staffLimit ? `${plan.staffLimit} staff` : 'unlimited staff';
-  return `${registers}, ${staff}`;
+  return `${branches}, ${registers}, ${staff}`;
 }
 
 function screenIntro(screen) {

@@ -61,6 +61,10 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'shifts',
@@ -76,6 +80,7 @@ module.exports = (sequelize, DataTypes) => {
     Shift.belongsTo(models.User, { foreignKey: 'openedByUserId', as: 'openedBy' });
     Shift.belongsTo(models.User, { foreignKey: 'closedByUserId', as: 'closedBy' });
     Shift.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
+    Shift.belongsTo(models.Branch, { foreignKey: 'branchId' });
   };
 
   return Shift;

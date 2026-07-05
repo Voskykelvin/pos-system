@@ -108,6 +108,7 @@ const models = {
   Payment: require('./Payment')(sequelize, modelDataTypes),
   EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes),
   AuditLog: require('./AuditLog')(sequelize, modelDataTypes),
+  Branch: require('./Branch')(sequelize, modelDataTypes),
   Shift: require('./Shift')(sequelize, modelDataTypes),
   LoyaltyTransaction: require('./LoyaltyTransaction')(sequelize, modelDataTypes),
   Promotion: require('./Promotion')(sequelize, modelDataTypes),

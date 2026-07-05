@@ -28,7 +28,8 @@ async function authenticate(req, res, next) {
       email: user.email,
       phone: user.phone,
       role: user.role,
-      tenantId: user.tenantId || null
+      tenantId: user.tenantId || null,
+      branchId: user.branchId || null
     };
     req.tenantId = user.role === 'super_admin' && req.get('x-tenant-id')
       ? req.get('x-tenant-id')

@@ -12,6 +12,11 @@ module.exports = {
       purpose: 'Daily sales, payment mix, eTIMS queue, and low-stock watchlist'
     },
     {
+      path: '/store',
+      name: 'Store Setup',
+      purpose: 'Branches, staff profiles, subscription payment method, shop details, M-Pesa, and KRA/eTIMS VAT readiness'
+    },
+    {
       path: '/checkout',
       name: 'Checkout',
       purpose: 'Cashier product search, cart, VAT totals, split payments, and M-Pesa initiation'
@@ -75,6 +80,12 @@ module.exports = {
     { method: 'GET', path: '/api/reports/analytics', purpose: 'Sales trends, conversion, staff, inventory, and stock health analytics' },
     { method: 'GET', path: '/api/reports/export', purpose: 'CSV sales export' },
     { method: 'GET', path: '/api/reports/reorder-suggestions', purpose: 'Sales velocity reorder suggestions' },
+    { method: 'GET', path: '/api/admin/store/setup', purpose: 'Admin setup dashboard for branches, staff, subscription billing, payment, and tax readiness' },
+    { method: 'POST', path: '/api/admin/store/branches', purpose: 'Create a branch profile within the store subscription limits' },
+    { method: 'PUT', path: '/api/admin/store/branches/:id', purpose: 'Update a branch profile' },
+    { method: 'POST', path: '/api/admin/store/staff', purpose: 'Create staff login profiles for cashiers, managers, or admins' },
+    { method: 'PUT', path: '/api/admin/store/staff/:id', purpose: 'Update staff profile, branch assignment, role, password, or active status' },
+    { method: 'PUT', path: '/api/admin/store/settings', purpose: 'Update store subscription payment method, shop details, M-Pesa, and KRA/eTIMS readiness settings' },
     { method: 'GET', path: '/api/admin/products', purpose: 'List products for back office' },
     { method: 'POST', path: '/api/admin/products', purpose: 'Create product' },
     { method: 'PUT', path: '/api/admin/products/:id', purpose: 'Update product metadata' },

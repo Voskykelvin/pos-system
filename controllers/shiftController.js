@@ -91,7 +91,8 @@ async function openShift(req, res) {
       openedByUserId: req.user.id,
       openingFloat,
       note,
-      tenantId: req.tenantId || null
+      tenantId: req.tenantId || null,
+      branchId: req.user?.branchId || null
     });
 
     await logAudit({

@@ -28,6 +28,7 @@ const customerRoutes = require('./routes/customers');
 const promotionRoutes = require('./routes/promotions');
 const supplierRoutes = require('./routes/suppliers');
 const purchaseOrderRoutes = require('./routes/purchaseOrders');
+const storeAdminRoutes = require('./routes/storeAdmin');
 const { tenantApiLimiter } = require('./middleware/tenantRateLimit');
 const tenantRoutes = require('./routes/tenants');
 
@@ -113,6 +114,7 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/admin/store', storeAdminRoutes);
 app.use('/api', tenantRoutes);
 
 app.use('/api', (req, res) => {

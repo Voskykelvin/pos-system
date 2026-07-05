@@ -2,7 +2,7 @@
 
 const { Op } = require('sequelize');
 const { hashPassword } = require('../utils/passwords');
-const { sequelize, Tenant, User, Category, Order, Payment } = require('../models');
+const { sequelize, Tenant, User, Branch, Category, Order, Payment } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 const { getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
 
@@ -116,6 +116,13 @@ async function signup(req, res) {
       status: 'active'
     }, { transaction: t });
 
+    const mainBranch = await Branch.create({
+      tenantId: tenant.id,
+      name: 'Main branch',
+      code: 'MAIN',
+      isActive: true
+    }, { transaction: t });
+
     // 2. Create Owner User
     const passwordHash = hashPassword(password);
     const owner = await User.create({
@@ -123,7 +130,8 @@ async function signup(req, res) {
       email: String(email).trim().toLowerCase(),
       passwordHash,
       role: 'admin',
-      tenantId: tenant.id
+      tenantId: tenant.id,
+      branchId: mainBranch.id
     }, { transaction: t });
 
     await tenant.update({ ownerUserId: owner.id }, { transaction: t });
@@ -152,7 +160,8 @@ async function signup(req, res) {
         name: owner.name,
         email: owner.email,
         role: owner.role,
-        tenantId: owner.tenantId
+        tenantId: owner.tenantId,
+        branchId: owner.branchId
       }
     });
   } catch (err) {

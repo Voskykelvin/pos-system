@@ -6,6 +6,7 @@ const PLAN_CATALOG = {
     name: 'Starter',
     priceUsd: 20,
     registerLimit: 1,
+    branchLimit: 1,
     staffLimit: 3,
     enabledFeatures: [
       'checkout',
@@ -20,7 +21,7 @@ const PLAN_CATALOG = {
       'Product catalog and category management',
       'Daily dashboard and CSV exports',
       'Low-stock alerts',
-      '1 register and up to 3 staff users'
+      '1 branch, 1 register, and up to 3 staff users'
     ]
   },
   growth: {
@@ -28,6 +29,7 @@ const PLAN_CATALOG = {
     name: 'Growth',
     priceUsd: 70,
     registerLimit: 5,
+    branchLimit: 5,
     staffLimit: 15,
     enabledFeatures: [
       'checkout',
@@ -57,6 +59,7 @@ const PLAN_CATALOG = {
     name: 'Enterprise',
     priceUsd: 115,
     registerLimit: null,
+    branchLimit: null,
     staffLimit: null,
     enabledFeatures: [
       'checkout',
@@ -77,7 +80,7 @@ const PLAN_CATALOG = {
     featureSummary: 'Multi-branch controls, deeper audit visibility, platform support, API exports, and custom rollout help.',
     features: [
       'Everything in Growth',
-      'Unlimited registers and staff users',
+      'Unlimited branches, registers, and staff users',
       'Multi-branch reporting readiness',
       'Audit and compliance reporting',
       'Priority support and custom integrations'

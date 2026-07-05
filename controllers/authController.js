@@ -11,7 +11,8 @@ function publicUser(user) {
     email: user.email,
     phone: user.phone,
     role: user.role,
-    tenantId: user.tenantId || null
+    tenantId: user.tenantId || null,
+    branchId: user.branchId || null
   };
 }
 

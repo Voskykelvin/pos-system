@@ -9,11 +9,13 @@ import CustomerAdmin from './components/CustomerAdmin.jsx';
 import Signup from './components/Signup.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
 import Homepage from './components/Homepage.jsx';
+import StoreAdmin from './components/StoreAdmin.jsx';
 import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
 
 const ROUTES = {
   '/home': 'home',
+  '/store': 'store_admin',
   '/': 'dashboard',
   '/checkout': 'checkout',
   '/inventory': 'inventory',
@@ -29,6 +31,7 @@ const AUTH_ROUTES = {
 };
 
 const NAV_ITEMS = [
+  { id: 'store_admin', label: 'Store Setup', path: '/store', roles: ['admin', 'manager'] },
   { id: 'dashboard', label: 'Dashboard', path: '/', roles: ['admin', 'manager'] },
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
   { id: 'inventory', label: 'Inventory', path: '/inventory', roles: ['admin', 'manager'] },
@@ -49,6 +52,14 @@ function getInitialAuthMode() {
 function isProtectedAppPath(pathname) {
   const route = ROUTES[pathname];
   return Boolean(route && route !== 'home' && pathname !== '/');
+}
+
+function landingForUser(user, tenant) {
+  const enabledFeatures = tenant?.enabledFeatures || [];
+  return NAV_ITEMS.find((item) => (
+    item.roles.includes(user?.role) &&
+    (!item.feature || !tenant || enabledFeatures.includes(item.feature))
+  )) || NAV_ITEMS[0];
 }
 
 export default function App() {
@@ -207,8 +218,8 @@ export default function App() {
           setAuthReady(false);
           setAuthToken(token);
           setAuthMode(null);
-          setView('dashboard');
-          window.history.replaceState({}, '', '/');
+          setView('store_admin');
+          window.history.replaceState({}, '', '/store');
         }}
         onNavigateLogin={() => {
           goToLogin();
@@ -229,14 +240,18 @@ export default function App() {
           setAuthToken(token);
           setAuthMode(null);
           if (payload.user) {
+            const landing = landingForUser(payload.user, payload.tenant);
             setBootstrap({
-            userId: payload.user.id,
-            cashierId: payload.user.id,
-            user: payload.user,
-            tenant: payload.tenant || null
-          });
+              userId: payload.user.id,
+              cashierId: payload.user.id,
+              user: payload.user,
+              tenant: payload.tenant || null
+            });
+            setView(landing.id);
+            window.history.replaceState({}, '', landing.path);
+          } else {
+            window.history.replaceState({}, '', '/');
           }
-          window.history.replaceState({}, '', '/');
         }}
         onNavigateHome={goToMasterHomepage}
       />
@@ -297,6 +312,9 @@ export default function App() {
       </aside>
 
       <main className={styles.main}>
+        {view === 'store_admin' && allowedIds.includes('store_admin') && (
+          <StoreAdmin authToken={authToken} user={bootstrap.user} />
+        )}
         {view === 'dashboard' && <Dashboard authToken={authToken} />}
         {view === 'checkout' && (
           <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
