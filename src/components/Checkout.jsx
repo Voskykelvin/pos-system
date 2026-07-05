@@ -4,6 +4,20 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './Checkout.module.css';
 import { addOrderToQueue, getCachedCatalog, cacheCatalog } from '../utils/offlineQueue';
 
+function Toast({ message, tone, onClose }) {
+  useEffect(() => {
+    const timer = window.setTimeout(onClose, 2600);
+    return () => window.clearTimeout(timer);
+  }, [onClose]);
+
+  return (
+    <div className={`${styles.toast} ${tone === 'error' ? styles.toastError : styles.toastSuccess}`}>
+      <span>{message}</span>
+      <button type="button" onClick={onClose} className={styles.toastClose}>x</button>
+    </div>
+  );
+}
+
 const VAT_RATES = { standard: 0.16, zero_rated: 0, exempt: 0 };
 const SCAN_CODE_PATTERN = /^[A-Za-z0-9._-]{4,}$/;
 
@@ -274,6 +288,8 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [error, setError] = useState(null);
   const [orderStatus, setOrderStatus] = useState(null);
   const [lastReceipt, setLastReceipt] = useState(null);
+  const [statusMessage, setStatusMessage] = useState(null);
+  const [toast, setToast] = useState(null);
   const pollRef = useRef(null);
 
   const addToCart = useCallback((product) => {
@@ -292,6 +308,8 @@ export default function Checkout({ authToken, cashierId, user }) {
     setResults([]);
     setOrderStatus(null);
     setLastReceipt(null);
+    setStatusMessage(null);
+    setToast(null);
   }, [isWholesale]);
 
   const lookupProducts = useCallback(async (term, { preferBarcode = false, exactCode = false } = {}) => {
@@ -409,10 +427,10 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   // When total changes and there's a single payment row, auto-update its amount
   useEffect(() => {
-    if (payments.length === 1) {
+    if (payments.length === 1 && payments[0].method === 'cash') {
       setPayments((prev) => [{ ...prev[0], amount: total.toFixed(2) }]);
     }
-  }, [total]);
+  }, [total, payments.length]);
 
   function changeQty(productId, delta) {
     setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
@@ -427,6 +445,8 @@ export default function Checkout({ authToken, cashierId, user }) {
     setPromoChecking(true);
     setPromoError(null);
     setPromoResult(null);
+    setStatusMessage('Checking promo code...');
+    showToast('Checking promo code...');
     try {
       const res = await fetch(
         `/api/promotions/validate?code=${encodeURIComponent(promoCode.trim())}&orderTotal=${total.toFixed(2)}`,
@@ -435,8 +455,12 @@ export default function Checkout({ authToken, cashierId, user }) {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
       setPromoResult(data);
+      setStatusMessage(`Promo applied: ${data.code}`);
+      showToast(`Promo applied: ${data.code}`);
     } catch (err) {
       setPromoError(err.message);
+      setStatusMessage(null);
+      showToast(err.message, 'error');
     } finally {
       setPromoChecking(false);
     }
@@ -453,6 +477,8 @@ export default function Checkout({ authToken, cashierId, user }) {
           clearInterval(pollRef.current);
           setOrderStatus('paid');
           resetSale();
+          setStatusMessage('Sale completed successfully.');
+          showToast('Sale completed successfully.');
         } else if (data.payments?.some((p) => p.status === 'failed')) {
           clearInterval(pollRef.current);
           setOrderStatus('failed');
@@ -478,9 +504,26 @@ export default function Checkout({ authToken, cashierId, user }) {
   }
 
   async function handleConfirm() {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      setError('Add at least one item before confirming the sale.');
+      return;
+    }
+    if (!paymentsBalanced) {
+      setError('Payment amount must match the total before checkout.');
+      return;
+    }
+    if (!mpesaComplete) {
+      setError('Enter a valid phone number for each M-Pesa payment.');
+      return;
+    }
+    if (discountNeedsApproval && !(managerIdentifier.trim() && managerPassword.trim())) {
+      setError('Manager approval is required for this discount.');
+      return;
+    }
     setError(null);
     setSubmitting(true);
+    setStatusMessage('Processing sale...');
+    showToast('Processing sale...');
 
     const paymentPayload = payments.map((p) => ({
       method: p.method,
@@ -503,6 +546,8 @@ export default function Checkout({ authToken, cashierId, user }) {
     if (!navigator.onLine) {
       if (payments.some((p) => p.method === 'mpesa')) {
         setError('M-Pesa payments require an active internet connection.');
+        setStatusMessage(null);
+        showToast('M-Pesa payments require an active internet connection.', 'error');
         setSubmitting(false);
         return;
       }
@@ -512,6 +557,8 @@ export default function Checkout({ authToken, cashierId, user }) {
         const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
         setLastReceipt({ orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4), total, changeDue });
+        setStatusMessage('Sale queued offline and will sync automatically.');
+        showToast('Sale queued offline and will sync automatically.');
         resetSale();
       } catch (err) {
         setError('Failed to queue offline order: ' + err.message);
@@ -542,6 +589,8 @@ export default function Checkout({ authToken, cashierId, user }) {
         const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
         setLastReceipt({ orderNumber: data.orderNumber, total: data.total, changeDue });
+        setStatusMessage('Sale completed successfully.');
+        showToast('Sale completed successfully.');
         resetSale();
         setSubmitting(false);
         return;
@@ -549,6 +598,7 @@ export default function Checkout({ authToken, cashierId, user }) {
 
       // Has M-Pesa payment(s) - trigger STK push
       setOrderStatus('waiting');
+      setStatusMessage(null);
       const mpesaPayment = data.payments.find((p) => p.method === 'mpesa');
       const mpesaPhone = payments.find((p) => p.method === 'mpesa')?.mpesaPhone;
 
@@ -566,6 +616,8 @@ export default function Checkout({ authToken, cashierId, user }) {
       if (!stkRes.ok) {
         setOrderStatus('failed');
         setError(stkData.error || 'STK push failed');
+        setStatusMessage(null);
+        showToast(stkData.error || 'STK push failed', 'error');
         setSubmitting(false);
         return;
       }
@@ -574,6 +626,8 @@ export default function Checkout({ authToken, cashierId, user }) {
       setSubmitting(false);
     } catch (err) {
       setError(err.message);
+      setStatusMessage(null);
+      showToast(err.message, 'error');
       setSubmitting(false);
     }
   }
@@ -592,6 +646,10 @@ export default function Checkout({ authToken, cashierId, user }) {
     paymentsBalanced &&
     mpesaComplete &&
     (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim()));
+
+  function showToast(message, tone = 'success') {
+    setToast({ message, tone });
+  }
 
   return (
     <div className={styles.page}>
@@ -764,14 +822,22 @@ export default function Checkout({ authToken, cashierId, user }) {
         {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN...</div>}
         {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}
         {orderStatus === 'failed' && <div className={`${styles.statusBanner} ${styles.error}`}>Payment did not go through. Try again or use cash.</div>}
+        {statusMessage && <div className={`${styles.statusBanner} ${styles.success}`}>{statusMessage}</div>}
         {lastReceipt && (
           <div className={styles.receiptMini}>
-            <div><span>Receipt</span><strong>{lastReceipt.orderNumber}</strong></div>
-            <div><span>Change</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
+            <div className={styles.receiptHeader}>
+              <span>Receipt</span>
+              <strong>{lastReceipt.orderNumber}</strong>
+            </div>
+            <div className={styles.receiptDivider} />
+            <div><span>Amount paid</span><strong>{formatKes(lastReceipt.total)}</strong></div>
+            <div><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
+            <div className={styles.receiptFooter}>Captured successfully - ready for print</div>
           </div>
         )}
         {error && <p className={styles.errorText}>{error}</p>}
       </div>
+      {toast && <Toast message={toast.message} tone={toast.tone} onClose={() => setToast(null)} />}
     </div>
   );
 }

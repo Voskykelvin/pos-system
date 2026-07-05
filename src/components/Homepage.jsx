@@ -28,11 +28,6 @@ const fallbackScreens = [
     name: 'Customers',
     purpose: 'Manage customer records, loyalty points, credit balances, ledgers, repayments, and repeat buyer history.'
   },
-  {
-    path: '/super-admin',
-    name: 'Platform',
-    purpose: 'Run many stores with tenant-aware accounts, owner signup, plan tiers, store health, and platform reporting.'
-  }
 ];
 
 const fallbackPlans = [
@@ -125,9 +120,7 @@ function screenIntro(screen) {
     Analytics: 'See what is working',
     Reports: 'See what is working',
     Customers: 'Keep buyers coming back',
-    Operations: 'Control the daily routine',
-    Platform: 'Run more than one store',
-    'Platform SaaS': 'Run more than one store'
+    Operations: 'Control the daily routine'
   };
   return copy[screen.name] || 'Part of the operating system';
 }
@@ -181,9 +174,8 @@ export default function Homepage({
 
     const seen = new Set();
     return normalized.filter((screen) => {
-      const key = screen.name === 'Platform SaaS' ? 'Platform' : screen.name;
-      if (seen.has(key)) return false;
-      seen.add(key);
+      if (seen.has(screen.name)) return false;
+      seen.add(screen.name);
       return true;
     });
   }, [siteMap]);
@@ -240,7 +232,7 @@ export default function Homepage({
                   <div className={styles.dropdownGrid}>
                     {featureScreens.slice(0, 6).map((screen) => (
                       <a href={featureHref(screen)} key={screen.path}>
-                        <strong>{screen.name === 'Platform SaaS' ? 'Platform' : screen.name}</strong>
+                        <strong>{screen.name}</strong>
                         <span>{screenIntro(screen)}</span>
                       </a>
                     ))}
@@ -362,7 +354,7 @@ export default function Homepage({
           {featureScreens.map((screen) => (
             <a className={styles.moduleCard} href={featureHref(screen)} key={screen.path}>
               <div className={styles.moduleEyebrow}>{screenIntro(screen)}</div>
-              <h3>{screen.name === 'Platform SaaS' ? 'Platform' : screen.name}</h3>
+              <h3>{screen.name}</h3>
               <p>{screen.purpose}</p>
             </a>
           ))}

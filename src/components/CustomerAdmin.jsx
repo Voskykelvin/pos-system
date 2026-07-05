@@ -17,6 +17,7 @@ export default function CustomerAdmin({ authToken, user }) {
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState(null);
+  const [successMessage, setSuccessMessage] = useState(null);
 
   // Ledger Modal State
   const [selectedCustomer, setSelectedCustomer] = useState(null);
@@ -40,10 +41,11 @@ export default function CustomerAdmin({ authToken, user }) {
 
   async function searchCustomers(e) {
     if (e) e.preventDefault();
+    setError(null);
+    setSuccessMessage(null);
     try {
       const payload = await api(`/api/customers/search?q=${encodeURIComponent(query)}`);
       setCustomers(payload);
-      setError(null);
     } catch (err) {
       setError(err.message);
     }
@@ -52,11 +54,13 @@ export default function CustomerAdmin({ authToken, user }) {
   async function openLedger(customer) {
     setSelectedCustomer(customer);
     setLedgerData(null);
+    setError(null);
+    setSuccessMessage(null);
     try {
       const payload = await api(`/api/customers/${customer.id}/ledger`);
       setLedgerData(payload);
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
       setSelectedCustomer(null);
     }
   }
@@ -65,6 +69,8 @@ export default function CustomerAdmin({ authToken, user }) {
     e.preventDefault();
     if (!paymentAmount) return;
     setIsPaying(true);
+    setError(null);
+    setSuccessMessage(null);
     try {
       await api(`/api/customers/${selectedCustomer.id}/payment`, {
         method: 'POST',
@@ -73,13 +79,12 @@ export default function CustomerAdmin({ authToken, user }) {
       });
       setPaymentAmount('');
       setPaymentNotes('');
-      // Reload ledger
       const payload = await api(`/api/customers/${selectedCustomer.id}/ledger`);
       setLedgerData(payload);
-      // Reload customers list to reflect new balance
-      searchCustomers();
+      await searchCustomers();
+      setSuccessMessage('Customer payment recorded successfully.');
     } catch (err) {
-      alert(err.message);
+      setError(err.message);
     } finally {
       setIsPaying(false);
     }
@@ -110,6 +115,7 @@ export default function CustomerAdmin({ authToken, user }) {
         </form>
 
         {error && <p style={{ color: '#ef4444' }}>{error}</p>}
+        {successMessage && <p style={{ color: '#16a34a' }}>{successMessage}</p>}
 
         <table className={styles.table}>
           <thead>

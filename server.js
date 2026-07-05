@@ -32,6 +32,10 @@ const tenantRoutes = require('./routes/tenants');
 
 const app = express();
 
+app.disable('x-powered-by');
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
 // Security headers
 app.use(helmet({
   contentSecurityPolicy: {
@@ -65,8 +69,6 @@ const apiLimiter = rateLimit({
   legacyHeaders:    false,
   message:          { error: 'Too many requests. Slow down.' }
 });
-app.use(express.json());
-
 app.get('/api/health', (req, res) => {
   res.json({
     ok: true,
@@ -112,6 +114,10 @@ app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
 app.use('/api', tenantRoutes);
 
+app.use('/api', (req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
+
 const distPath = path.join(__dirname, 'dist');
 const indexPath = path.join(distPath, 'index.html');
 
@@ -122,9 +128,21 @@ if (fs.existsSync(indexPath)) {
   });
 }
 
-const PORT = process.env.PORT || 4000;
+app.use((req, res) => {
+  res.status(404).json({ error: 'Route not found' });
+});
 
-async function start({ port = PORT } = {}) {
+app.use((err, req, res, next) => {
+  console.error('Unhandled error:', err);
+  res.status(err.status || 500).json({
+    error: err.message || 'Internal server error'
+  });
+});
+
+const PORT = process.env.PORT || 4000;
+const HOST = process.env.HOST || '0.0.0.0';
+
+async function start({ port = PORT, host = HOST } = {}) {
   await sequelize.authenticate();
   console.log(`Database connection established (${isUsingMemoryDatabase() ? 'memory demo' : 'postgres'})`);
 
@@ -150,8 +168,14 @@ async function start({ port = PORT } = {}) {
     startEtimsScheduler();
   }
 
-  return app.listen(port, () => {
-    console.log(`Jijenge POS listening on port ${port}`);
+  return new Promise((resolve, reject) => {
+    const server = app.listen(port, host, () => {
+      const address = server.address();
+      const actualPort = typeof address === 'object' && address ? address.port : port;
+      console.log(`Jijenge POS listening on port ${actualPort}`);
+      resolve(server);
+    });
+    server.on('error', reject);
   });
 }
 

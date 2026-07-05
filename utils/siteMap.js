@@ -35,11 +35,6 @@ module.exports = {
       path: '/operations',
       name: 'Operations',
       purpose: 'Shift control, expenses, cash reconciliation, receipt lookup, voids, refunds, printing, and audit review'
-    },
-    {
-      path: '/super-admin',
-      name: 'Platform SaaS',
-      purpose: 'Platform owner MRR, activation, store activity, tenant health, tiers, and tenant controls'
     }
   ],
   api: [

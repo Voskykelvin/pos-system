@@ -448,7 +448,7 @@ export default function Operations({ authToken, user }) {
                         }).filter(Boolean);
 
                         if (itemsToRefund.length === 0) {
-                          alert('Please enter a quantity for at least one item to refund');
+                          setOrderError('Please enter a quantity for at least one item to refund.');
                           return;
                         }
 
@@ -460,9 +460,10 @@ export default function Operations({ authToken, user }) {
                           });
                           await loadReceipt(receipt.id);
                           setActionReason('');
-                          alert('Partial refund completed successfully');
+                          setOrderError(null);
+                          setShiftMessage('Partial refund completed successfully.');
                         } catch (err) {
-                          alert(err.message);
+                          setOrderError(err.message);
                         }
                       }}
                     >

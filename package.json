@@ -7,6 +7,7 @@
     "dev": "concurrently -k -n api,web \"node server.js\" \"vite --host 0.0.0.0\"",
     "dev:api": "node server.js",
     "dev:web": "vite --host 0.0.0.0",
+    "start:prod": "NODE_ENV=production node server.js",
     "admin:create": "node scripts/create-admin.js",
     "build": "vite build",
     "db:migrate": "node scripts/migrate.js",

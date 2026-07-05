@@ -229,6 +229,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   async function handleCreateCategory(e) {
     e.preventDefault();
     if (!newCatName.trim()) return;
+    setError(null);
+    setMessage(null);
     try {
       const newCat = await api('/api/admin/categories', {
         method: 'POST',
@@ -239,7 +241,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       setForm((f) => ({ ...f, categoryId: newCat.id }));
       setNewCatName('');
       setShowCatModal(false);
-    } catch (err) { alert(err.message); }
+      setMessage(`Category "${newCat.name}" created.`);
+    } catch (err) { setError(err.message); }
   }
 
   async function handleAdjustStock(e) {
@@ -271,6 +274,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
   async function handleCreateSupplier(e) {
     e.preventDefault();
+    setError(null);
+    setMessage(null);
     try {
       await api('/api/suppliers', {
         method: 'POST',
@@ -279,13 +284,18 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       });
       setSupplierForm({ name: '', phone: '', email: '', address: '', contactPerson: '' });
       await loadSuppliers();
-      alert('Supplier created');
-    } catch (err) { alert(err.message); }
+      setMessage('Supplier created successfully.');
+    } catch (err) { setError(err.message); }
   }
 
   async function handleCreatePo(e) {
     e.preventDefault();
-    if (!poSupplierId || poItems.length === 0) return alert('Select supplier and add at least 1 item');
+    setError(null);
+    setMessage(null);
+    if (!poSupplierId || poItems.length === 0) {
+      setError('Select a supplier and add at least one item before creating a purchase order.');
+      return;
+    }
     try {
       await api('/api/purchase-orders', {
         method: 'POST',
@@ -294,11 +304,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       });
       setPoItems([]);
       await loadPurchaseOrders();
-      alert('Purchase Order created');
-    } catch (err) { alert(err.message); }
+      setMessage('Purchase order created successfully.');
+    } catch (err) { setError(err.message); }
   }
 
   async function handleReceivePo(po) {
+    setError(null);
+    setMessage(null);
     const itemsToReceive = po.items.map((i) => ({
       itemId: i.id,
       receivedQuantity: i.orderedQuantity,
@@ -312,12 +324,17 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       });
       await loadPurchaseOrders();
       await loadProducts();
-      alert('Stock received and inventory updated');
-    } catch (err) { alert(err.message); }
+      setMessage('Stock received and inventory updated.');
+    } catch (err) { setError(err.message); }
   }
 
   function generatePoFromReorder() {
-    if (reorderSuggestions.length === 0) return alert('No reorder suggestions available');
+    setError(null);
+    setMessage(null);
+    if (reorderSuggestions.length === 0) {
+      setError('No reorder suggestions are available right now.');
+      return;
+    }
     const items = reorderSuggestions.map((s) => ({
       productId: s.productId,
       name: s.name,
@@ -326,10 +343,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     }));
     setPoItems(items);
     setActiveTab('pos');
+    setMessage('Reorder suggestions loaded into the purchase order draft.');
   }
 
   async function handleCreatePromo(e) {
     e.preventDefault();
+    setError(null);
+    setMessage(null);
     try {
       await api('/api/admin/promotions', {
         method: 'POST',
@@ -343,11 +363,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       });
       setPromoForm({ code: '', type: 'percent', value: '', minOrderTotal: 0, maxUses: 0, description: '' });
       await loadPromotions();
-      alert('Promotion code created');
-    } catch (err) { alert(err.message); }
+      setMessage('Promotion code created successfully.');
+    } catch (err) { setError(err.message); }
   }
 
   async function togglePromoStatus(promo) {
+    setError(null);
+    setMessage(null);
     try {
       await api(`/api/admin/promotions/${promo.id}`, {
         method: 'PUT',
@@ -355,21 +377,27 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         body: JSON.stringify({ isActive: !promo.isActive })
       });
       await loadPromotions();
-    } catch (err) { alert(err.message); }
+      setMessage(`Promotion ${promo.code} is now ${!promo.isActive ? 'active' : 'inactive'}.`);
+    } catch (err) { setError(err.message); }
   }
 
   async function handleImportCsv() {
-    if (!csvText.trim()) return alert('Paste CSV data first');
+    setError(null);
+    setMessage(null);
+    if (!csvText.trim()) {
+      setError('Paste CSV data first before importing products.');
+      return;
+    }
     try {
       const data = await api('/api/admin/products/import-csv', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ csvData: csvText })
       });
-      alert(data.message);
+      setMessage(data.message || 'CSV import completed.');
       setCsvText('');
       await loadProducts();
-    } catch (err) { alert(err.message); }
+    } catch (err) { setError(err.message); }
   }
 
   return (

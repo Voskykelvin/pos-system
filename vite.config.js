@@ -3,6 +3,27 @@ const react = require('@vitejs/plugin-react');
 const { VitePWA } = require('vite-plugin-pwa');
 
 module.exports = defineConfig({
+  build: {
+    sourcemap: false,
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          const normalizedId = id.replace(/\\/g, '/');
+          if (!normalizedId.includes('/node_modules/')) return undefined;
+          if (normalizedId.includes('/node_modules/recharts/')) return 'vendor-recharts';
+          if (
+            normalizedId.includes('/node_modules/react/') ||
+            normalizedId.includes('/node_modules/react-dom/') ||
+            normalizedId.includes('/node_modules/scheduler/')
+          ) {
+            return 'vendor-react';
+          }
+          return undefined;
+        }
+      }
+    }
+  },
   plugins: [
     react(),
     VitePWA({
