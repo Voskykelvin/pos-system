@@ -1,6 +1,7 @@
 .container {
   min-height: 100vh;
-  padding: 24px;
+  max-width: 1320px;
+  padding: 24px 24px 36px;
   background: var(--pos-bg);
   color: var(--pos-ink);
 }
@@ -29,15 +30,45 @@
 
 .title {
   margin: 0;
-  font-size: 28px;
+  font-size: 30px;
   line-height: 1.2;
   letter-spacing: 0;
+}
+
+.headerCopy {
+  max-width: 620px;
+}
+
+.headerCopy p {
+  margin: 8px 0 0;
+  color: var(--pos-ink-soft);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.headerMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.headerMeta span {
+  border: 1px solid var(--pos-line);
+  border-radius: 999px;
+  background: var(--pos-surface);
+  color: var(--pos-ink-mid);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 900;
 }
 
 .actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .segmented {
@@ -82,9 +113,9 @@
 
 .kpiGrid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .kpiCard,
@@ -95,15 +126,22 @@
 }
 
 .kpiCard {
-  min-height: 104px;
+  min-height: 112px;
   display: grid;
   align-content: space-between;
   padding: 16px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
 }
 
-.kpiCard:first-child {
+.highlightKpi {
+  grid-column: span 2;
   border-color: var(--pos-accent-dark);
-  box-shadow: inset 4px 0 0 var(--pos-accent);
+  background: linear-gradient(135deg, #ecfdf5, #ffffff);
+  box-shadow: inset 4px 0 0 var(--pos-accent), 0 14px 36px rgba(5, 150, 105, 0.08);
+}
+
+.quietKpi {
+  background: #f8fafc;
 }
 
 .kpiLabel {
@@ -120,6 +158,24 @@
   color: var(--pos-ink);
 }
 
+.highlightKpi .kpiValue {
+  font-size: 32px;
+}
+
+.kpiTextValue {
+  font-family: inherit;
+  font-size: 17px;
+  line-height: 1.2;
+}
+
+.highlightKpi .kpiTextValue {
+  font-size: 18px;
+}
+
+.quietKpi .kpiSub {
+  color: var(--pos-ink-soft);
+}
+
 .kpiSub {
   color: var(--pos-accent-dark);
   font-size: 12px;
@@ -129,13 +185,14 @@
 .chartGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
+  margin-bottom: 14px;
 }
 
 .panel {
   overflow: hidden;
-  margin-bottom: 12px;
+  margin-bottom: 14px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.04);
 }
 
 .panelHeader {
@@ -161,9 +218,65 @@
 }
 
 .chartFrame {
+  position: relative;
   width: 100%;
   height: 286px;
   padding: 14px;
+}
+
+.emptyChart {
+  height: 100%;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  text-align: center;
+  border: 1px dashed var(--pos-line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--pos-ink-soft);
+  padding: 24px;
+}
+
+.emptyChart strong {
+  color: var(--pos-ink);
+  font-size: 15px;
+}
+
+.emptyChart span {
+  max-width: 360px;
+  line-height: 1.5;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.healthLegend {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 7px 12px;
+  padding: 8px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--pos-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.healthLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.healthLegend i {
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
 }
 
 .planGrid {
@@ -218,6 +331,10 @@
   min-width: 1160px;
   border-collapse: collapse;
   font-size: 13px;
+}
+
+.compactTable {
+  min-width: 760px;
 }
 
 .table th,
@@ -349,6 +466,14 @@
   padding: 12px;
 }
 
+.opsGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: 14px;
+  align-items: start;
+  margin-bottom: 14px;
+}
+
 .alertRow {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -407,9 +532,24 @@
   background: var(--pos-danger-bg);
 }
 
+.emptyStateCompact {
+  min-height: 112px;
+  display: grid;
+  place-items: center;
+  margin: 12px;
+  border: 1px dashed var(--pos-line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--pos-ink-soft);
+  padding: 18px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 800;
+}
+
 @media (max-width: 1240px) {
   .kpiGrid {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .planGrid {
@@ -419,8 +559,13 @@
 
 @media (max-width: 980px) {
   .chartGrid,
-  .kpiGrid {
+  .kpiGrid,
+  .opsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .highlightKpi {
+    grid-column: span 1;
   }
 }
 
