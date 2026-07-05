@@ -23,6 +23,11 @@ const ROUTES = {
   '/super-admin': 'saas_owner'
 };
 
+const AUTH_ROUTES = {
+  '/login': 'login',
+  '/signup': 'signup'
+};
+
 const NAV_ITEMS = [
   { id: 'dashboard', label: 'Dashboard', path: '/', roles: ['admin', 'manager'] },
   { id: 'checkout', label: 'Checkout', path: '/checkout', roles: ['admin', 'manager', 'cashier'] },
@@ -37,6 +42,10 @@ function getInitialView() {
   return ROUTES[window.location.pathname] || 'dashboard';
 }
 
+function getInitialAuthMode() {
+  return AUTH_ROUTES[window.location.pathname] || null;
+}
+
 function isProtectedAppPath(pathname) {
   const route = ROUTES[pathname];
   return Boolean(route && route !== 'home' && pathname !== '/');
@@ -44,6 +53,7 @@ function isProtectedAppPath(pathname) {
 
 export default function App() {
   const [view, setView] = useState(getInitialView);
+  const [authMode, setAuthMode] = useState(getInitialAuthMode);
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('pos_auth_token'));
   const [authReady, setAuthReady] = useState(false);
   const [bootstrap, setBootstrap] = useState({
@@ -80,7 +90,10 @@ export default function App() {
   }, [authToken]);
 
   useEffect(() => {
-    const onPop = () => setView(getInitialView());
+    const onPop = () => {
+      setAuthMode(getInitialAuthMode());
+      setView(getInitialView());
+    };
     window.addEventListener('popstate', onPop);
     return () => window.removeEventListener('popstate', onPop);
   }, []);
@@ -130,6 +143,7 @@ export default function App() {
   }, [visibleNavItems, view]);
 
   function navigate(item) {
+    setAuthMode(null);
     setView(item.id);
     if (window.location.pathname !== item.path) {
       window.history.pushState({}, '', item.path);
@@ -137,8 +151,7 @@ export default function App() {
   }
 
   function goToMasterHomepage() {
-    setShowSignup(false);
-    setShowLogin(false);
+    setAuthMode(null);
     setView('home');
     if (window.location.pathname !== '/home') {
       window.history.pushState({}, '', '/home');
@@ -154,33 +167,46 @@ export default function App() {
     localStorage.removeItem('pos_auth_token');
     setAuthToken(null);
     setBootstrap({ userId: null, cashierId: null, user: null, tenant: null, demoMode: false });
+    setAuthMode(null);
     window.history.pushState({}, '', '/');
     setView('dashboard');
   }
 
-  const [showSignup, setShowSignup] = useState(false);
-  const [showLogin, setShowLogin] = useState(false);
   const [signupPlan, setSignupPlan] = useState('starter');
-  const requestedProtectedLogin = !authToken && !showSignup && isProtectedAppPath(window.location.pathname);
+  const requestedProtectedLogin = !authToken && !authMode && isProtectedAppPath(window.location.pathname);
+
+  function goToSignup(planId = 'starter') {
+    setSignupPlan(planId);
+    setAuthMode('signup');
+    if (window.location.pathname !== '/signup') {
+      window.history.pushState({}, '', '/signup');
+    }
+  }
+
+  function goToLogin() {
+    setAuthMode('login');
+    if (window.location.pathname !== '/login') {
+      window.history.pushState({}, '', '/login');
+    }
+  }
 
   if (!authReady) {
     return <div className={styles.loading}>Loading workspace...</div>;
   }
 
-  if (showSignup && !authToken) {
+  if (authMode === 'signup' && !authToken) {
     return (
       <Signup
         initialPlan={signupPlan}
         onSignupSuccess={(token, user) => {
           localStorage.setItem('pos_auth_token', token);
           setAuthToken(token);
-          setShowSignup(false);
-          setShowLogin(false);
+          setAuthMode(null);
           setView('dashboard');
+          window.history.replaceState({}, '', '/');
         }}
         onNavigateLogin={() => {
-          setShowSignup(false);
-          setShowLogin(true);
+          goToLogin();
         }}
         onNavigateHome={() => {
           goToMasterHomepage();
@@ -189,14 +215,14 @@ export default function App() {
     );
   }
 
-  if ((showLogin || requestedProtectedLogin) && !authToken) {
+  if ((authMode === 'login' || requestedProtectedLogin) && !authToken) {
     return (
       <Login
         onLogin={(payload) => {
           const token = typeof payload === 'string' ? payload : payload.token;
           localStorage.setItem('pos_auth_token', token);
           setAuthToken(token);
-          setShowLogin(false);
+          setAuthMode(null);
           if (payload.user) {
             setBootstrap({
             userId: payload.user.id,
@@ -205,6 +231,7 @@ export default function App() {
             tenant: payload.tenant || null
           });
           }
+          window.history.replaceState({}, '', '/');
         }}
         onNavigateHome={goToMasterHomepage}
       />
@@ -214,11 +241,8 @@ export default function App() {
   if (!authToken) {
     return (
       <Homepage
-        onNavigateLogin={() => setShowLogin(true)}
-        onNavigateSignup={(planId = 'starter') => {
-          setSignupPlan(planId);
-          setShowSignup(true);
-        }}
+        onNavigateLogin={goToLogin}
+        onNavigateSignup={goToSignup}
       />
     );
   }
