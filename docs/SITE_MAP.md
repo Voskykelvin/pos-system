@@ -5,8 +5,9 @@
 | Path | Screen | Purpose |
 | --- | --- | --- |
 | `/home` | Master Homepage | Public product homepage, signup entry, pricing, and feature map back into the app. |
+| `/billing` | Subscription Billing | Tenant subscription payment instructions, manual reference submission, billing status, and payment history. |
 | `/` | Dashboard | Daily sales, payment mix, queued eTIMS invoices, low-stock watchlist, and recent orders. |
-| `/checkout` | Checkout | Product search, barcode scanner input, cart, VAT totals, split payments, and M-Pesa initiation. |
+| `/checkout` | Checkout | Product search, barcode scanner input, cart, held-sale recall, VAT totals, split payments, and M-Pesa initiation. |
 | `/inventory` | Inventory | Products, categories, suppliers, purchase orders, reorder suggestions, promotions, CSV tools, and barcode labels. |
 | `/analytics` | Analytics | Sales trends, conversion, payment mix, category mix, staff performance, stock health, restock recommendations, and export links. |
 | `/customers` | Customers | Customer profiles, loyalty balances, credit ledgers, and debt repayments. |
@@ -22,6 +23,10 @@
 | `GET` | `/api/site-map` | Machine-readable site map. |
 | `GET` | `/api/plans` | Public plan and pricing catalog for homepage and signup. |
 | `POST` | `/api/signup` | Self-serve tenant signup. |
+| `GET` | `/api/billing` | Tenant subscription status, payment instructions, and recent payment references. |
+| `POST` | `/api/billing/payments` | Submit a manual subscription payment reference for admin verification. |
+| `POST` | `/api/billing/payments/:id/confirm` | Super-admin confirms a subscription payment and extends the billing period. |
+| `POST` | `/api/billing/payments/:id/reject` | Super-admin rejects an unverified subscription payment reference. |
 | `GET` | `/api/super-admin/dashboard` | Platform owner MRR, activation, tenant health, plan tiers, and activity metrics. |
 | `PUT` | `/api/super-admin/tenants/:id` | Platform owner tenant status or plan update. |
 | `POST` | `/api/auth/login` | Staff login and auth token issue. |

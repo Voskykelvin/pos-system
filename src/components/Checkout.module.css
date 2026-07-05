@@ -124,6 +124,10 @@
 }
 
 .cartHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 20px 20px 12px;
   border-bottom: 1px dashed var(--line);
 }
@@ -138,6 +142,164 @@
   font-size: 12px;
   color: var(--ink-soft);
   margin-top: 4px;
+}
+
+.holdSaleBtn {
+  min-height: 36px;
+  border: 1px solid var(--pos-accent-dark);
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: var(--pos-accent-dark);
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.holdSaleBtn:disabled {
+  border-color: var(--line);
+  background: var(--pos-panel);
+  color: var(--ink-soft);
+  cursor: not-allowed;
+}
+
+.holdNoteBox {
+  display: grid;
+  gap: 6px;
+  margin: 10px 20px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  padding: 10px;
+}
+
+.holdNoteBox label {
+  display: grid;
+  gap: 5px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.holdNoteBox input {
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.holdNoteBox small {
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.heldSales {
+  margin: 12px 20px 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--pos-panel);
+  overflow: hidden;
+}
+
+.heldSalesHeader {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.heldSalesHeader strong {
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.heldSalesHeader span {
+  min-width: 24px;
+  min-height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.heldSalesList {
+  display: grid;
+  max-height: 182px;
+  overflow-y: auto;
+}
+
+.heldSaleRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 34px;
+  border-bottom: 1px solid var(--line);
+}
+
+.heldSaleRow:last-child {
+  border-bottom: 0;
+}
+
+.heldSaleMain {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+  border: 0;
+  background: var(--surface);
+  color: var(--ink);
+  text-align: left;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.heldSaleMain:hover {
+  background: #f0fdf4;
+}
+
+.heldSaleMain strong,
+.heldSaleMain span,
+.heldSaleMain small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.heldSaleMain strong {
+  font-size: 13px;
+}
+
+.heldSaleMain span {
+  color: var(--ink-soft);
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 12px;
+}
+
+.heldSaleMain small {
+  color: var(--pos-accent-dark);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.heldSaleRemove {
+  border: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--danger);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
 }
 
 .cartItems {

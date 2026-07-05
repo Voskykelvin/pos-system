@@ -5,6 +5,8 @@ const PLAN_CATALOG = {
     id: 'starter',
     name: 'Starter',
     priceUsd: 20,
+    priceKes: 2600,
+    billingIntervalDays: 30,
     registerLimit: 1,
     branchLimit: 1,
     staffLimit: 3,
@@ -28,6 +30,8 @@ const PLAN_CATALOG = {
     id: 'growth',
     name: 'Growth',
     priceUsd: 70,
+    priceKes: 9100,
+    billingIntervalDays: 30,
     registerLimit: 5,
     branchLimit: 5,
     staffLimit: 15,
@@ -58,6 +62,8 @@ const PLAN_CATALOG = {
     id: 'enterprise',
     name: 'Enterprise',
     priceUsd: 115,
+    priceKes: 14950,
+    billingIntervalDays: 30,
     registerLimit: null,
     branchLimit: null,
     staffLimit: null,
@@ -100,6 +106,17 @@ function getPlanPrice(planId) {
   return PLAN_CATALOG[planId]?.priceUsd || 0;
 }
 
+function getPlanAmount(planId, currency = 'KES') {
+  const plan = PLAN_CATALOG[planId];
+  if (!plan) return 0;
+
+  if (String(currency).toUpperCase() === 'KES') {
+    return plan.priceKes;
+  }
+
+  return plan.priceUsd;
+}
+
 function getPlan(planId) {
   const plan = PLAN_CATALOG[planId];
   return plan ? { ...plan, features: [...plan.features], enabledFeatures: [...plan.enabledFeatures] } : null;
@@ -120,9 +137,15 @@ function getPlanLimit(planId, limitName) {
   return plan ? plan[limitName] : undefined;
 }
 
+function getPlanBillingIntervalDays(planId) {
+  return PLAN_CATALOG[planId]?.billingIntervalDays || 30;
+}
+
 module.exports = {
   PLAN_CATALOG,
   getPlan,
+  getPlanAmount,
+  getPlanBillingIntervalDays,
   getPlanCatalog,
   getPlanLimit,
   getPlanPrice,

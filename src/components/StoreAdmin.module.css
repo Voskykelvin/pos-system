@@ -95,6 +95,14 @@
   margin-bottom: 16px;
 }
 
+.panelHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .panelHeader h2 {
   margin: 0;
   font-size: 18px;

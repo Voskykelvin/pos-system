@@ -29,7 +29,7 @@ const PLAN_COLORS = {
   enterprise: '#7c3aed'
 };
 
-const HEALTH_COLORS = ['#059669', '#2563eb', '#d97706', '#dc2626', '#7c3aed'];
+const HEALTH_COLORS = ['#059669', '#2563eb', '#0f766e', '#d97706', '#f97316', '#dc2626', '#7c3aed'];
 
 function formatUsd(amount) {
   return `$${Number(amount || 0).toLocaleString(undefined, {
@@ -57,6 +57,21 @@ function formatPercent(value) {
 
 function labelize(value) {
   return String(value || '').replace(/_/g, ' ');
+}
+
+function formatDate(value) {
+  if (!value) return '-';
+  return new Date(value).toLocaleDateString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+}
+
+function daysText(value) {
+  if (value === null || value === undefined) return 'No active period';
+  if (value < 0) return `${Math.abs(value)} day${Math.abs(value) === 1 ? '' : 's'} overdue`;
+  return `${value} day${value === 1 ? '' : 's'} left`;
 }
 
 export default function SuperAdmin({ authToken }) {
@@ -106,10 +121,30 @@ export default function SuperAdmin({ authToken }) {
     await updateTenant(tenant, { status });
   }
 
+  async function reviewPayment(payment, action) {
+    const adminNotes = action === 'reject'
+      ? window.prompt('Reason for rejecting this payment reference?', 'Reference could not be verified.') || ''
+      : '';
+
+    try {
+      const res = await fetch(`/api/billing/payments/${payment.id}/${action}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${authToken}` },
+        body: JSON.stringify({ adminNotes })
+      });
+      const result = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(result.error || `Failed to ${action} payment`);
+      await loadDashboard(days);
+    } catch (err) {
+      alert(err.message);
+    }
+  }
+
   if (loading && !data) return <div className={styles.loading}>Loading SaaS platform analytics...</div>;
   if (error) return <div className={styles.errorBanner}>{error}</div>;
 
-  const { metrics, tenants, charts, plans } = data;
+  const { metrics, tenants, charts, plans, subscriptionAlerts = [], subscriptionPayments = {} } = data;
+  const pendingReview = subscriptionPayments.pendingReview || [];
 
   return (
     <section className={styles.container}>
@@ -166,6 +201,18 @@ export default function SuperAdmin({ authToken }) {
           <div className={styles.kpiLabel}>ARPA</div>
           <div className={styles.kpiValue}>{formatUsd(metrics.arpaUsd)}</div>
           <div className={styles.kpiSub}>average revenue per account</div>
+        </article>
+
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiLabel}>Pending verification</div>
+          <div className={styles.kpiValue}>{metrics.pendingSubscriptionPayments}</div>
+          <div className={styles.kpiSub}>{metrics.pendingPaymentTenants} unpaid tenants</div>
+        </article>
+
+        <article className={styles.kpiCard}>
+          <div className={styles.kpiLabel}>Ending soon</div>
+          <div className={styles.kpiValue}>{metrics.expiringSoonTenants}</div>
+          <div className={styles.kpiSub}>subscriptions within 7 days</div>
         </article>
       </div>
 
@@ -260,6 +307,77 @@ export default function SuperAdmin({ authToken }) {
 
       <section className={styles.panel}>
         <div className={styles.panelHeader}>
+          <h2>Subscription alerts</h2>
+          <span>{subscriptionAlerts.length} alerts</span>
+        </div>
+        <div className={styles.alertList}>
+          {subscriptionAlerts.slice(0, 8).map((alert) => (
+            <article className={`${styles.alertRow} ${styles[alert.severity]}`} key={`${alert.type}-${alert.tenantId}-${alert.paymentId || alert.createdAt}`}>
+              <div>
+                <strong>{alert.tenantName}</strong>
+                <span>{alert.message}</span>
+              </div>
+              <small>{labelize(alert.type)}</small>
+            </article>
+          ))}
+          {subscriptionAlerts.length === 0 && (
+            <div className={styles.emptyCell}>No subscription alerts right now.</div>
+          )}
+        </div>
+      </section>
+
+      {pendingReview.length > 0 && (
+        <section className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <h2>Payment references to verify</h2>
+            <span>{pendingReview.length} pending</span>
+          </div>
+          <div className={styles.tableWrap}>
+            <table className={styles.table}>
+              <thead>
+                <tr>
+                  <th>Business</th>
+                  <th>Plan</th>
+                  <th>Amount</th>
+                  <th>Reference</th>
+                  <th>Submitted</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pendingReview.map((payment) => (
+                  <tr key={payment.id}>
+                    <td className={styles.tenantName}>
+                      <strong>{payment.tenant?.name || '-'}</strong>
+                      <span>{payment.payerPhone || payment.payerName || '-'}</span>
+                    </td>
+                    <td>{labelize(payment.plan)}</td>
+                    <td>{formatKes(payment.amount)}</td>
+                    <td>
+                      <strong>{payment.reference}</strong>
+                      <span>{labelize(payment.method)}</span>
+                    </td>
+                    <td>{formatDate(payment.submittedAt)}</td>
+                    <td>
+                      <div className={styles.rowActions}>
+                        <button className={styles.activateBtn} type="button" onClick={() => reviewPayment(payment, 'confirm')}>
+                          Confirm
+                        </button>
+                        <button className={styles.suspendBtn} type="button" onClick={() => reviewPayment(payment, 'reject')}>
+                          Reject
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+
+      <section className={styles.panel}>
+        <div className={styles.panelHeader}>
           <h2>Plan packaging</h2>
           <span>Current tiers</span>
         </div>
@@ -295,6 +413,7 @@ export default function SuperAdmin({ authToken }) {
                 <th>Plan</th>
                 <th>Activity</th>
                 <th>Sales</th>
+                <th>Subscription</th>
                 <th>Health</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -325,6 +444,11 @@ export default function SuperAdmin({ authToken }) {
                   </td>
                   <td>{formatKes(tenant.activity.sales)}</td>
                   <td>
+                    <strong>{formatDate(tenant.subscription.endsAt)}</strong>
+                    <span>{daysText(tenant.subscription.daysRemaining)}</span>
+                    {tenant.subscription.pendingPayment && <small className={styles.upgradeHint}>Payment review</small>}
+                  </td>
+                  <td>
                     <span className={`${styles.healthBadge} ${styles[tenant.activity.health]}`}>
                       {labelize(tenant.activity.health)}
                     </span>
@@ -346,7 +470,7 @@ export default function SuperAdmin({ authToken }) {
               ))}
               {tenants.length === 0 && (
                 <tr>
-                  <td colSpan="8" className={styles.emptyCell}>No tenant stores registered yet.</td>
+                  <td colSpan="9" className={styles.emptyCell}>No tenant stores registered yet.</td>
                 </tr>
               )}
             </tbody>

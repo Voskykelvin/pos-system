@@ -3,6 +3,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import styles from './Checkout.module.css';
 import { addOrderToQueue, getCachedCatalog, cacheCatalog } from '../utils/offlineQueue';
+import {
+  createHeldSaleSnapshot,
+  formatHeldSaleAge,
+  heldSalesStorageKey,
+  insertHeldSale
+} from '../utils/heldSaleState.mjs';
 
 function Toast({ message, tone, onClose }) {
   useEffect(() => {
@@ -28,6 +34,24 @@ function formatKes(amount) {
 function createClientIdempotencyKey(prefix) {
   const randomPart = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${prefix}-${randomPart}`;
+}
+
+function loadHeldSales(user) {
+  try {
+    const raw = localStorage.getItem(heldSalesStorageKey(user));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveHeldSales(user, heldSales) {
+  try {
+    localStorage.setItem(heldSalesStorageKey(user), JSON.stringify(heldSales));
+  } catch {
+    // If local storage is full or blocked, the in-memory state still works for this tab.
+  }
 }
 
 function escapeHtml(value) {
@@ -299,7 +323,14 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [lastReceipt, setLastReceipt] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
   const [toast, setToast] = useState(null);
+  const [heldSales, setHeldSales] = useState(() => loadHeldSales(user));
+  const [holdNote, setHoldNote] = useState('');
   const pollRef = useRef(null);
+  const searchInputRef = useRef(null);
+
+  useEffect(() => {
+    saveHeldSales(user, heldSales);
+  }, [heldSales, user?.id, user?.tenantId]);
 
   const addToCart = useCallback((product) => {
     setCart((prev) => {
@@ -449,6 +480,72 @@ export default function Checkout({ authToken, cashierId, user }) {
     setCart((prev) => prev.filter((i) => i.productId !== productId));
   }
 
+  function holdCurrentSale() {
+    if (cart.length === 0) return;
+    if (orderStatus === 'waiting') {
+      setError('This sale already has a pending M-Pesa request. Finish or retry it before holding another sale.');
+      showToast('Finish the pending M-Pesa request first.', 'error');
+      return;
+    }
+
+    const snapshot = createHeldSaleSnapshot({
+      cashierId,
+      cashierName: user?.name,
+      cart,
+      payments,
+      customer,
+      discountTotal,
+      promoCode,
+      promoResult,
+      redeemLoyalty,
+      isWholesale,
+      note: holdNote,
+      total
+    });
+
+    setHeldSales((current) => insertHeldSale(current, snapshot));
+    resetSale({ clearReceipt: true });
+    setStatusMessage('Sale held. You can recall it from the held sales list.');
+    showToast('Sale held.');
+  }
+
+  function resumeHeldSale(heldSale) {
+    if (cart.length > 0) {
+      const replace = window.confirm('Replace the current sale with this held sale?');
+      if (!replace) return;
+    }
+
+    if (pollRef.current) {
+      clearInterval(pollRef.current);
+      pollRef.current = null;
+    }
+
+    setCart(heldSale.cart || []);
+    setPayments(heldSale.payments?.length ? heldSale.payments : [{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+    setCustomer(heldSale.customer || null);
+    setDiscountTotal(heldSale.discountTotal || '');
+    setPromoCode(heldSale.promoCode || '');
+    setPromoResult(heldSale.promoResult || null);
+    setPromoError(null);
+    setRedeemLoyalty(Boolean(heldSale.redeemLoyalty));
+    setIsWholesale(Boolean(heldSale.isWholesale));
+    setManagerIdentifier('');
+    setManagerPassword('');
+    setHoldNote(heldSale.note || '');
+    setError(null);
+    setOrderStatus(null);
+    setLastReceipt(null);
+    setStatusMessage('Held sale recalled.');
+    setToast(null);
+    setHeldSales((current) => current.filter((sale) => sale.id !== heldSale.id));
+    showToast('Held sale recalled.');
+  }
+
+  function removeHeldSale(heldSaleId) {
+    setHeldSales((current) => current.filter((sale) => sale.id !== heldSaleId));
+    showToast('Held sale removed.');
+  }
+
   async function checkPromo() {
     if (!promoCode.trim()) return;
     setPromoChecking(true);
@@ -506,16 +603,21 @@ export default function Checkout({ authToken, cashierId, user }) {
     }, 120000);
   }, [authToken]);
 
-  function resetSale() {
+  function resetSale({ clearReceipt = false } = {}) {
     setCart([]);
     setPayments([{ method: 'cash', amount: '0', mpesaPhone: '' }]);
     setDiscountTotal('');
     setPromoCode('');
     setPromoResult(null);
     setPromoError(null);
+    setRedeemLoyalty(false);
+    setHoldNote('');
     setManagerIdentifier('');
     setManagerPassword('');
     setCustomer(null);
+    setError(null);
+    setOrderStatus(null);
+    if (clearReceipt) setLastReceipt(null);
   }
 
   async function handleConfirm() {
@@ -661,6 +763,32 @@ export default function Checkout({ authToken, cashierId, user }) {
     paymentsBalanced &&
     mpesaComplete &&
     (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim()));
+  const canHoldSale = cart.length > 0 && !submitting && orderStatus !== 'waiting';
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if (event.key === 'F4') {
+        event.preventDefault();
+        searchInputRef.current?.focus();
+        searchInputRef.current?.select();
+        return;
+      }
+
+      if (event.key === 'F2') {
+        event.preventDefault();
+        if (canHoldSale) holdCurrentSale();
+        return;
+      }
+
+      if (event.ctrlKey && event.key === 'Enter') {
+        event.preventDefault();
+        if (canConfirm) handleConfirm();
+      }
+    };
+
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  });
 
   function showToast(message, tone = 'success') {
     setToast({ message, tone });
@@ -785,6 +913,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       <div className={styles.catalog}>
         <div className={styles.searchBar}>
           <input
+            ref={searchInputRef}
             className={styles.searchInput}
             type="text"
             placeholder="Scan barcode or search a product..."
@@ -856,11 +985,53 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
 
         <div className={styles.cartHeader}>
-          <h2 className={`${styles.heading} ${styles.cartTitle}`}>Current sale</h2>
-          {cart.length > 0 && (
-            <div className={styles.orderNumber}>{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
-          )}
+          <div>
+            <h2 className={`${styles.heading} ${styles.cartTitle}`}>Current sale</h2>
+            {cart.length > 0 && (
+              <div className={styles.orderNumber}>{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
+            )}
+          </div>
+          <button className={styles.holdSaleBtn} type="button" onClick={holdCurrentSale} disabled={!canHoldSale} title="F2">
+            Hold sale
+          </button>
         </div>
+
+        {cart.length > 0 && orderStatus !== 'waiting' && (
+          <div className={styles.holdNoteBox}>
+            <label>
+              Hold note
+              <input
+                value={holdNote}
+                onChange={(event) => setHoldNote(event.target.value)}
+                placeholder="e.g. M-Pesa delay, customer fetching cash"
+              />
+            </label>
+            <small>Press F2 to hold, F4 to scan/search, Ctrl+Enter to confirm.</small>
+          </div>
+        )}
+
+        {heldSales.length > 0 && (
+          <div className={styles.heldSales}>
+            <div className={styles.heldSalesHeader}>
+              <strong>Held sales</strong>
+              <span>{heldSales.length}</span>
+            </div>
+            <div className={styles.heldSalesList}>
+              {heldSales.map((heldSale) => (
+                <div className={styles.heldSaleRow} key={heldSale.id}>
+                  <button className={styles.heldSaleMain} type="button" onClick={() => resumeHeldSale(heldSale)}>
+                    <strong>{heldSale.label}</strong>
+                    <span>{formatKes(heldSale.total)} - {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} - {formatHeldSaleAge(heldSale)}</span>
+                    <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' - ') || 'No note'}</small>
+                  </button>
+                  <button className={styles.heldSaleRemove} type="button" onClick={() => removeHeldSale(heldSale.id)}>
+                    x
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         <div className={styles.cartItems}>
           {cart.length === 0 ? (
@@ -942,9 +1113,13 @@ export default function Checkout({ authToken, cashierId, user }) {
           {submitting ? 'Processing...' : `Confirm sale - ${formatKes(total)}`}
         </button>
 
-        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN...</div>}
+        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
         {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}
-        {orderStatus === 'failed' && <div className={`${styles.statusBanner} ${styles.error}`}>Payment did not go through. Try again or use cash.</div>}
+        {orderStatus === 'failed' && (
+          <div className={`${styles.statusBanner} ${styles.error}`}>
+            Payment did not go through. Ask the customer to retry M-Pesa, switch the tender to cash, or find the receipt in Operations and void it if a backend order was created.
+          </div>
+        )}
         {statusMessage && <div className={`${styles.statusBanner} ${styles.success}`}>{statusMessage}</div>}
         {lastReceipt && (
           <div className={styles.receiptMini}>

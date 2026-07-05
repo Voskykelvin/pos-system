@@ -1,5 +1,11 @@
 import { useState } from 'react';
 import styles from './Login.module.css';
+import {
+  BUILDER_NAME,
+  BUILDER_PHONE_DISPLAY,
+  BUILDER_TEL_URL,
+  BUILDER_WHATSAPP_URL
+} from '../utils/builderContact';
 
 export default function Login({ onLogin, onNavigateHome }) {
   const [identifier, setIdentifier] = useState('');
@@ -66,6 +72,14 @@ export default function Login({ onLogin, onNavigateHome }) {
         </form>
 
         {error && <div className={styles.error}>{error}</div>}
+
+        <div className={styles.builderCredit}>
+          <span>System built by {BUILDER_NAME}</span>
+          <div>
+            <a href={BUILDER_TEL_URL}>{BUILDER_PHONE_DISPLAY}</a>
+            <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">WhatsApp</a>
+          </div>
+        </div>
       </section>
     </main>
   );

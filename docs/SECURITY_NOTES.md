@@ -12,6 +12,7 @@ Last reviewed: 2026-07-04.
 - `helmet` sets security headers and CSP.
 - Write routes use `middleware/validate.js`.
 - Checkout and M-Pesa STK push use idempotency middleware.
+- Held checkout sales are stored in browser local storage per tenant/user; shared tills should use staff sign-out and clear abandoned held sales before handover.
 - SQL access is through Sequelize or migration scripts with parameterized replacements.
 - Production schema changes use `npm run db:migrate`.
 - CI runs the frontend build, smoke test, and a visible dependency audit on pushes and pull requests.

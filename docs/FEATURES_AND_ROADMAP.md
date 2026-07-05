@@ -8,6 +8,7 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 - Staff login with role-based navigation for admin, manager, cashier, and platform owner users.
 - Barcode and text product search with offline catalog cache.
 - Split tender checkout with cash, M-Pesa, and customer credit.
+- Held-sale workflow that parks the current cart locally with note, timestamp, and cashier metadata, then lets the cashier recall it after serving the next customer.
 - Customer lookup and quick-add from checkout.
 - Loyalty earn and redemption support.
 - Promotion code validation in checkout and admin promotion management.
@@ -42,6 +43,10 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 - Tenant-aware auth tokens and request context.
 - Platform owner dashboard at `/super-admin` with MRR, signup activation, store activity, tenant health, and plan packaging.
 - Shared Starter, Growth, and Enterprise tier catalog for plan pricing and feature packaging.
+- Tenant subscription billing page at `/billing` with manual M-Pesa/Till/PayBill/bank instructions, payment reference submission, and payment history.
+- Super-admin subscription tracker with pending payment review, expiry alerts, manual confirm/reject actions, and 30-day period extension on confirmation.
+- Subscription access gate that lets unpaid or expired tenants log in only to billing until payment is verified.
+- Billing page renewal guidance and rejected-payment reason visibility for store owners.
 - Tenant-aware model fields and scoped admin/customer/operations queries where tenant context is present.
 - Tenant-scoped uniqueness for product SKU/barcode, customer phone, and promotion codes.
 - Plan feature enforcement for analytics, purchasing, promotions, loyalty, and customer credit.
@@ -56,12 +61,13 @@ These items cannot be completed entirely in code without live accounts, secrets,
 - Safaricom Daraja production credentials and public callback URL.
 - KRA eTIMS live registration, device serial, base URL, and API key.
 - Africa's Talking live SMS username, API key, and sender ID.
-- Subscription billing provider credentials and webhook setup if the SaaS offering moves beyond manual plan management.
+- Subscription payment provider credentials and webhook setup if the SaaS offering moves beyond manual M-Pesa/reference verification.
 
 ## Launch Credential Approach
 
-- Client signup should stay lightweight and create the tenant/store account first.
-- Payment and KRA credentials should be configured after signup by a platform/admin operator during the first launch phase.
+- Client signup stays lightweight and creates the tenant/store account first, then routes the owner to `/billing` before workspace access.
+- Subscription payments start with manual M-Pesa/reference verification by the platform owner, then can move to Daraja STK Push or a gateway webhook.
+- Payment and KRA credentials should be configured after subscription activation by a platform/admin operator during the first launch phase.
 - Shops can start with cash and manual M-Pesa sales before Daraja or eTIMS credentials are ready.
 - STK Push should be enabled only for tenants that provide their own Daraja credentials or use an approved payment provider/aggregator.
 - KRA/eTIMS sync should be enabled only after the tenant provides its own business KRA PIN, eTIMS device serial, base URL, and API key.
@@ -69,8 +75,8 @@ These items cannot be completed entirely in code without live accounts, secrets,
 
 ## Known Follow-Up
 
-- Add a real payment subscription integration for SaaS billing.
+- Execute the controlled first-shop rollout using `docs/PILOT_LAUNCH_CHECKLIST.md`.
+- Add automated SaaS subscription collection via Daraja STK Push, Pesapal, Paystack, IntaSend, Flutterwave, or DPO webhooks.
 - Add tenant export/import and restore workflows for store-level operational support.
-- Add a self-service Store Setup screen after signup for business profile, payment mode, Daraja credentials, and KRA/eTIMS credentials.
 - Add secure secret storage/encryption before allowing tenants to enter live Daraja or eTIMS credentials directly in the app.
 - Add payment-mode support per tenant: cash only, manual M-Pesa, Daraja STK Push, and payment provider/aggregator.

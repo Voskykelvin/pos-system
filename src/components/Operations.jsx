@@ -1,5 +1,10 @@
 import { useEffect, useState } from 'react';
 import styles from './Operations.module.css';
+import {
+  formatHeldSaleAge,
+  heldSalesStorageKey,
+  isHeldSaleStale
+} from '../utils/heldSaleState.mjs';
 
 function formatKes(amount) {
   return `KES ${Number(amount || 0).toFixed(2)}`;
@@ -10,6 +15,16 @@ function formatDate(value) {
     dateStyle: 'medium',
     timeStyle: 'short'
   }).format(new Date(value));
+}
+
+function loadHeldSales(user) {
+  try {
+    const raw = localStorage.getItem(heldSalesStorageKey(user));
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
 }
 
 export default function Operations({ authToken, user }) {
@@ -31,6 +46,7 @@ export default function Operations({ authToken, user }) {
   const [expenseLogging, setExpenseLogging] = useState(false);
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditError, setAuditError] = useState(null);
+  const [heldSales, setHeldSales] = useState([]);
 
   // Multi-till shift summary state for managers
   const [shiftSummary, setShiftSummary] = useState(null);
@@ -88,6 +104,14 @@ export default function Operations({ authToken, user }) {
 
   async function closeShift() {
     if (!shift?.id) return;
+    if (heldSales.length > 0) {
+      const oldest = heldSales[heldSales.length - 1];
+      const proceed = window.confirm(
+        `There ${heldSales.length === 1 ? 'is' : 'are'} ${heldSales.length} held sale${heldSales.length === 1 ? '' : 's'} on this till. ` +
+        `Oldest: ${formatHeldSaleAge(oldest)}. Close shift anyway?`
+      );
+      if (!proceed) return;
+    }
     try {
       const payload = await api(`/api/shifts/${shift.id}/close`, {
         method: 'POST',
@@ -188,6 +212,19 @@ export default function Operations({ authToken, user }) {
     loadShiftSummary();
   }, [authToken, canViewAudit]);
 
+  useEffect(() => {
+    const refreshHeldSales = () => setHeldSales(loadHeldSales(user));
+    refreshHeldSales();
+    window.addEventListener('focus', refreshHeldSales);
+    window.addEventListener('storage', refreshHeldSales);
+    return () => {
+      window.removeEventListener('focus', refreshHeldSales);
+      window.removeEventListener('storage', refreshHeldSales);
+    };
+  }, [user?.id, user?.tenantId]);
+
+  const staleHeldSales = heldSales.filter((sale) => isHeldSaleStale(sale));
+
   return (
     <section className={styles.page}>
       <header className={styles.header}>
@@ -236,6 +273,16 @@ export default function Operations({ authToken, user }) {
               </div>
               {shift.status === 'open' ? (
                 <>
+                  {heldSales.length > 0 && (
+                    <div className={staleHeldSales.length > 0 ? styles.heldSaleWarning : styles.heldSaleNotice}>
+                      <strong>{heldSales.length} held sale{heldSales.length === 1 ? '' : 's'} still parked on this till.</strong>
+                      <span>
+                        {staleHeldSales.length > 0
+                          ? `${staleHeldSales.length} held sale${staleHeldSales.length === 1 ? '' : 's'} older than 30 minutes.`
+                          : `Oldest held sale is ${formatHeldSaleAge(heldSales[heldSales.length - 1])}.`}
+                      </span>
+                    </div>
+                  )}
                   <form className={styles.expenseForm} onSubmit={logExpense}>
                     <h4>Log Petty Cash Expense</h4>
                     <div className={styles.expenseInputs}>

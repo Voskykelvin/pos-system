@@ -31,10 +31,22 @@ module.exports = (sequelize, DataTypes) => {
       defaultValue: 'starter'
     },
     status: {
-      // active, past_due, suspended
+      // pending_payment, active, past_due, suspended
       type: DataTypes.STRING,
       allowNull: false,
-      defaultValue: 'active'
+      defaultValue: 'pending_payment'
+    },
+    subscriptionStartedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    subscriptionEndsAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    lastBillingReminderAt: {
+      type: DataTypes.DATE,
+      allowNull: true
     },
     ownerUserId: {
       type: DataTypes.UUID,
@@ -51,7 +63,8 @@ module.exports = (sequelize, DataTypes) => {
     indexes: [
       { fields: ['slug'] },
       { fields: ['status'] },
-      { fields: ['plan'] }
+      { fields: ['plan'] },
+      { fields: ['subscriptionEndsAt'] }
     ]
   });
 
@@ -67,6 +80,7 @@ module.exports = (sequelize, DataTypes) => {
     Tenant.hasMany(models.Supplier, { foreignKey: 'tenantId' });
     Tenant.hasMany(models.PurchaseOrder, { foreignKey: 'tenantId' });
     Tenant.hasMany(models.Promotion, { foreignKey: 'tenantId' });
+    Tenant.hasMany(models.SubscriptionPayment, { foreignKey: 'tenantId' });
   };
 
   return Tenant;

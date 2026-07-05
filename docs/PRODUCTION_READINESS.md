@@ -2,6 +2,8 @@
 
 Use this guide when deploying the POS system to Render with PostgreSQL.
 
+For the first controlled store rollout, also follow [`PILOT_LAUNCH_CHECKLIST.md`](PILOT_LAUNCH_CHECKLIST.md).
+
 ## Stack
 
 - Host: Render Web Service.
@@ -46,6 +48,16 @@ Optional SMS receipts:
 - `AFRICASTALKING_API_KEY`
 - `AFRICASTALKING_SENDER_ID`
 
+Platform subscription billing:
+
+- `PLATFORM_BILLING_NAME`
+- `PLATFORM_MPESA_PHONE` for the initial manual M-Pesa number.
+- `PLATFORM_MPESA_TILL` or `PLATFORM_MPESA_PAYBILL` once the merchant account is ready.
+- `PLATFORM_MPESA_ACCOUNT` for the PayBill account/reference label.
+- `PLATFORM_BANK_NAME`, `PLATFORM_BANK_ACCOUNT_NAME`, and `PLATFORM_BANK_ACCOUNT_NUMBER` if bank transfer is accepted.
+- `PLATFORM_BILLING_EMAIL` and `PLATFORM_BILLING_PHONE` for payment follow-up.
+- `PLATFORM_PAYMENT_GATEWAY` once Pesapal, Paystack, IntaSend, Flutterwave, DPO, or Daraja automation is chosen.
+
 Multi-tenant credential option:
 
 - Tenant settings can define `business`, `mpesa`, `etims`, and `sms` blocks.
@@ -57,12 +69,14 @@ Multi-tenant credential option:
 - [ ] Create Render Web Service with `render.yaml`.
 - [ ] Configure all production secrets.
 - [ ] Run `npm run db:migrate`.
-- [ ] Create the first admin with `npm run admin:create`.
+- [ ] Create the first platform owner through `SUPER_ADMIN_EMAIL` / `SUPER_ADMIN_PASSWORD` or create the first admin with `npm run admin:create`.
+- [ ] Configure at least one platform subscription payment channel.
 - [ ] Confirm `/api/health` returns `{"ok":true,"database":"postgres"}`.
 - [ ] Log in as admin.
 - [ ] Import the product catalog or create products manually.
 - [ ] Open a shift.
 - [ ] Run a cash test sale.
+- [ ] Hold a checkout cart, start a second cart, then recall and complete the held sale.
 - [ ] Run an M-Pesa test sale after live credentials are configured.
 - [ ] Print a receipt from the browser print dialog.
 - [ ] Close the shift and verify expected cash, counted cash, and variance.
@@ -81,8 +95,9 @@ Multi-tenant credential option:
 | Plan enforcement | Complete | Growth/Enterprise feature gates for analytics, purchasing, promotions, loyalty, and customer credit. |
 | Tenant uniqueness | Complete | Tenant-scoped product, customer, and promotion uniqueness. |
 | Tenant integration config | Complete | Per-tenant settings with env fallback for M-Pesa, eTIMS, SMS, and business receipt metadata. |
+| Subscription billing MVP | Complete | `/billing`, manual payment references, super-admin confirm/reject, expiry tracker, and billing access gate. |
 | Inventory | Complete | Products, suppliers, POs, CSV, reorder suggestions. |
-| Operations | Complete | Shifts, expenses, receipt lookup, voids, refunds, audit logs. |
+| Operations | Complete | Shifts, expenses, held sales, receipt lookup, voids, refunds, audit logs. |
 | Reporting | Complete | Dashboard, analytics, reorder suggestions, CSV export. |
 
 ## Production Blockers Outside The Repo
@@ -91,3 +106,4 @@ Multi-tenant credential option:
 - Live KRA eTIMS credentials and device registration.
 - Business legal details for production receipts and tax payloads.
 - SMS provider credentials if receipt SMS is required.
+- Automated subscription billing provider credentials and webhook signing secrets when moving beyond manual reference verification.

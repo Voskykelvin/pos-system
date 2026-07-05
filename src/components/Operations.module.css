@@ -119,6 +119,34 @@
   padding: 14px 16px 16px;
 }
 
+.heldSaleNotice,
+.heldSaleWarning {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.heldSaleNotice {
+  border: 1px solid #bae6fd;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.heldSaleWarning {
+  border: 1px solid #fed7aa;
+  background: #fff7ed;
+  color: #c2410c;
+}
+
+.heldSaleNotice span,
+.heldSaleWarning span {
+  font-weight: 700;
+}
+
 .row,
 .receiptLine,
 .totals div {

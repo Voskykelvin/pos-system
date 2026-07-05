@@ -10,11 +10,19 @@ import Signup from './components/Signup.jsx';
 import SuperAdmin from './components/SuperAdmin.jsx';
 import Homepage from './components/Homepage.jsx';
 import StoreAdmin from './components/StoreAdmin.jsx';
+import Billing from './components/Billing.jsx';
 import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
+import {
+  BUILDER_NAME,
+  BUILDER_PHONE_DISPLAY,
+  BUILDER_TEL_URL,
+  BUILDER_WHATSAPP_URL
+} from './utils/builderContact';
 
 const ROUTES = {
   '/home': 'home',
+  '/billing': 'billing',
   '/store': 'store_admin',
   '/': 'dashboard',
   '/checkout': 'checkout',
@@ -55,6 +63,10 @@ function isProtectedAppPath(pathname) {
 }
 
 function landingForUser(user, tenant) {
+  if (tenant && tenant.status !== 'active') {
+    return { id: 'billing', label: 'Billing', path: '/billing', roles: ['admin', 'manager', 'cashier'] };
+  }
+
   const enabledFeatures = tenant?.enabledFeatures || [];
   return NAV_ITEMS.find((item) => (
     item.roles.includes(user?.role) &&
@@ -67,6 +79,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState(getInitialAuthMode);
   const [authToken, setAuthToken] = useState(() => localStorage.getItem('pos_auth_token'));
   const [authReady, setAuthReady] = useState(false);
+  const [bootstrapRefresh, setBootstrapRefresh] = useState(0);
   const [bootstrap, setBootstrap] = useState({
     userId: null,
     cashierId: null,
@@ -98,7 +111,7 @@ export default function App() {
     }
 
     loadBootstrap();
-  }, [authToken]);
+  }, [authToken, bootstrapRefresh]);
 
   useEffect(() => {
     const onPop = () => {
@@ -145,8 +158,20 @@ export default function App() {
   const allowedIds = visibleNavItems.map((i) => i.id);
 
   useEffect(() => {
+    if (!authToken || !bootstrap.user || bootstrap.user.role === 'super_admin') return;
+    if (bootstrap.tenant && bootstrap.tenant.status !== 'active' && view !== 'billing') {
+      setAuthMode(null);
+      setView('billing');
+      if (window.location.pathname !== '/billing') {
+        window.history.replaceState({}, '', '/billing');
+      }
+    }
+  }, [authToken, bootstrap.user, bootstrap.tenant, view]);
+
+  useEffect(() => {
     if (!visibleNavItems.length) return;
     if (view === 'home') return;
+    if (view === 'billing') return;
     const current = visibleNavItems.find((item) => item.id === view);
     if (!current) {
       navigate(visibleNavItems[0]);
@@ -213,13 +238,20 @@ export default function App() {
     return (
       <Signup
         initialPlan={signupPlan}
-        onSignupSuccess={(token, user) => {
+        onSignupSuccess={(token, user, tenant) => {
           localStorage.setItem('pos_auth_token', token);
           setAuthReady(false);
           setAuthToken(token);
           setAuthMode(null);
-          setView('store_admin');
-          window.history.replaceState({}, '', '/store');
+          setBootstrap((current) => ({
+            ...current,
+            userId: user?.id || null,
+            cashierId: user?.id || null,
+            user: user || null,
+            tenant: tenant || null
+          }));
+          setView(tenant?.status === 'active' ? 'store_admin' : 'billing');
+          window.history.replaceState({}, '', tenant?.status === 'active' ? '/store' : '/billing');
         }}
         onNavigateLogin={() => {
           goToLogin();
@@ -267,6 +299,21 @@ export default function App() {
     );
   }
 
+  if (view === 'billing') {
+    return (
+      <Billing
+        authToken={authToken}
+        onLogout={handleLogout}
+        onContinue={() => {
+          setAuthReady(false);
+          setBootstrapRefresh((current) => current + 1);
+          setView('store_admin');
+          window.history.replaceState({}, '', '/store');
+        }}
+      />
+    );
+  }
+
   if (view === 'home') {
     return (
       <Homepage
@@ -309,11 +356,21 @@ export default function App() {
             Sign out
           </button>
         </div>
+
+        <div className={styles.builderCredit}>
+          <span>System built by {BUILDER_NAME}</span>
+          <a href={BUILDER_TEL_URL}>{BUILDER_PHONE_DISPLAY}</a>
+          <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">WhatsApp</a>
+        </div>
       </aside>
 
       <main className={styles.main}>
         {view === 'store_admin' && allowedIds.includes('store_admin') && (
-          <StoreAdmin authToken={authToken} user={bootstrap.user} />
+          <StoreAdmin
+            authToken={authToken}
+            user={bootstrap.user}
+            onOpenBilling={() => navigate({ id: 'billing', path: '/billing' })}
+          />
         )}
         {view === 'dashboard' && <Dashboard authToken={authToken} />}
         {view === 'checkout' && (

@@ -23,6 +23,7 @@ Implemented pieces:
 - Platform owner dashboard for tenant status and plan oversight.
 - Tenant-scoped product SKU/barcode, customer phone, and promotion code uniqueness.
 - Plan feature enforcement for Growth/Enterprise modules.
+- Manual subscription billing with `/billing`, `subscription_payments`, super-admin review, tenant expiry tracking, and billing-only access for unpaid stores.
 - Optional tenant runtime settings for business metadata and integration credential lookup.
 
 ## Trade-Offs
@@ -42,6 +43,6 @@ Implemented pieces:
 
 ## SaaS Product Follow-Up
 
-- Add subscription billing provider integration.
+- Add automated subscription billing provider integration and webhook reconciliation on top of the current manual billing MVP.
 - Add tenant export/import and soft-delete restore workflows.
 - Expand tenant payment, tax, receipt, and localization configuration UI.

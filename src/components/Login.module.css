@@ -115,3 +115,26 @@
   color: var(--pos-danger);
   font-size: 13px;
 }
+
+.builderCredit {
+  display: grid;
+  gap: 6px;
+  margin-top: 22px;
+  padding-top: 16px;
+  border-top: 1px solid var(--pos-line);
+  color: var(--pos-ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.builderCredit div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.builderCredit a {
+  color: var(--pos-accent-dark);
+  text-decoration-color: rgba(5, 150, 105, 0.35);
+  text-underline-offset: 3px;
+}

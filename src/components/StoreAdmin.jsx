@@ -96,7 +96,7 @@ function mergeDefaults(defaults, values) {
   return { ...defaults, ...(values || {}) };
 }
 
-export default function StoreAdmin({ authToken, user }) {
+export default function StoreAdmin({ authToken, user, onOpenBilling }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [setup, setSetup] = useState(null);
   const [branches, setBranches] = useState([]);
@@ -536,7 +536,14 @@ export default function StoreAdmin({ authToken, user }) {
         <form className={styles.panel} onSubmit={saveSettings}>
           <div className={styles.panelHeader}>
             <h2>Subscription payment</h2>
-            <span>{titleCase(billingForm.status)}</span>
+            <div className={styles.panelHeaderActions}>
+              <span>{titleCase(billingForm.status)}</span>
+              {onOpenBilling && (
+                <button className={styles.secondaryBtn} type="button" onClick={onOpenBilling}>
+                  Open payment page
+                </button>
+              )}
+            </div>
           </div>
           <div className={styles.formGrid}>
             <label>Payment method

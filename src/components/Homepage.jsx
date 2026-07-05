@@ -1,6 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import heroImage from '../assets/jijenge-pos-hero.png';
 import styles from './Homepage.module.css';
+import {
+  BUILDER_NAME,
+  BUILDER_PHONE_DISPLAY,
+  BUILDER_TEL_URL,
+  BUILDER_WHATSAPP_URL
+} from '../utils/builderContact';
 
 const fallbackScreens = [
   {
@@ -309,6 +315,9 @@ export default function Homepage({
               )}
             </div>
 
+            <a className={styles.builderTopLink} href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">
+              Build yours: {BUILDER_PHONE_DISPLAY}
+            </a>
             <button className={styles.navCta} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>
               {navCtaLabel}
             </button>
@@ -336,6 +345,9 @@ export default function Homepage({
             {isAuthenticated
               ? 'You are signed in. Use the modules below to jump into your workspace.'
               : 'New owner? Create a store. Staff member? Ask the owner or manager to add you, then sign in.'}
+          </p>
+          <p className={styles.builderLine}>
+            System built by {BUILDER_NAME}. Call or WhatsApp <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">{BUILDER_PHONE_DISPLAY}</a>.
           </p>
         </div>
       </section>
@@ -450,6 +462,14 @@ export default function Homepage({
           </button>
         </div>
       </section>
+
+      <footer className={styles.builderFooter}>
+        <span>System built by {BUILDER_NAME}</span>
+        <div>
+          <a href={BUILDER_TEL_URL}>{BUILDER_PHONE_DISPLAY}</a>
+          <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">WhatsApp</a>
+        </div>
+      </footer>
     </main>
   );
 }

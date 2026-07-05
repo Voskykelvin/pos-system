@@ -1,5 +1,15 @@
 const { User, Tenant } = require('../models');
 const { verifyAuthToken } = require('../utils/authToken');
+const { isExpired, resolveBillingStatus } = require('../services/subscriptionBilling');
+
+function isBillingRecoveryPath(req) {
+  const path = String(req.originalUrl || req.url || '').split('?')[0];
+  return (
+    path === '/api/bootstrap' ||
+    path === '/api/auth/me' ||
+    path.startsWith('/api/billing')
+  );
+}
 
 async function authenticate(req, res, next) {
   try {
@@ -12,14 +22,30 @@ async function authenticate(req, res, next) {
 
     const payload = verifyAuthToken(token);
     const user = await User.findByPk(payload.sub, {
-      include: [{ model: Tenant, attributes: ['id', 'name', 'plan', 'status', 'currency', 'country'] }]
+      include: [{
+        model: Tenant,
+        attributes: ['id', 'name', 'plan', 'status', 'currency', 'country', 'subscriptionStartedAt', 'subscriptionEndsAt']
+      }]
     });
 
     if (!user || !user.isActive) {
       return res.status(401).json({ error: 'User is inactive or missing' });
     }
-    if (user.Tenant?.status === 'suspended') {
-      return res.status(403).json({ error: 'This store is suspended. Contact the platform owner.' });
+    if (user.Tenant?.status === 'active' && isExpired(user.Tenant)) {
+      await user.Tenant.update({ status: 'past_due' });
+      user.Tenant.status = 'past_due';
+    }
+
+    const billingStatus = resolveBillingStatus(user.Tenant);
+    if (user.Tenant && billingStatus !== 'active' && !isBillingRecoveryPath(req)) {
+      const status = billingStatus === 'suspended' ? 403 : 402;
+      return res.status(status).json({
+        error: billingStatus === 'suspended'
+          ? 'This store is suspended. Contact the platform owner.'
+          : 'Subscription payment is required to continue.',
+        billingRequired: true,
+        billingStatus
+      });
     }
 
     req.user = {
@@ -40,7 +66,9 @@ async function authenticate(req, res, next) {
       plan: user.Tenant.plan,
       status: user.Tenant.status,
       currency: user.Tenant.currency,
-      country: user.Tenant.country
+      country: user.Tenant.country,
+      subscriptionStartedAt: user.Tenant.subscriptionStartedAt,
+      subscriptionEndsAt: user.Tenant.subscriptionEndsAt
     } : null;
 
     return next();

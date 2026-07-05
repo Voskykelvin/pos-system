@@ -1,6 +1,8 @@
 # Jijenge POS
 
-Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management system built with Node.js, Express, Sequelize ORM, and React (Vite). Designed for high-speed checkout, multi-tender payments, inventory management, supplier purchase orders, sales velocity analytics, eTIMS tax compliance, and multi-till shift reconciliation.
+Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management system built with Node.js, Express, Sequelize ORM, and React (Vite). Designed for high-speed checkout, queue-friendly cashier workflows, multi-tender payments, subscription billing, inventory management, supplier purchase orders, sales velocity analytics, eTIMS tax compliance, and multi-till shift reconciliation.
+
+Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp **+254 703 920 254**.
 
 ---
 
@@ -9,6 +11,7 @@ Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management sys
 ### High-Speed Checkout & Payments
 - Barcode scanner & instant fuzzy text search.
 - Split-Tender Multi-Payment UI (Cash + M-Pesa on the same order).
+- Hold/park a current sale locally and recall it later so cashiers can keep serving the queue when a customer needs time.
 - Customer Phone Lookup & Quick-Add inside checkout with automated loyalty point earnings.
 - Promotions & Discount Code engine (`SAVE10`, percentage & flat KES off).
 - M-Pesa STK push prompt trigger with real-time payment status polling.
@@ -36,6 +39,13 @@ Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management sys
 - Printable thermal receipt view.
 - Chart-driven analytics dashboard with sales trends, conversion, payment mix, staff performance, gross margin, stock alerts, and reorder recommendations.
 - Platform owner dashboard with MRR, signup activation, store activity, tenant health, and Starter/Growth/Enterprise plan packaging.
+
+### SaaS Subscription Billing
+- Public signup creates a tenant account and routes unpaid stores to `/billing`.
+- Manual M-Pesa phone, Till, PayBill, bank, or gateway instructions can be configured through `PLATFORM_*` environment variables.
+- Store owners submit subscription payment references for super-admin verification.
+- Super-admin can confirm or reject payment references, track subscriptions ending soon, and activate 30-day subscription periods.
+- Pending, past-due, or suspended tenants can log in only to billing until payment is verified.
 
 ---
 
@@ -89,9 +99,30 @@ npm run db:migrate:dry
 
 ---
 
+## Subscription Billing Setup
+
+For the first launch phase, configure at least one platform collection channel:
+
+```env
+PLATFORM_BILLING_NAME=Jijenge POS
+PLATFORM_MPESA_PHONE=
+PLATFORM_MPESA_TILL=
+PLATFORM_MPESA_PAYBILL=
+PLATFORM_MPESA_ACCOUNT=
+PLATFORM_BILLING_EMAIL=
+PLATFORM_PAYMENT_GATEWAY=
+```
+
+The recommended Kenya rollout is manual M-Pesa first, then Till/PayBill, then Daraja STK Push or a gateway webhook when the business account is ready.
+
+---
+
 ## Project Documentation
 
 - [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) - Production Deployment & Runbook
+- [docs/PILOT_LAUNCH_CHECKLIST.md](docs/PILOT_LAUNCH_CHECKLIST.md) - Controlled first-shop rollout checklist
 - [docs/FEATURES_AND_ROADMAP.md](docs/FEATURES_AND_ROADMAP.md) - Built Features & Roadmap
 - [docs/SAAS_ARCHITECTURE.md](docs/SAAS_ARCHITECTURE.md) - SaaS Architecture Notes
+- [docs/SUBSCRIPTION_BILLING_MVP.md](docs/SUBSCRIPTION_BILLING_MVP.md) - Subscription billing product decision and rollout notes
+- [docs/SITE_MAP.md](docs/SITE_MAP.md) - Screens and API map
 - [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md) - Security Audit & Hardening Notes

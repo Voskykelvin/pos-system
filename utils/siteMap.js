@@ -12,6 +12,11 @@ module.exports = {
       purpose: 'Daily sales, payment mix, eTIMS queue, and low-stock watchlist'
     },
     {
+      path: '/billing',
+      name: 'Subscription Billing',
+      purpose: 'Tenant subscription payment instructions, manual reference submission, status, and payment history'
+    },
+    {
       path: '/store',
       name: 'Store Setup',
       purpose: 'Branches, staff profiles, subscription payment method, shop details, M-Pesa, and KRA/eTIMS VAT readiness'
@@ -19,7 +24,7 @@ module.exports = {
     {
       path: '/checkout',
       name: 'Checkout',
-      purpose: 'Cashier product search, cart, VAT totals, split payments, and M-Pesa initiation'
+      purpose: 'Cashier product search, cart, held-sale recall, VAT totals, split payments, and M-Pesa initiation'
     },
     {
       path: '/inventory',
@@ -53,6 +58,10 @@ module.exports = {
     { method: 'GET', path: '/api/site-map', purpose: 'Machine-readable site map' },
     { method: 'GET', path: '/api/plans', purpose: 'Public plan and pricing catalog for homepage and signup' },
     { method: 'POST', path: '/api/signup', purpose: 'Self-serve tenant signup' },
+    { method: 'GET', path: '/api/billing', purpose: 'Tenant subscription status, payment instructions, and recent payment references' },
+    { method: 'POST', path: '/api/billing/payments', purpose: 'Submit a manual subscription payment reference for admin verification' },
+    { method: 'POST', path: '/api/billing/payments/:id/confirm', purpose: 'Super-admin confirms a subscription payment and extends the billing period' },
+    { method: 'POST', path: '/api/billing/payments/:id/reject', purpose: 'Super-admin rejects an unverified subscription payment reference' },
     { method: 'GET', path: '/api/super-admin/dashboard', purpose: 'Platform owner MRR, activation, tenant health, plan tiers, and activity metrics' },
     { method: 'PUT', path: '/api/super-admin/tenants/:id', purpose: 'Platform owner tenant update' },
     { method: 'POST', path: '/api/auth/login', purpose: 'Staff login and auth token issue' },

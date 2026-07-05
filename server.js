@@ -11,6 +11,7 @@ const { bootstrapSuperAdmin } = require('./services/superAdminBootstrap');
 const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
 const { getPlan } = require('./utils/planCatalog');
+const { resolveBillingStatus } = require('./services/subscriptionBilling');
 
 // Routes require the route files after app and limiter are configured.
 const authRoutes = require('./routes/auth');
@@ -31,6 +32,7 @@ const purchaseOrderRoutes = require('./routes/purchaseOrders');
 const storeAdminRoutes = require('./routes/storeAdmin');
 const { tenantApiLimiter } = require('./middleware/tenantRateLimit');
 const tenantRoutes = require('./routes/tenants');
+const billingRoutes = require('./routes/billing');
 
 const app = express();
 
@@ -85,12 +87,14 @@ app.get('/api/site-map', (req, res) => {
 
 app.get('/api/bootstrap', authenticate, async (req, res) => {
   const tenantPlan = req.tenant?.plan ? getPlan(req.tenant.plan) : null;
+  const billingStatus = resolveBillingStatus(req.tenant);
   res.json({
     userId: req.user.id,
     cashierId: req.user.id,
     user: req.user,
     tenant: req.tenant ? {
       ...req.tenant,
+      status: billingStatus,
       enabledFeatures: tenantPlan?.enabledFeatures || []
     } : null,
     demoMode: isUsingMemoryDatabase()
@@ -100,6 +104,7 @@ app.get('/api/bootstrap', authenticate, async (req, res) => {
 app.use('/api/auth', authLimiter, authRoutes);
 app.use('/api', apiLimiter);
 app.use('/api', tenantApiLimiter);
+app.use('/api/billing', billingRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/mpesa', mpesaRoutes);
 app.use('/api/products', productRoutes);

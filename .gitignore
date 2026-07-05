@@ -5,6 +5,7 @@ dev-dist/
 npm-debug.log*
 server.log
 server.err
+dev-server.*.log
 .DS_Store
 
 # Generated scratch output copied from an earlier export is not part of the app.

@@ -215,7 +215,7 @@
 
 .table {
   width: 100%;
-  min-width: 1040px;
+  min-width: 1160px;
   border-collapse: collapse;
   font-size: 13px;
 }
@@ -301,6 +301,8 @@
 }
 
 .no_sales,
+.pending_payment,
+.expiring_soon,
 .past_due {
   background: var(--pos-warn-bg);
   color: var(--pos-warn);
@@ -339,6 +341,55 @@
   background: var(--pos-success-bg);
   color: var(--pos-success);
   border: 1px solid #bbf7d0;
+}
+
+.alertList {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.alertRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--pos-line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--pos-panel);
+}
+
+.alertRow div {
+  display: grid;
+  gap: 4px;
+}
+
+.alertRow strong {
+  color: var(--pos-ink);
+}
+
+.alertRow span,
+.alertRow small {
+  color: var(--pos-ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.alertRow.high {
+  border-color: #fecaca;
+  background: var(--pos-danger-bg);
+}
+
+.alertRow.medium {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.rowActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .loading,
@@ -406,7 +457,7 @@
   }
 
   .table {
-    min-width: 920px;
+    min-width: 1080px;
   }
 }
 

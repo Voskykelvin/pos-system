@@ -2,6 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import styles from './Signup.module.css';
+import {
+  BUILDER_NAME,
+  BUILDER_PHONE_DISPLAY,
+  BUILDER_TEL_URL,
+  BUILDER_WHATSAPP_URL
+} from '../utils/builderContact';
 
 const fallbackPlans = [
   { id: 'starter', name: 'Starter', priceUsd: 20 },
@@ -173,6 +179,14 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
               </button>
             </>
           )}
+        </div>
+
+        <div className={styles.builderCredit}>
+          <span>System built by {BUILDER_NAME}</span>
+          <div>
+            <a href={BUILDER_TEL_URL}>{BUILDER_PHONE_DISPLAY}</a>
+            <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">WhatsApp</a>
+          </div>
         </div>
       </div>
     </div>

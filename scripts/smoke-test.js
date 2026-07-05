@@ -228,6 +228,88 @@ async function main() {
     if (!signup.token || !signup.user?.tenantId) {
       throw new Error('Signup did not return a tenant-aware owner session');
     }
+    if (signup.tenant?.status !== 'pending_payment') {
+      throw new Error(`Expected pending_payment tenant after signup, got ${signup.tenant?.status}`);
+    }
+
+    const ownerHeaders = { Authorization: `Bearer ${signup.token}` };
+    await expectFailure(baseUrl, '/api/products/search?q=milk', {
+      headers: ownerHeaders
+    }, 402);
+
+    const initialBilling = await request(baseUrl, '/api/billing', {
+      headers: ownerHeaders
+    });
+    if (initialBilling.billing.status !== 'pending_payment') {
+      throw new Error(`Expected pending billing status, got ${initialBilling.billing.status}`);
+    }
+
+    const rejectedReference = `SMOKEREJECT${Date.now()}`;
+    await request(baseUrl, '/api/billing/payments', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: 'mpesa_manual',
+        reference: rejectedReference,
+        payerPhone: '0712345678',
+        payerName: 'Smoke Owner'
+      })
+    });
+
+    let reviewDashboard = await request(baseUrl, '/api/super-admin/dashboard', {
+      headers: superAdminHeaders
+    });
+    const rejectedPayment = reviewDashboard.subscriptionPayments.pendingReview.find(
+      (payment) => payment.reference === rejectedReference
+    );
+    if (!rejectedPayment) throw new Error('Submitted subscription payment did not enter review queue');
+
+    await request(baseUrl, `/api/billing/payments/${rejectedPayment.id}/reject`, {
+      method: 'POST',
+      headers: { ...superAdminHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ adminNotes: 'Smoke test rejection reason' })
+    });
+
+    const rejectedBilling = await request(baseUrl, '/api/billing', {
+      headers: ownerHeaders
+    });
+    const visibleRejection = rejectedBilling.recentPayments.find((payment) => payment.reference === rejectedReference);
+    if (visibleRejection?.status !== 'rejected' || visibleRejection.adminNotes !== 'Smoke test rejection reason') {
+      throw new Error('Rejected subscription payment reason was not visible to the tenant');
+    }
+
+    const confirmedReference = `SMOKECONFIRM${Date.now()}`;
+    await request(baseUrl, '/api/billing/payments', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: 'mpesa_manual',
+        reference: confirmedReference,
+        payerPhone: '0712345678',
+        payerName: 'Smoke Owner'
+      })
+    });
+
+    reviewDashboard = await request(baseUrl, '/api/super-admin/dashboard', {
+      headers: superAdminHeaders
+    });
+    const confirmedPayment = reviewDashboard.subscriptionPayments.pendingReview.find(
+      (payment) => payment.reference === confirmedReference
+    );
+    if (!confirmedPayment) throw new Error('Second subscription payment did not enter review queue');
+
+    await request(baseUrl, `/api/billing/payments/${confirmedPayment.id}/confirm`, {
+      method: 'POST',
+      headers: { ...superAdminHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+
+    const activatedTenant = await request(baseUrl, '/api/bootstrap', {
+      headers: ownerHeaders
+    });
+    if (activatedTenant.tenant?.status !== 'active' || !activatedTenant.tenant?.subscriptionEndsAt) {
+      throw new Error('Confirmed subscription payment did not activate tenant access');
+    }
 
     const cashierLogin = await request(baseUrl, '/api/auth/login', {
       method: 'POST',

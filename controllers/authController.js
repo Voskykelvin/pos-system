@@ -3,6 +3,7 @@ const { User, Tenant } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 const { verifyPassword } = require('../utils/passwords');
 const { getPlan } = require('../utils/planCatalog');
+const { isExpired, resolveBillingStatus } = require('../services/subscriptionBilling');
 
 function publicUser(user) {
   return {
@@ -30,17 +31,22 @@ async function login(req, res) {
         isActive: true,
         [Op.or]: [{ email: { [Op.iLike]: trimmed } }, { phone: trimmed }]
       },
-      include: [{ model: Tenant, attributes: ['id', 'name', 'plan', 'status', 'currency', 'country'] }]
+      include: [{
+        model: Tenant,
+        attributes: ['id', 'name', 'plan', 'status', 'currency', 'country', 'subscriptionStartedAt', 'subscriptionEndsAt']
+      }]
     });
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
       return res.status(401).json({ error: 'Invalid login details' });
     }
-    if (user.Tenant?.status === 'suspended') {
-      return res.status(403).json({ error: 'This store is suspended. Contact the platform owner.' });
+    if (user.Tenant?.status === 'active' && isExpired(user.Tenant)) {
+      await user.Tenant.update({ status: 'past_due' });
+      user.Tenant.status = 'past_due';
     }
 
     const tenantPlan = user.Tenant?.plan ? getPlan(user.Tenant.plan) : null;
+    const billingStatus = resolveBillingStatus(user.Tenant);
 
     return res.json({
       token: createAuthToken(user),
@@ -49,9 +55,11 @@ async function login(req, res) {
         id: user.Tenant.id,
         name: user.Tenant.name,
         plan: user.Tenant.plan,
-        status: user.Tenant.status,
+        status: billingStatus,
         currency: user.Tenant.currency,
         country: user.Tenant.country,
+        subscriptionStartedAt: user.Tenant.subscriptionStartedAt,
+        subscriptionEndsAt: user.Tenant.subscriptionEndsAt,
         enabledFeatures: tenantPlan?.enabledFeatures || []
       } : null
     });

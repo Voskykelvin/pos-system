@@ -151,6 +151,22 @@
   border-color: #ef4444;
 }
 
+.builderCredit {
+  display: grid;
+  gap: 5px;
+  padding: 12px 4px 0;
+  color: #94a3b8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.builderCredit a {
+  color: #d1fae5;
+  text-decoration-color: rgba(209, 250, 229, 0.32);
+  text-underline-offset: 3px;
+}
+
 .main {
   min-width: 0;
   background: var(--pos-bg);
@@ -251,6 +267,10 @@
     min-height: 34px;
     margin-top: 0;
     padding: 0 12px;
+  }
+
+  .builderCredit {
+    display: none;
   }
 }
 

@@ -2,9 +2,12 @@
 
 const { Op } = require('sequelize');
 const { hashPassword } = require('../utils/passwords');
-const { sequelize, Tenant, User, Branch, Category, Order, Payment } = require('../models');
+const { sequelize, Tenant, User, Branch, Category, Order, Payment, SubscriptionPayment } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
-const { getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
+const { getPlanAmount, getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
+const { publicPayment, resolveBillingStatus } = require('../services/subscriptionBilling');
+
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function money(value) {
   return Number(Number(value || 0).toFixed(2));
@@ -16,6 +19,11 @@ function percent(value) {
 
 function ratio(numerator, denominator) {
   return denominator > 0 ? percent((numerator / denominator) * 100) : 0;
+}
+
+function daysUntil(value) {
+  if (!value) return null;
+  return Math.ceil((new Date(value).getTime() - Date.now()) / MS_PER_DAY);
 }
 
 function dateKey(value) {
@@ -68,6 +76,73 @@ function sanitizeTenant(tenant) {
   return safe;
 }
 
+function indexSubscriptionPayments(payments) {
+  const latestByTenant = new Map();
+  const pendingByTenant = new Map();
+
+  for (const payment of payments) {
+    if (!latestByTenant.has(payment.tenantId)) {
+      latestByTenant.set(payment.tenantId, payment);
+    }
+    if (payment.status === 'pending' && !pendingByTenant.has(payment.tenantId)) {
+      pendingByTenant.set(payment.tenantId, payment);
+    }
+  }
+
+  return { latestByTenant, pendingByTenant };
+}
+
+function buildSubscriptionAlerts(tenantRows) {
+  const alerts = [];
+
+  for (const tenant of tenantRows) {
+    if (tenant.subscription.pendingPayment) {
+      alerts.push({
+        type: 'payment_review',
+        severity: 'high',
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        message: `${tenant.name} submitted ${tenant.subscription.pendingPayment.currency} ${tenant.subscription.pendingPayment.amount} for review.`,
+        paymentId: tenant.subscription.pendingPayment.id,
+        createdAt: tenant.subscription.pendingPayment.submittedAt
+      });
+      continue;
+    }
+
+    if (tenant.subscription.status === 'past_due' || tenant.subscription.status === 'pending_payment') {
+      alerts.push({
+        type: tenant.subscription.status,
+        severity: 'high',
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        message: `${tenant.name} cannot continue until the subscription is paid.`,
+        paymentId: null,
+        createdAt: tenant.subscription.endsAt || tenant.createdAt
+      });
+      continue;
+    }
+
+    if (tenant.subscription.daysRemaining !== null && tenant.subscription.daysRemaining <= 7) {
+      alerts.push({
+        type: 'expires_soon',
+        severity: tenant.subscription.daysRemaining <= 2 ? 'high' : 'medium',
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        message: `${tenant.name} subscription ends in ${tenant.subscription.daysRemaining} day${tenant.subscription.daysRemaining === 1 ? '' : 's'}.`,
+        paymentId: null,
+        createdAt: tenant.subscription.endsAt
+      });
+    }
+  }
+
+  return alerts.sort((a, b) => {
+    const severityScore = { high: 0, medium: 1, low: 2 };
+    const severityDelta = severityScore[a.severity] - severityScore[b.severity];
+    if (severityDelta !== 0) return severityDelta;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+}
+
 /**
  * GET /api/plans
  * Public plan catalog for the homepage and signup flow.
@@ -113,7 +188,15 @@ async function signup(req, res) {
       currency: String(currency).toUpperCase(),
       country: String(country).toUpperCase(),
       plan,
-      status: 'active'
+      status: 'pending_payment',
+      settings: {
+        billing: {
+          status: 'pending_payment',
+          subscriptionPaymentMethod: 'not_set',
+          billingContactEmail: String(email).trim().toLowerCase(),
+          billingReference: ''
+        }
+      }
     }, { transaction: t });
 
     const mainBranch = await Branch.create({
@@ -153,7 +236,10 @@ async function signup(req, res) {
         id: tenant.id,
         name: tenant.name,
         currency: tenant.currency,
-        plan: tenant.plan
+        plan: tenant.plan,
+        status: tenant.status,
+        subscriptionStartedAt: tenant.subscriptionStartedAt,
+        subscriptionEndsAt: tenant.subscriptionEndsAt
       },
       user: {
         id: owner.id,
@@ -178,7 +264,7 @@ async function superAdminDashboard(req, res) {
   try {
     const { start, end, days } = parseRange(req.query);
 
-    const [tenants, users, orders] = await Promise.all([
+    const [tenants, users, orders, subscriptionPayments] = await Promise.all([
       Tenant.findAll({
         include: [{ model: User, as: 'owner', attributes: ['id', 'name', 'email'] }],
         order: [['createdAt', 'DESC']]
@@ -193,17 +279,23 @@ async function superAdminDashboard(req, res) {
         },
         include: [{ model: Payment }],
         order: [['createdAt', 'DESC']]
+      }),
+      SubscriptionPayment.findAll({
+        order: [['createdAt', 'DESC']]
       })
     ]);
 
-    const activeTenants = tenants.filter((tenant) => tenant.status === 'active');
-    const suspendedTenants = tenants.filter((tenant) => tenant.status === 'suspended');
-    const pastDueTenants = tenants.filter((tenant) => tenant.status === 'past_due');
+    const { latestByTenant, pendingByTenant } = indexSubscriptionPayments(subscriptionPayments);
+    const activeTenants = tenants.filter((tenant) => resolveBillingStatus(tenant) === 'active');
+    const suspendedTenants = tenants.filter((tenant) => resolveBillingStatus(tenant) === 'suspended');
+    const pastDueTenants = tenants.filter((tenant) => resolveBillingStatus(tenant) === 'past_due');
+    const pendingPaymentTenants = tenants.filter((tenant) => resolveBillingStatus(tenant) === 'pending_payment');
     const newTenants = tenants.filter((tenant) => tenant.createdAt >= start && tenant.createdAt <= end);
-    const activeNewTenants = newTenants.filter((tenant) => tenant.status === 'active');
+    const activeNewTenants = newTenants.filter((tenant) => resolveBillingStatus(tenant) === 'active');
 
     const planBreakdown = { starter: 0, growth: 0, enterprise: 0 };
     const planRevenue = { starter: 0, growth: 0, enterprise: 0 };
+    const planRevenueKes = { starter: 0, growth: 0, enterprise: 0 };
 
     for (const tenant of activeTenants) {
       if (!Object.prototype.hasOwnProperty.call(planBreakdown, tenant.plan)) {
@@ -211,9 +303,11 @@ async function superAdminDashboard(req, res) {
       }
       planBreakdown[tenant.plan] += 1;
       planRevenue[tenant.plan] += getPlanPrice(tenant.plan);
+      planRevenueKes[tenant.plan] += getPlanAmount(tenant.plan, 'KES');
     }
 
     const mrrUsd = Object.values(planRevenue).reduce((sum, value) => sum + value, 0);
+    const mrrKes = Object.values(planRevenueKes).reduce((sum, value) => sum + value, 0);
     const usersByTenant = new Map();
     for (const user of users) {
       if (!user.tenantId) continue;
@@ -231,7 +325,7 @@ async function superAdminDashboard(req, res) {
       const signupDay = dailyMap.get(dateKey(tenant.createdAt));
       if (signupDay) {
         signupDay.signups += 1;
-        if (tenant.status === 'active') signupDay.activated += 1;
+        if (resolveBillingStatus(tenant) === 'active') signupDay.activated += 1;
       }
     }
 
@@ -274,11 +368,15 @@ async function superAdminDashboard(req, res) {
     const activeStoresWithSales = Array.from(tenantActivity.entries())
       .filter(([tenantId, activity]) => {
         const tenant = tenants.find((item) => item.id === tenantId);
-        return tenant?.status === 'active' && activity.paidOrders > 0;
+        return tenant && resolveBillingStatus(tenant) === 'active' && activity.paidOrders > 0;
       }).length;
 
     const tenantRows = tenants.map((tenant) => {
       const plain = sanitizeTenant(tenant);
+      const billingStatus = resolveBillingStatus(tenant);
+      const latestPayment = latestByTenant.get(tenant.id) || null;
+      const pendingPayment = pendingByTenant.get(tenant.id) || null;
+      const subscriptionDaysRemaining = daysUntil(tenant.subscriptionEndsAt);
       const activity = tenantActivity.get(tenant.id) || {
         attemptedOrders: 0,
         paidOrders: 0,
@@ -294,7 +392,8 @@ async function superAdminDashboard(req, res) {
       );
 
       let health = 'healthy';
-      if (tenant.status !== 'active') health = tenant.status;
+      if (billingStatus !== 'active') health = billingStatus;
+      else if (subscriptionDaysRemaining !== null && subscriptionDaysRemaining <= 7) health = 'expiring_soon';
       else if (activity.paidOrders === 0 && daysSinceSignup > 7) health = 'no_sales';
       else if (daysSinceSignup <= 7) health = 'new_store';
 
@@ -306,6 +405,16 @@ async function superAdminDashboard(req, res) {
 
       return {
         ...plain,
+        status: billingStatus,
+        subscription: {
+          status: billingStatus,
+          startedAt: tenant.subscriptionStartedAt,
+          endsAt: tenant.subscriptionEndsAt,
+          daysRemaining: subscriptionDaysRemaining,
+          amountDueKes: getPlanAmount(tenant.plan, 'KES'),
+          latestPayment: publicPayment(latestPayment),
+          pendingPayment: publicPayment(pendingPayment)
+        },
         activity: {
           attemptedOrders: activity.attemptedOrders,
           paidOrders: activity.paidOrders,
@@ -334,6 +443,9 @@ async function superAdminDashboard(req, res) {
         activeTenants: activeTenants.length,
         suspendedTenants: suspendedTenants.length,
         pastDueTenants: pastDueTenants.length,
+        pendingPaymentTenants: pendingPaymentTenants.length,
+        expiringSoonTenants: tenantRows.filter((tenant) => tenant.subscription.daysRemaining !== null && tenant.subscription.daysRemaining >= 0 && tenant.subscription.daysRemaining <= 7).length,
+        pendingSubscriptionPayments: subscriptionPayments.filter((payment) => payment.status === 'pending').length,
         newTenants: newTenants.length,
         activeNewTenants: activeNewTenants.length,
         signupToActiveConversionRate: ratio(activeTenants.length, tenants.length),
@@ -341,10 +453,11 @@ async function superAdminDashboard(req, res) {
         activeStoresWithSales,
         storeActivityRate: ratio(activeStoresWithSales, activeTenants.length),
         mrrUsd,
-        mrrKes: mrrUsd * 130, // approx KES conversion
+        mrrKes,
         arpaUsd: activeTenants.length ? money(mrrUsd / activeTenants.length) : 0,
         planBreakdown,
-        planRevenue
+        planRevenue,
+        planRevenueKes
       },
       charts: {
         signupTrend: dailySeries.map((day) => ({
@@ -355,12 +468,31 @@ async function superAdminDashboard(req, res) {
           plan: plan.id,
           name: plan.name,
           stores: planBreakdown[plan.id] || 0,
-          mrrUsd: planRevenue[plan.id] || 0
+          mrrUsd: planRevenue[plan.id] || 0,
+          mrrKes: planRevenueKes[plan.id] || 0
         })),
-        tenantHealth: ['healthy', 'new_store', 'no_sales', 'past_due', 'suspended'].map((health) => ({
+        tenantHealth: ['healthy', 'new_store', 'expiring_soon', 'no_sales', 'pending_payment', 'past_due', 'suspended'].map((health) => ({
           health,
           stores: tenantRows.filter((tenant) => tenant.activity.health === health).length
         }))
+      },
+      subscriptionAlerts: buildSubscriptionAlerts(tenantRows),
+      subscriptionPayments: {
+        pendingReview: subscriptionPayments
+          .filter((payment) => payment.status === 'pending')
+          .map((payment) => {
+            const tenant = tenants.find((item) => item.id === payment.tenantId);
+            return {
+              ...publicPayment(payment),
+              tenant: tenant ? {
+                id: tenant.id,
+                name: tenant.name,
+                plan: tenant.plan,
+                status: resolveBillingStatus(tenant),
+                subscriptionEndsAt: tenant.subscriptionEndsAt
+              } : null
+            };
+          })
       },
       plans: getPlanCatalog(),
       tenants: tenantRows
@@ -383,7 +515,7 @@ async function updateTenant(req, res) {
     const updates = {};
 
     if (status !== undefined) {
-      if (!['active', 'past_due', 'suspended'].includes(status)) {
+      if (!['pending_payment', 'active', 'past_due', 'suspended'].includes(status)) {
         return res.status(400).json({ error: 'Unknown tenant status' });
       }
       updates.status = status;
