@@ -265,7 +265,7 @@ export default function App() {
           <span className={styles.brandMark}>J</span>
           <div>
             <div className={styles.brandName}>Jijenge POS</div>
-            <div className={styles.brandMeta}>{bootstrap.demoMode ? 'Demo store' : 'Live store'}</div>
+            <div className={styles.brandMeta}>{bootstrap.demoMode ? 'Sample workspace' : 'Live store'}</div>
           </div>
         </button>
 

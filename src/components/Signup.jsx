@@ -79,9 +79,9 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
       <div className={styles.card}>
         <div className={styles.header}>
           <div className={styles.badge}>Jijenge POS Platform</div>
-          <h1 className={styles.title}>Create your store</h1>
+          <h1 className={styles.title}>Sign up to create your store</h1>
           <p className={styles.subtitle}>
-            Use this if you own the shop. We will create the store and your admin account.
+            Create the shop account now. Add products, staff, M-Pesa, and KRA/eTIMS VAT details after login.
           </p>
         </div>
 

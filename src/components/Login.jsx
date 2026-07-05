@@ -2,8 +2,8 @@ import { useState } from 'react';
 import styles from './Login.module.css';
 
 export default function Login({ onLogin, onNavigateHome }) {
-  const [identifier, setIdentifier] = useState('admin@example.local');
-  const [password, setPassword] = useState('admin12345');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -38,7 +38,7 @@ export default function Login({ onLogin, onNavigateHome }) {
       <section className={styles.panel}>
         <div className={styles.brandMark}>J</div>
         <h1>Jijenge POS</h1>
-        <p>Sign in with your staff account.</p>
+        <p>Log in to run your store.</p>
 
         <form className={styles.form} onSubmit={handleSubmit}>
           <label>
@@ -66,9 +66,6 @@ export default function Login({ onLogin, onNavigateHome }) {
         </form>
 
         {error && <div className={styles.error}>{error}</div>}
-        <div className={styles.demoHint}>
-          Demo: admin@example.local / admin12345
-        </div>
       </section>
     </main>
   );

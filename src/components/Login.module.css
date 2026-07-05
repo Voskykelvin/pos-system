@@ -115,10 +115,3 @@
   color: var(--pos-danger);
   font-size: 13px;
 }
-
-.demoHint {
-  margin-top: 18px;
-  color: var(--pos-ink-soft);
-  font-size: 12px;
-  font-family: "IBM Plex Mono", Consolas, monospace;
-}

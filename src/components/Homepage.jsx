@@ -88,16 +88,20 @@ const trustPoints = [
 
 const setupSteps = [
   {
-    title: 'Create the store',
-    text: 'Use signup if you are the owner. Jijenge creates your store, your admin account, and starter categories.'
+    title: 'Sign up to create your store',
+    text: 'Create the shop account, choose a plan, and get your owner admin login.'
   },
   {
-    title: 'Add the real shop data',
-    text: 'Load products, suppliers, staff users, customers, promotions, and opening stock.'
+    title: 'Log in to run your store',
+    text: 'Owners and staff sign in to sell, manage stock, check reports, and review daily activity.'
   },
   {
-    title: 'Connect live services',
-    text: "Add each shop's M-Pesa, KRA eTIMS, SMS, domain, and production hosting credentials before going live."
+    title: 'Add your shop details',
+    text: 'Add products, opening stock, staff, customers, suppliers, receipt details, and branch information.'
+  },
+  {
+    title: 'Connect payments and VAT',
+    text: 'Use cash or manual M-Pesa first, then add Daraja STK Push and KRA/eTIMS VAT details when the shop is ready.'
   }
 ];
 
@@ -267,7 +271,7 @@ export default function Homepage({
                 <div className={styles.dropdown}>
                   <div className={styles.dropdownHeader}>
                     <strong>Start small, upgrade when the store grows</strong>
-                    <span>Plans come from the Jijenge backend catalog.</span>
+                    <span>Choose the plan that fits the shop today.</span>
                   </div>
                   <div className={styles.planMenuGrid}>
                     {plans.map((plan) => (
@@ -287,7 +291,7 @@ export default function Homepage({
                 <div className={styles.dropdown}>
                   <div className={styles.dropdownHeader}>
                     <strong>The process</strong>
-                    <span>Signup creates the store. Login is for existing staff.</span>
+                    <span>Sign up to create the store. Log in to run it.</span>
                   </div>
                   <div className={styles.dropdownGrid}>
                     {setupSteps.map((step) => (
@@ -347,7 +351,7 @@ export default function Homepage({
         <div className={styles.sectionHeader}>
           <p>Product</p>
           <h2>The workspace maps to live store operations.</h2>
-          <span>These are not brochure-only features. They open the same modules staff use after sign-in.</span>
+          <span>Open checkout, inventory, reports, customers, and operations from one workspace.</span>
         </div>
 
         <div className={styles.moduleGrid}>
@@ -414,7 +418,8 @@ export default function Homepage({
       <section className={styles.setupSection} id="setup">
         <div className={styles.sectionHeader}>
           <p>How It Works</p>
-          <h2>Signup creates the store. Login runs the store.</h2>
+          <h2>Sign up to create your store. Log in to run it.</h2>
+          <span>Add shop details, M-Pesa, and KRA/eTIMS VAT setup when the business is ready.</span>
         </div>
         <div className={styles.flowSteps}>
           {setupSteps.map((step, index) => (
@@ -430,7 +435,7 @@ export default function Homepage({
       <section className={styles.ctaSection}>
         <div>
           <p>Ready to try it?</p>
-          <h2>Create a Jijenge store, then start from the actual operating dashboard.</h2>
+          <h2>Create your store, then start selling from the Jijenge workspace.</h2>
         </div>
         <div className={styles.ctaActions}>
           <button className={styles.primaryBtn} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>
