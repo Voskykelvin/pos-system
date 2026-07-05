@@ -194,12 +194,17 @@ export default function App() {
     return <div className={styles.loading}>Loading workspace...</div>;
   }
 
+  if (authToken && !bootstrap.user) {
+    return <div className={styles.loading}>Loading workspace...</div>;
+  }
+
   if (authMode === 'signup' && !authToken) {
     return (
       <Signup
         initialPlan={signupPlan}
         onSignupSuccess={(token, user) => {
           localStorage.setItem('pos_auth_token', token);
+          setAuthReady(false);
           setAuthToken(token);
           setAuthMode(null);
           setView('dashboard');
