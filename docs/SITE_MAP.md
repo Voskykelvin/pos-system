@@ -12,7 +12,11 @@
 | `/analytics` | Analytics | Sales trends, conversion, payment mix, category mix, staff performance, stock health, restock recommendations, and export links. |
 | `/customers` | Customers | Customer profiles, loyalty balances, credit ledgers, and debt repayments. |
 | `/operations` | Operations | Shift control, petty cash expenses, cash reconciliation, receipt lookup, voids, refunds, printing, and audit review. |
-| `/super-admin` | Platform SaaS | Platform owner MRR, activation, store activity, tenant health, plan tiers, and tenant controls. |
+| `/super-admin` | Platform SaaS Overview | Platform owner overview for MRR, subscription review, and tenant health. |
+| `/super-admin/analytics` | Platform Analytics | Signup trends, tenant POS sales signal, plan economics, and health charts. |
+| `/super-admin/plans` | Platform Plans | Starter, Growth, and Enterprise plan packaging. |
+| `/super-admin/subscriptions` | Platform Subscriptions | Subscription alerts and pending payment reference review. |
+| `/super-admin/tenants` | Platform Users & Stores | Tenant owner profiles, store status, plan updates, suspension, and unused profile cleanup. |
 
 ## API
 
@@ -29,6 +33,7 @@
 | `POST` | `/api/billing/payments/:id/reject` | Super-admin rejects an unverified subscription payment reference. |
 | `GET` | `/api/super-admin/dashboard` | Platform owner MRR, activation, tenant health, plan tiers, and activity metrics. |
 | `PUT` | `/api/super-admin/tenants/:id` | Platform owner tenant status or plan update. |
+| `DELETE` | `/api/super-admin/tenants/:id` | Delete an unused tenant profile that has no protected business activity. |
 | `POST` | `/api/auth/login` | Staff login and auth token issue. |
 | `GET` | `/api/auth/me` | Current authenticated staff user. |
 | `GET` | `/api/products/search` | Cashier product lookup by text or barcode. |

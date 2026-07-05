@@ -2,7 +2,24 @@
 
 const { Op } = require('sequelize');
 const { hashPassword } = require('../utils/passwords');
-const { sequelize, Tenant, User, Branch, Category, Order, Payment, SubscriptionPayment } = require('../models');
+const {
+  sequelize,
+  Tenant,
+  User,
+  Branch,
+  Category,
+  Product,
+  InventoryTransaction,
+  Customer,
+  Order,
+  Payment,
+  Shift,
+  Supplier,
+  PurchaseOrder,
+  Promotion,
+  AuditLog,
+  SubscriptionPayment
+} = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 const { getPlanAmount, getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
 const { publicPayment, resolveBillingStatus } = require('../services/subscriptionBilling');
@@ -141,6 +158,77 @@ function buildSubscriptionAlerts(tenantRows) {
     if (severityDelta !== 0) return severityDelta;
     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
+}
+
+async function countTenantDeleteBlockers(tenantId) {
+  const products = await Product.findAll({
+    where: { tenantId },
+    attributes: ['id'],
+    paranoid: false
+  });
+  const productIds = products.map((product) => product.id);
+  const users = await User.findAll({
+    where: { tenantId },
+    attributes: ['id']
+  });
+  const userIds = users.map((user) => user.id);
+
+  const [
+    orders,
+    customers,
+    shifts,
+    suppliers,
+    purchaseOrders,
+    subscriptionPayments,
+    inventoryMovements,
+    auditLogs
+  ] = await Promise.all([
+    Order.count({ where: { tenantId } }),
+    Customer.count({ where: { tenantId }, paranoid: false }),
+    Shift.count({ where: { tenantId } }),
+    Supplier.count({ where: { tenantId }, paranoid: false }),
+    PurchaseOrder.count({ where: { tenantId } }),
+    SubscriptionPayment.count({ where: { tenantId } }),
+    productIds.length
+      ? InventoryTransaction.count({ where: { productId: { [Op.in]: productIds } } })
+      : 0,
+    userIds.length
+      ? AuditLog.count({
+        where: {
+          [Op.or]: [
+            { userId: { [Op.in]: userIds } },
+            { approvedByUserId: { [Op.in]: userIds } }
+          ]
+        }
+      })
+      : 0
+  ]);
+
+  return {
+    orders,
+    customers,
+    shifts,
+    suppliers,
+    purchaseOrders,
+    subscriptionPayments,
+    inventoryMovements,
+    auditLogs,
+    products: productIds.length,
+    users: userIds.length
+  };
+}
+
+function tenantHasDeleteBlockers(blockers) {
+  return [
+    blockers.orders,
+    blockers.customers,
+    blockers.shifts,
+    blockers.suppliers,
+    blockers.purchaseOrders,
+    blockers.subscriptionPayments,
+    blockers.inventoryMovements,
+    blockers.auditLogs
+  ].some((count) => Number(count || 0) > 0);
 }
 
 /**
@@ -547,4 +635,52 @@ async function updateTenant(req, res) {
   }
 }
 
-module.exports = { plans, signup, superAdminDashboard, updateTenant };
+/**
+ * DELETE /api/super-admin/tenants/:id
+ * Remove an unused self-serve tenant profile. Operational stores are protected.
+ */
+async function deleteTenant(req, res) {
+  const t = await sequelize.transaction();
+
+  try {
+    const tenant = await Tenant.findByPk(req.params.id, { transaction: t });
+    if (!tenant) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    const blockers = await countTenantDeleteBlockers(tenant.id);
+    if (tenantHasDeleteBlockers(blockers)) {
+      await t.rollback();
+      return res.status(409).json({
+        error: 'This tenant has business activity and cannot be deleted. Suspend it instead.',
+        blockers
+      });
+    }
+
+    await tenant.update({ ownerUserId: null }, { transaction: t });
+    await Product.destroy({ where: { tenantId: tenant.id }, force: true, transaction: t });
+    await Promotion.destroy({ where: { tenantId: tenant.id }, transaction: t });
+    await Category.destroy({ where: { tenantId: tenant.id }, force: true, transaction: t });
+    await User.destroy({ where: { tenantId: tenant.id }, transaction: t });
+    await Branch.destroy({ where: { tenantId: tenant.id }, transaction: t });
+    await Tenant.destroy({ where: { id: tenant.id }, transaction: t });
+
+    await t.commit();
+
+    return res.json({
+      message: `${tenant.name} unused tenant profile deleted.`,
+      deleted: {
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        products: blockers.products,
+        users: blockers.users
+      }
+    });
+  } catch (err) {
+    await t.rollback();
+    return res.status(400).json({ error: err.message });
+  }
+}
+
+module.exports = { plans, signup, superAdminDashboard, updateTenant, deleteTenant };

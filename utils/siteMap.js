@@ -49,7 +49,27 @@ module.exports = {
     {
       path: '/super-admin',
       name: 'Platform SaaS',
-      purpose: 'Platform owner MRR, activation, store activity, tenant health, tiers, and tenant controls'
+      purpose: 'Platform owner overview for MRR, subscription review, and tenant health'
+    },
+    {
+      path: '/super-admin/analytics',
+      name: 'Platform Analytics',
+      purpose: 'Signup trends, tenant POS sales signal, plan economics, and health charts'
+    },
+    {
+      path: '/super-admin/plans',
+      name: 'Platform Plans',
+      purpose: 'Starter, Growth, and Enterprise plan packaging'
+    },
+    {
+      path: '/super-admin/subscriptions',
+      name: 'Platform Subscriptions',
+      purpose: 'Subscription alerts and pending payment reference review'
+    },
+    {
+      path: '/super-admin/tenants',
+      name: 'Platform Users & Stores',
+      purpose: 'Tenant owner profiles, store status, plan updates, suspension, and unused profile cleanup'
     }
   ],
   api: [
@@ -64,6 +84,7 @@ module.exports = {
     { method: 'POST', path: '/api/billing/payments/:id/reject', purpose: 'Super-admin rejects an unverified subscription payment reference' },
     { method: 'GET', path: '/api/super-admin/dashboard', purpose: 'Platform owner MRR, activation, tenant health, plan tiers, and activity metrics' },
     { method: 'PUT', path: '/api/super-admin/tenants/:id', purpose: 'Platform owner tenant update' },
+    { method: 'DELETE', path: '/api/super-admin/tenants/:id', purpose: 'Delete an unused tenant profile that has no protected business activity' },
     { method: 'POST', path: '/api/auth/login', purpose: 'Staff login and auth token issue' },
     { method: 'GET', path: '/api/auth/me', purpose: 'Current authenticated staff user' },
     { method: 'GET', path: '/api/products/search', purpose: 'Cashier product lookup by text or barcode' },

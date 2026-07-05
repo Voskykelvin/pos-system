@@ -1,7 +1,13 @@
 import styles from '../SuperAdmin.module.css';
 import { daysText, formatDate, formatKes, formatPercent, labelize } from './formatters';
 
-export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant }) {
+function isUnusedProfile(tenant) {
+  return Number(tenant.activity?.attemptedOrders || 0) === 0 &&
+    !tenant.subscription?.latestPayment &&
+    !tenant.subscription?.pendingPayment;
+}
+
+export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant, onDeleteTenant }) {
   return (
     <section className={styles.panel}>
       <div className={styles.panelHeader}>
@@ -62,13 +68,24 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                   <span className={`${styles.statusBadge} ${styles[tenant.status]}`}>{labelize(tenant.status)}</span>
                 </td>
                 <td>
-                  <button
-                    className={tenant.status === 'active' ? styles.suspendBtn : styles.activateBtn}
-                    onClick={() => onToggleStatus(tenant)}
-                    type="button"
-                  >
-                    {tenant.status === 'active' ? 'Suspend' : 'Activate'}
-                  </button>
+                  <div className={styles.rowActions}>
+                    <button
+                      className={tenant.status === 'active' ? styles.suspendBtn : styles.activateBtn}
+                      onClick={() => onToggleStatus(tenant)}
+                      type="button"
+                    >
+                      {tenant.status === 'active' ? 'Suspend' : 'Activate'}
+                    </button>
+                    {isUnusedProfile(tenant) && (
+                      <button
+                        className={styles.deleteProfileBtn}
+                        onClick={() => onDeleteTenant(tenant)}
+                        type="button"
+                      >
+                        Delete profile
+                      </button>
+                    )}
+                  </div>
                 </td>
               </tr>
             ))}

@@ -71,6 +71,40 @@
   flex-wrap: wrap;
 }
 
+.sectionNav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 6px;
+  border: 1px solid var(--pos-line);
+  border-radius: 8px;
+  background: var(--pos-surface);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.04);
+}
+
+.sectionNav button {
+  min-height: 38px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--pos-ink-soft);
+  padding: 0 13px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.sectionNav button:hover {
+  background: var(--pos-panel);
+  color: var(--pos-ink);
+}
+
+.sectionNav .activeSection {
+  background: var(--pos-accent);
+  color: #ffffff;
+}
+
 .segmented {
   display: grid;
   grid-template-columns: repeat(3, minmax(90px, 1fr));
@@ -439,7 +473,8 @@
 }
 
 .suspendBtn,
-.activateBtn {
+.activateBtn,
+.deleteProfileBtn {
   min-height: 34px;
   border-radius: 8px;
   padding: 0 12px;
@@ -458,6 +493,12 @@
   background: var(--pos-success-bg);
   color: var(--pos-success);
   border: 1px solid #bbf7d0;
+}
+
+.deleteProfileBtn {
+  background: #fff1f2;
+  color: #be123c;
+  border: 1px solid #fecdd3;
 }
 
 .alertList {

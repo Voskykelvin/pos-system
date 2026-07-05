@@ -65,6 +65,26 @@ async function main() {
       throw new Error('Super admin dashboard did not return platform metrics');
     }
 
+    const unusedSignup = await request(baseUrl, '/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        businessName: 'Unused Smoke Tenant',
+        email: `unused-smoke-${Date.now()}@example.local`,
+        password: 'owner12345'
+      })
+    });
+    await request(baseUrl, `/api/super-admin/tenants/${unusedSignup.tenant.id}`, {
+      method: 'DELETE',
+      headers: superAdminHeaders
+    });
+    const afterDeleteDashboard = await request(baseUrl, '/api/super-admin/dashboard', {
+      headers: superAdminHeaders
+    });
+    if (afterDeleteDashboard.tenants.some((tenant) => tenant.id === unusedSignup.tenant.id)) {
+      throw new Error('Unused tenant profile was not deleted');
+    }
+
     const bootstrap = await request(baseUrl, '/api/bootstrap', {
       headers: authHeaders
     });

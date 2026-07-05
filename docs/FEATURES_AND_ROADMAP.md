@@ -41,7 +41,8 @@ This document replaces the old launch-batch and build-roadmap notes. It records 
 ### SaaS Foundation
 - Public store signup at `POST /api/signup`.
 - Tenant-aware auth tokens and request context.
-- Platform owner dashboard at `/super-admin` with MRR, signup activation, store activity, tenant health, and plan packaging.
+- Platform owner console split across `/super-admin`, `/super-admin/analytics`, `/super-admin/plans`, `/super-admin/subscriptions`, and `/super-admin/tenants`.
+- Guarded unused tenant profile deletion for signups with no protected business activity.
 - Shared Starter, Growth, and Enterprise tier catalog for plan pricing and feature packaging.
 - Tenant subscription billing page at `/billing` with manual M-Pesa/Till/PayBill/bank instructions, payment reference submission, and payment history.
 - Super-admin subscription tracker with pending payment review, expiry alerts, manual confirm/reject actions, and 30-day period extension on confirmation.
