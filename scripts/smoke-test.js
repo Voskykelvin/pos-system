@@ -74,6 +74,19 @@ async function main() {
         password: 'owner12345'
       })
     });
+    await request(baseUrl, '/api/billing/payments', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${unusedSignup.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        method: 'mpesa_manual',
+        reference: `UNUSED${Date.now()}`,
+        payerPhone: '0700000999',
+        payerName: 'Unused Tenant'
+      })
+    });
     await request(baseUrl, `/api/super-admin/tenants/${unusedSignup.tenant.id}`, {
       method: 'DELETE',
       headers: superAdminHeaders

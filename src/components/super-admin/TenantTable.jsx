@@ -3,8 +3,7 @@ import { daysText, formatDate, formatKes, formatPercent, labelize } from './form
 
 function isUnusedProfile(tenant) {
   return Number(tenant.activity?.attemptedOrders || 0) === 0 &&
-    !tenant.subscription?.latestPayment &&
-    !tenant.subscription?.pendingPayment;
+    tenant.subscription?.latestPayment?.status !== 'confirmed';
 }
 
 export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant, onDeleteTenant }) {

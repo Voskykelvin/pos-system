@@ -180,6 +180,7 @@ async function countTenantDeleteBlockers(tenantId) {
     suppliers,
     purchaseOrders,
     subscriptionPayments,
+    confirmedSubscriptionPayments,
     inventoryMovements,
     auditLogs
   ] = await Promise.all([
@@ -189,6 +190,7 @@ async function countTenantDeleteBlockers(tenantId) {
     Supplier.count({ where: { tenantId }, paranoid: false }),
     PurchaseOrder.count({ where: { tenantId } }),
     SubscriptionPayment.count({ where: { tenantId } }),
+    SubscriptionPayment.count({ where: { tenantId, status: 'confirmed' } }),
     productIds.length
       ? InventoryTransaction.count({ where: { productId: { [Op.in]: productIds } } })
       : 0,
@@ -211,6 +213,7 @@ async function countTenantDeleteBlockers(tenantId) {
     suppliers,
     purchaseOrders,
     subscriptionPayments,
+    confirmedSubscriptionPayments,
     inventoryMovements,
     auditLogs,
     products: productIds.length,
@@ -225,7 +228,7 @@ function tenantHasDeleteBlockers(blockers) {
     blockers.shifts,
     blockers.suppliers,
     blockers.purchaseOrders,
-    blockers.subscriptionPayments,
+    blockers.confirmedSubscriptionPayments,
     blockers.inventoryMovements,
     blockers.auditLogs
   ].some((count) => Number(count || 0) > 0);
@@ -653,12 +656,13 @@ async function deleteTenant(req, res) {
     if (tenantHasDeleteBlockers(blockers)) {
       await t.rollback();
       return res.status(409).json({
-        error: 'This tenant has business activity and cannot be deleted. Suspend it instead.',
+        error: 'This tenant has business activity or confirmed billing history and cannot be deleted. Suspend it instead.',
         blockers
       });
     }
 
     await tenant.update({ ownerUserId: null }, { transaction: t });
+    await SubscriptionPayment.destroy({ where: { tenantId: tenant.id }, transaction: t });
     await Product.destroy({ where: { tenantId: tenant.id }, force: true, transaction: t });
     await Promotion.destroy({ where: { tenantId: tenant.id }, transaction: t });
     await Category.destroy({ where: { tenantId: tenant.id }, force: true, transaction: t });
@@ -673,6 +677,7 @@ async function deleteTenant(req, res) {
       deleted: {
         tenantId: tenant.id,
         tenantName: tenant.name,
+        subscriptionPayments: blockers.subscriptionPayments,
         products: blockers.products,
         users: blockers.users
       }

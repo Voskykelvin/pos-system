@@ -13,10 +13,6 @@ const {
 
 const PAYMENT_METHODS = ['mpesa_manual', 'till_manual', 'paybill_manual', 'bank_transfer', 'card_gateway', 'other'];
 
-function paymentIncludeTenant() {
-  return [{ model: Tenant, attributes: ['id', 'name', 'slug', 'plan', 'status', 'currency', 'subscriptionStartedAt', 'subscriptionEndsAt', 'settings'] }];
-}
-
 async function loadTenantBilling(tenantId) {
   const tenant = await Tenant.findByPk(tenantId, {
     attributes: ['id', 'name', 'slug', 'plan', 'status', 'currency', 'country', 'subscriptionStartedAt', 'subscriptionEndsAt', 'settings']
@@ -175,7 +171,6 @@ async function confirmSubscriptionPayment(req, res) {
 
   try {
     const payment = await SubscriptionPayment.findByPk(req.params.id, {
-      include: paymentIncludeTenant(),
       transaction: t,
       lock: t.LOCK.UPDATE
     });
@@ -193,7 +188,15 @@ async function confirmSubscriptionPayment(req, res) {
       return res.status(400).json({ error: 'Only pending payments can be confirmed' });
     }
 
-    const tenant = payment.Tenant;
+    const tenant = await Tenant.findByPk(payment.tenantId, {
+      transaction: t,
+      lock: t.LOCK.UPDATE
+    });
+    if (!tenant) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Tenant not found for this subscription payment' });
+    }
+
     const { periodStart, periodEnd } = nextPeriodForTenant(tenant);
     const settings = tenant.settings || {};
     const adminNotes = String(req.body?.adminNotes || '').trim().slice(0, 1000) || null;
@@ -245,7 +248,6 @@ async function rejectSubscriptionPayment(req, res) {
 
   try {
     const payment = await SubscriptionPayment.findByPk(req.params.id, {
-      include: paymentIncludeTenant(),
       transaction: t,
       lock: t.LOCK.UPDATE
     });
@@ -259,7 +261,15 @@ async function rejectSubscriptionPayment(req, res) {
       return res.status(400).json({ error: 'Only pending payments can be rejected' });
     }
 
-    const tenant = payment.Tenant;
+    const tenant = await Tenant.findByPk(payment.tenantId, {
+      transaction: t,
+      lock: t.LOCK.UPDATE
+    });
+    if (!tenant) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Tenant not found for this subscription payment' });
+    }
+
     const settings = tenant.settings || {};
     const adminNotes = String(req.body?.adminNotes || '').trim().slice(0, 1000) || 'Reference could not be verified.';
 
