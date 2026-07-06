@@ -507,9 +507,22 @@
 }
 
 .changeRow {
-  padding: 8px 0 0;
+  padding: 12px 0 0;
   color: var(--ink);
-  font-weight: 700;
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.changeRow span:last-child {
+  font-size: 22px;
+}
+
+.changePositive span:last-child {
+  color: var(--pos-success);
+}
+
+.changeShort span:last-child {
+  color: var(--danger);
 }
 
 .confirmBtn {
@@ -562,9 +575,9 @@
   border: 1px solid var(--line);
   border-radius: 10px;
   background: linear-gradient(135deg, var(--surface), var(--pos-panel));
-  padding: 12px 14px;
+  padding: 16px;
   display: grid;
-  gap: 8px;
+  gap: 10px;
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
 }
 
@@ -572,7 +585,7 @@
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  font-size: 13px;
+  font-size: 15px;
 }
 
 .receiptMini span {
@@ -581,12 +594,33 @@
 
 .receiptMini strong {
   font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 17px;
+  font-weight: 900;
 }
 
 .receiptHeader {
-  font-size: 14px;
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 900;
   color: var(--ink);
+}
+
+.receiptAmountRow,
+.receiptChangeRow {
+  align-items: baseline;
+  padding: 4px 0;
+}
+
+.receiptChangeRow {
+  color: var(--pos-success);
+}
+
+.receiptChangeRow span {
+  color: var(--pos-success);
+}
+
+.receiptChangeRow strong {
+  font-size: 22px;
+  color: var(--pos-success);
 }
 
 .receiptDivider {
@@ -604,13 +638,14 @@
 
 .receiptPrintBtn {
   width: 100%;
-  min-height: 36px;
-  border: 1px solid var(--line);
+  min-height: 52px;
+  border: 0;
   border-radius: 8px;
-  background: var(--surface);
-  color: var(--ink);
+  background: var(--accent);
+  color: var(--accent-ink);
   cursor: pointer;
-  font-weight: 800;
+  font-size: 18px;
+  font-weight: 900;
 }
 
 .toast {
@@ -862,10 +897,13 @@
 
 .paymentAmountInput {
   flex: 1;
-  padding: 8px;
+  padding: 10px 12px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: 17px;
+  font-weight: 800;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .paymentPhoneInput {
@@ -927,10 +965,12 @@
 
 .remainingWarn,
 .changeDue {
-  padding: 8px 10px;
-  border-radius: 6px;
-  font-size: 12px;
-  font-weight: 800;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 900;
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
   text-align: right;
 }
 

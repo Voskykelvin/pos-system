@@ -284,7 +284,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
             const cashVal = Number(payments[0].amount || 0);
             const change = cashVal - total;
             return (
-              <div className={`${styles.totalsRow} ${styles.changeRow}`}>
+              <div className={`${styles.totalsRow} ${styles.changeRow} ${change < 0 ? styles.changeShort : styles.changePositive}`}>
                 <span>{change < 0 ? 'Short' : 'Change'}</span>
                 <span>{formatKes(Math.abs(change))}</span>
               </div>
@@ -1130,8 +1130,8 @@ export default function Checkout({ authToken, cashierId, user }) {
               <strong>{lastReceipt.orderNumber}</strong>
             </div>
             <div className={styles.receiptDivider} />
-            <div><span>Amount paid</span><strong>{formatKes(lastReceipt.total)}</strong></div>
-            <div><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
+            <div className={styles.receiptAmountRow}><span>Amount paid</span><strong>{formatKes(lastReceipt.total)}</strong></div>
+            <div className={styles.receiptChangeRow}><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
             <button className={styles.receiptPrintBtn} type="button" onClick={printLastReceipt}>
               Print receipt
             </button>
