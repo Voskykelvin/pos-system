@@ -177,6 +177,12 @@ async function main() {
     if (etimsDashboard.summary.queued < 1 || !Array.isArray(etimsDashboard.recent)) {
       throw new Error('eTIMS dashboard did not return queued invoice status');
     }
+    const etimsStatus = await request(baseUrl, '/api/etims/status', {
+      headers: authHeaders
+    });
+    if (etimsStatus.queued < 1 || etimsStatus.failed !== 0) {
+      throw new Error('Cashier eTIMS status did not return the expected queue state');
+    }
 
     const orderSearch = await request(
       baseUrl,
@@ -196,6 +202,13 @@ async function main() {
       headers: authHeaders
     });
     if (!Array.isArray(reorder.suggestions)) throw new Error('Reorder suggestions did not return a list');
+
+    const vatAudit = await request(baseUrl, '/api/reports/vat-products', {
+      headers: authHeaders
+    });
+    if (!vatAudit.summary?.zero_rated || !Array.isArray(vatAudit.products)) {
+      throw new Error('VAT product audit did not return classifications');
+    }
 
     const customer = await request(baseUrl, '/api/customers', {
       method: 'POST',
@@ -239,6 +252,9 @@ async function main() {
       body: JSON.stringify({ cashCounted: (1000 + total - 10).toFixed(2) })
     });
     if (closedShift.status !== 'closed') throw new Error('Shift did not close');
+    if (!closedShift.etimsWarning || closedShift.etimsWarning.queued < 1) {
+      throw new Error('Shift close did not warn about queued eTIMS invoices');
+    }
     if (Math.abs(Number(closedShift.cashVariance)) > 0.01) {
       throw new Error(`Expected zero shift variance, got ${closedShift.cashVariance}`);
     }

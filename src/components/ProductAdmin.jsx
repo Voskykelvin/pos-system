@@ -26,6 +26,7 @@ const PRODUCT_TABS = [
   { id: 'pos', label: 'Purchase Orders', feature: 'purchasing' },
   { id: 'reorder', label: 'Reorder Suggestions', feature: 'reorder_suggestions' },
   { id: 'promotions', label: 'Promotions', feature: 'promotions' },
+  { id: 'vat', label: 'VAT Audit' },
   { id: 'csv', label: 'CSV Import/Export' }
 ];
 
@@ -113,6 +114,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   const [suppliers, setSuppliers] = useState([]);
   const [purchaseOrders, setPurchaseOrders] = useState([]);
   const [reorderSuggestions, setReorderSuggestions] = useState([]);
+  const [vatAudit, setVatAudit] = useState(null);
   const [supplierForm, setSupplierForm] = useState({ name: '', phone: '', email: '', address: '', contactPerson: '' });
   const [poSupplierId, setPoSupplierId] = useState('');
   const [poItems, setPoItems] = useState([]); // [{ productId, orderedQuantity, unitCostPrice }]
@@ -173,6 +175,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     } catch { /* ignore */ }
   }
 
+  async function loadVatAudit() {
+    try {
+      const data = await api('/api/reports/vat-products');
+      setVatAudit(data);
+    } catch (err) { setError(err.message); }
+  }
+
   async function loadPromotions() {
     try {
       const data = await api('/api/admin/promotions');
@@ -196,6 +205,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     if (activeTab === 'pos') { loadSuppliers(); loadPurchaseOrders(); }
     if (activeTab === 'reorder') loadReorderSuggestions();
     if (activeTab === 'promotions') loadPromotions();
+    if (activeTab === 'vat') loadVatAudit();
   }, [activeTab]);
 
   const filtered = useMemo(() => {
@@ -856,6 +866,71 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   </td>
                 </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* VAT AUDIT TAB */}
+      {activeTab === 'vat' && (
+        <div className={styles.tabContent}>
+          <div className={styles.tabHeaderAction}>
+            <div>
+              <h2>VAT Classification Audit</h2>
+              <p className={styles.subtitle}>Review active products by VAT treatment before they reach checkout.</p>
+            </div>
+            <button className={styles.secondaryBtn} type="button" onClick={loadVatAudit}>Refresh Audit</button>
+          </div>
+
+          <div className={styles.auditCards}>
+            {TAX_CATEGORY_OPTIONS.map((option) => {
+              const summary = vatAudit?.summary?.[option.value] || { count: 0, stockValue: 0 };
+              return (
+                <article key={option.value} className={styles.auditCard}>
+                  <span>{option.label}</span>
+                  <strong>{summary.count}</strong>
+                  <small>KES {Number(summary.stockValue || 0).toFixed(2)} stock value</small>
+                </article>
+              );
+            })}
+            <article className={styles.auditCard}>
+              <span>Needs review</span>
+              <strong>{vatAudit?.reviewCount || 0}</strong>
+              <small>Product/category tax mismatch</small>
+            </article>
+          </div>
+
+          <table className={styles.table}>
+            <thead>
+              <tr>
+                <th>SKU</th>
+                <th>Product</th>
+                <th>Category</th>
+                <th>Product VAT</th>
+                <th>Category VAT</th>
+                <th>Stock Value</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(vatAudit?.products || []).map((product) => (
+                <tr key={product.id} className={product.needsReview ? styles.lowStockRow : ''}>
+                  <td><code>{product.sku}</code></td>
+                  <td>{product.name}</td>
+                  <td>{product.category}</td>
+                  <td>{taxLabel(product.productTaxCategory)}</td>
+                  <td>{taxLabel(product.categoryTaxCategory || product.taxCategory)}</td>
+                  <td>KES {Number(product.stockValue || 0).toFixed(2)}</td>
+                  <td>
+                    <span className={product.needsReview ? styles.badgeLow : styles.badgeOk}>
+                      {product.needsReview ? 'Review' : 'OK'}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+              {(!vatAudit || vatAudit.products?.length === 0) && (
+                <tr><td colSpan="7">No active products found for VAT audit.</td></tr>
+              )}
             </tbody>
           </table>
         </div>

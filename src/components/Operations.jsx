@@ -118,6 +118,12 @@ export default function Operations({ authToken, user }) {
     }
   }
 
+  async function syncAndRefreshReceipt() {
+    if (!receipt?.id) return;
+    await runEtimsAction('sync');
+    await loadReceipt(receipt.id);
+  }
+
   async function openShift() {
     try {
       const payload = await api('/api/shifts/open', {
@@ -137,6 +143,19 @@ export default function Operations({ authToken, user }) {
 
   async function closeShift() {
     if (!shift?.id) return;
+    try {
+      const status = await api('/api/etims/status');
+      if ((Number(status.queued || 0) > 0 || Number(status.failed || 0) > 0)) {
+        const proceed = window.confirm(
+          `eTIMS has ${status.queued || 0} queued and ${status.failed || 0} failed invoice(s). ` +
+          'Close this shift anyway?'
+        );
+        if (!proceed) return;
+      }
+    } catch {
+      const proceed = window.confirm('Could not check eTIMS invoice status. Close this shift anyway?');
+      if (!proceed) return;
+    }
     if (heldSales.length > 0) {
       const oldest = heldSales[heldSales.length - 1];
       const proceed = window.confirm(
@@ -153,10 +172,11 @@ export default function Operations({ authToken, user }) {
       });
       setShift(payload);
       setCashCounted('');
-      setShiftMessage('Shift closed.');
+      setShiftMessage(payload.etimsWarning ? `Shift closed. ${payload.etimsWarning.message}` : 'Shift closed.');
       setShiftError(null);
       await loadAuditLogs();
       await loadShiftSummary();
+      await loadEtimsDashboard();
     } catch (err) {
       setShiftError(err.message);
     }
@@ -563,6 +583,14 @@ export default function Operations({ authToken, user }) {
                   <div>change - {formatKes(receipt.tender.changeDue)}</div>
                 )}
               </div>
+              <div className={styles.receiptFiscal}>
+                <div><span>eTIMS</span><b>{receipt.etims?.status || 'pending'}</b></div>
+                <div><span>CU invoice</span><b>{receipt.etims?.cuInvoiceNumber || 'pending'}</b></div>
+                <div><span>QR</span><b>{receipt.etims?.qrCodeUrl ? 'available' : 'pending'}</b></div>
+                {receipt.etims?.qrCodeUrl && (
+                  <img src={receipt.etims.qrCodeUrl} alt="eTIMS QR code" />
+                )}
+              </div>
               {canManageOrders && ['completed', 'partial_refund'].includes(receipt.status) && (
                 <div className={styles.actionBox}>
                   <input
@@ -625,8 +653,13 @@ export default function Operations({ authToken, user }) {
                   </div>
                 </div>
               )}
+              {canManageOrders && !receipt.etims?.fiscalReady && (
+                <button className={styles.secondaryPrintBtn} type="button" onClick={syncAndRefreshReceipt} disabled={etimsBusy}>
+                  Sync eTIMS and refresh receipt
+                </button>
+              )}
               <button className={styles.printBtn} type="button" onClick={() => window.print()}>
-                Print
+                {receipt.etims?.fiscalReady ? 'Reprint fiscal receipt' : 'Print sales copy'}
               </button>
             </div>
           )}

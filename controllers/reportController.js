@@ -669,6 +669,64 @@ async function exportCsv(req, res) {
 }
 
 /**
+ * GET /api/reports/vat-products
+ * Lists product VAT classifications so managers can review tax setup.
+ */
+async function vatProducts(req, res) {
+  try {
+    const products = await Product.findAll({
+      where: tenantWhere(req, { isActive: true }),
+      include: [{ model: Category, attributes: ['id', 'name', 'taxCategory'] }],
+      order: [['name', 'ASC']]
+    });
+
+    const summary = {
+      standard: { count: 0, stockValue: 0 },
+      zero_rated: { count: 0, stockValue: 0 },
+      exempt: { count: 0, stockValue: 0 }
+    };
+
+    const rows = products.map((product) => {
+      const category = product.taxCategory || product.Category?.taxCategory || 'standard';
+      const stockValue = Number(product.sellingPrice || 0) * Number(product.stockQuantity || 0);
+      const bucket = summary[category] || summary.standard;
+      bucket.count += 1;
+      bucket.stockValue += stockValue;
+
+      return {
+        id: product.id,
+        sku: product.sku,
+        barcode: product.barcode,
+        name: product.name,
+        category: product.Category?.name || 'Uncategorized',
+        productTaxCategory: product.taxCategory,
+        categoryTaxCategory: product.Category?.taxCategory || null,
+        taxCategory: category,
+        unit: product.unit,
+        sellingPrice: Number(product.sellingPrice),
+        stockQuantity: Number(product.stockQuantity),
+        stockValue: money(stockValue),
+        needsReview: Boolean(product.Category?.taxCategory && product.taxCategory !== product.Category.taxCategory)
+      };
+    });
+
+    res.json({
+      summary: Object.fromEntries(
+        Object.entries(summary).map(([key, value]) => [key, {
+          count: value.count,
+          stockValue: money(value.stockValue)
+        }])
+      ),
+      totalProducts: rows.length,
+      reviewCount: rows.filter((row) => row.needsReview).length,
+      products: rows
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+/**
  * GET /api/reports/reorder-suggestions?days=30&leadTimeDays=7
  * Analyzes item sales velocity over past N days to recommend PO reorder quantities.
  */
@@ -733,4 +791,4 @@ async function reorderSuggestions(req, res) {
   }
 }
 
-module.exports = { analytics, exportCsv, reorderSuggestions, today };
+module.exports = { analytics, exportCsv, reorderSuggestions, today, vatProducts };

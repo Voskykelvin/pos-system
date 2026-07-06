@@ -48,6 +48,15 @@ function isProductionFiscalMode(runtimeConfig) {
   return String(runtimeConfig?.etims?.env || '').toLowerCase() === 'production';
 }
 
+function missingProductionFiscalFields(runtimeConfig) {
+  const missing = [];
+  if (!runtimeConfig.business.kraPin) missing.push('seller KRA PIN');
+  if (!runtimeConfig.etims.baseUrl) missing.push('eTIMS base URL');
+  if (!runtimeConfig.etims.apiKey) missing.push('eTIMS API key');
+  if (!runtimeConfig.etims.deviceSerial) missing.push('eTIMS device serial');
+  return missing;
+}
+
 function normalizeTenderedPayments(payments, total) {
   const normalized = payments.map((payment) => ({
     ...payment,
@@ -161,9 +170,12 @@ async function checkout(req, res) {
   }
 
   const runtimeConfig = await resolveTenantConfig(req.tenantId);
-  if (isProductionFiscalMode(runtimeConfig) && !runtimeConfig.business.kraPin) {
+  const missingFiscalFields = isProductionFiscalMode(runtimeConfig)
+    ? missingProductionFiscalFields(runtimeConfig)
+    : [];
+  if (missingFiscalFields.length) {
     return res.status(400).json({
-      error: 'Seller KRA PIN is required before production eTIMS receipts can be issued.'
+      error: `Production eTIMS checkout is blocked until these settings are configured: ${missingFiscalFields.join(', ')}.`
     });
   }
 

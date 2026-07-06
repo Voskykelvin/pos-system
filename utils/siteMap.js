@@ -109,6 +109,7 @@ module.exports = {
     { method: 'GET', path: '/api/reports/today', purpose: 'Dashboard metrics' },
     { method: 'GET', path: '/api/reports/analytics', purpose: 'Sales trends, conversion, staff, inventory, and stock health analytics' },
     { method: 'GET', path: '/api/reports/export', purpose: 'CSV sales export' },
+    { method: 'GET', path: '/api/reports/vat-products', purpose: 'VAT classification audit for active products' },
     { method: 'GET', path: '/api/reports/reorder-suggestions', purpose: 'Sales velocity reorder suggestions' },
     { method: 'GET', path: '/api/admin/store/setup', purpose: 'Admin setup dashboard for branches, staff, subscription billing, payment, and tax readiness' },
     { method: 'POST', path: '/api/admin/store/branches', purpose: 'Create a branch profile within the store subscription limits' },
@@ -136,6 +137,7 @@ module.exports = {
     { method: 'POST', path: '/api/purchase-orders', purpose: 'Create purchase order' },
     { method: 'POST', path: '/api/purchase-orders/:id/receive', purpose: 'Receive stock from purchase order' },
     { method: 'GET', path: '/api/audit-logs', purpose: 'Manager/admin audit trail' },
+    { method: 'GET', path: '/api/etims/status', purpose: 'Cashier-safe eTIMS queued/failed invoice status' },
     { method: 'GET', path: '/api/etims/dashboard', purpose: 'Tenant eTIMS queue, retry, and readiness dashboard' },
     { method: 'POST', path: '/api/etims/sync', purpose: 'Process queued eTIMS invoices' },
     { method: 'POST', path: '/api/etims/requeue-failed', purpose: 'Retry failed eTIMS invoices' }

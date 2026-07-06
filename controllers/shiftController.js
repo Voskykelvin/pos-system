@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Shift, Payment, Order, User, Expense } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { getEtimsStatus } = require('../services/etimsStatusService');
 const { tenantWhere } = require('../utils/tenantScope');
 
 function money(value) {
@@ -132,6 +133,14 @@ async function closeShift(req, res) {
     const cashSalesExpected = await expectedCashForShift(shift, closedAt);
     const expectedDrawer = Number(shift.openingFloat) + cashSalesExpected;
     const cashVariance = cashCounted - expectedDrawer;
+    const etimsStatus = await getEtimsStatus({ tenantId: req.tenantId });
+    const etimsWarning = etimsStatus.summary.failed > 0 || etimsStatus.summary.queued > 0
+      ? {
+          queued: etimsStatus.summary.queued,
+          failed: etimsStatus.summary.failed,
+          message: `${etimsStatus.summary.queued} queued and ${etimsStatus.summary.failed} failed eTIMS invoice(s) still need attention.`
+        }
+      : null;
 
     await shift.update({
       status: 'closed',
@@ -152,11 +161,16 @@ async function closeShift(req, res) {
         openingFloat: Number(shift.openingFloat),
         cashSalesExpected: money(cashSalesExpected),
         cashCounted: money(cashCounted),
-        cashVariance: money(cashVariance)
+        cashVariance: money(cashVariance),
+        etimsQueued: etimsStatus.summary.queued,
+        etimsFailed: etimsStatus.summary.failed
       }
     });
 
-    return res.json(mapShift(shift));
+    return res.json({
+      ...mapShift(shift),
+      etimsWarning
+    });
   } catch (err) {
     return res.status(500).json({ error: err.message });
   }

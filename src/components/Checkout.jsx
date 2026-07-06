@@ -481,8 +481,42 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [heldSales, setHeldSales] = useState(() => loadHeldSales(user));
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [holdNote, setHoldNote] = useState('');
+  const [etimsStatus, setEtimsStatus] = useState(null);
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
   const pollRef = useRef(null);
   const searchInputRef = useRef(null);
+
+  const loadEtimsStatus = useCallback(async () => {
+    if (!navigator.onLine) {
+      setEtimsStatus(null);
+      return;
+    }
+    try {
+      const res = await fetch('/api/etims/status', {
+        headers: { Authorization: `Bearer ${authToken}` }
+      });
+      const data = await res.json();
+      if (res.ok) setEtimsStatus(data);
+    } catch {
+      setEtimsStatus(null);
+    }
+  }, [authToken]);
+
+  useEffect(() => {
+    const refreshOnlineState = () => {
+      setIsOnline(navigator.onLine);
+      if (navigator.onLine) loadEtimsStatus();
+    };
+    refreshOnlineState();
+    const interval = window.setInterval(loadEtimsStatus, 60000);
+    window.addEventListener('online', refreshOnlineState);
+    window.addEventListener('offline', refreshOnlineState);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener('online', refreshOnlineState);
+      window.removeEventListener('offline', refreshOnlineState);
+    };
+  }, [loadEtimsStatus]);
 
   useEffect(() => {
     saveHeldSales(user, heldSales);
@@ -750,6 +784,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           resetSale();
           setStatusMessage('Sale completed successfully.');
           showToast('Sale completed successfully.');
+          loadEtimsStatus();
         } else if (data.payments?.some((p) => p.status === 'failed')) {
           clearInterval(pollRef.current);
           setOrderStatus('failed');
@@ -760,7 +795,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       if (pollRef.current) clearInterval(pollRef.current);
       setOrderStatus((s) => s === 'waiting' ? 'failed' : s);
     }, 120000);
-  }, [authToken]);
+  }, [authToken, loadEtimsStatus]);
 
   function resetSale({ clearReceipt = false } = {}) {
     setCart([]);
@@ -843,6 +878,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         setStatusMessage('Sale queued offline and will sync automatically.');
         showToast('Sale queued offline and will sync automatically.');
         resetSale();
+        setEtimsStatus(null);
       } catch (err) {
         setError('Failed to queue offline order: ' + err.message);
       } finally {
@@ -881,6 +917,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         setStatusMessage('Sale completed successfully.');
         showToast('Sale completed successfully.');
         resetSale();
+        loadEtimsStatus();
         setSubmitting(false);
         return;
       }
@@ -1160,6 +1197,18 @@ export default function Checkout({ authToken, cashierId, user }) {
     printWindow.document.close();
   }
 
+  const etimsNotice = !isOnline
+    ? { tone: 'pending', text: 'Offline mode: eTIMS sync is paused until internet returns.' }
+    : Number(etimsStatus?.failed || 0) > 0
+      ? { tone: 'error', text: `${etimsStatus.failed} failed eTIMS invoice(s) need manager attention.` }
+      : Number(etimsStatus?.queued || 0) > 0
+        ? { tone: 'pending', text: `${etimsStatus.queued} receipt(s) pending eTIMS transmission.` }
+        : etimsStatus?.warnings?.productionBlocked
+          ? { tone: 'error', text: 'Production eTIMS is blocked until fiscal settings are complete.' }
+          : etimsStatus
+            ? { tone: 'ok', text: 'eTIMS queue clear.' }
+            : null;
+
   return (
     <div className={styles.page}>
       {!navigator.onLine && (
@@ -1370,6 +1419,12 @@ export default function Checkout({ authToken, cashierId, user }) {
         <button className={styles.confirmBtn} disabled={!canConfirm} onClick={handleConfirm}>
           {submitting ? 'Processing...' : `Confirm sale - ${formatKes(total)}`}
         </button>
+
+        {etimsNotice && (
+          <div className={`${styles.etimsNotice} ${styles[`etims${etimsNotice.tone}`]}`}>
+            {etimsNotice.text}
+          </div>
+        )}
 
         {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
         {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}

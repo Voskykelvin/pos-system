@@ -3,7 +3,7 @@ const assert = require('node:assert/strict');
 process.env.PORT = '0';
 process.env.ENABLE_ETIMS_SCHEDULER = 'false';
 process.env.ETIMS_ENV = 'production';
-delete process.env.BUSINESS_KRA_PIN;
+process.env.BUSINESS_KRA_PIN = '';
 
 try {
   require('moment').suppressDeprecationWarnings = true;
@@ -55,7 +55,8 @@ async function main() {
       })
     }, 400);
 
-    assert.match(failure.error, /Seller KRA PIN is required/);
+    assert.match(failure.error, /Production eTIMS checkout is blocked/);
+    assert.match(failure.error, /seller KRA PIN/);
     console.log('Fiscal receipt guard passed');
   } finally {
     await new Promise((resolve) => server.close(resolve));

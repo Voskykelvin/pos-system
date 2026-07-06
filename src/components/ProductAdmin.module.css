@@ -390,6 +390,37 @@
   gap: 12px;
 }
 
+.auditCards {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(140px, 1fr));
+  gap: 12px;
+}
+
+.auditCard {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--pos-panel);
+  display: grid;
+  gap: 5px;
+}
+
+.auditCard span {
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.auditCard strong {
+  font-family: "IBM Plex Mono", ui-monospace, monospace;
+  font-size: 26px;
+}
+
+.auditCard small {
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
 .catModal {
   background: var(--surface);
   padding: 24px;
@@ -548,7 +579,8 @@
   .controls,
   .inlineForm,
   .drawerActions,
-  .categorySelectRow {
+  .categorySelectRow,
+  .auditCards {
     display: grid;
     grid-template-columns: 1fr;
     align-items: stretch;

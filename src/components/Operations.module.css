@@ -100,7 +100,8 @@
 .formBlock button,
 .searchBar button,
 .actionBox button,
-.printBtn {
+.printBtn,
+.secondaryPrintBtn {
   min-height: 40px;
   border: 0;
   border-radius: 8px;
@@ -253,6 +254,41 @@
   font-weight: 800;
 }
 
+.receiptFiscal {
+  display: grid;
+  gap: 8px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel);
+}
+
+.receiptFiscal div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.receiptFiscal span {
+  color: var(--ink-soft);
+  font-weight: 800;
+}
+
+.receiptFiscal b {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+}
+
+.receiptFiscal img {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  justify-self: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px;
+}
+
 .grand {
   font-size: 18px;
   font-weight: 900;
@@ -274,6 +310,17 @@
 
 .printBtn {
   width: 100%;
+}
+
+.secondaryPrintBtn {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: var(--surface);
+}
+
+.secondaryPrintBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .actionButtons {
@@ -649,7 +696,8 @@
 
   .actionButtons button,
   .searchBar button,
-  .actionBox button {
+  .actionBox button,
+  .secondaryPrintBtn {
     width: 100%;
   }
 
@@ -677,6 +725,7 @@
   .grid > .panel:not(.receiptPanel),
   .panelHeader,
   .actionBox,
+  .secondaryPrintBtn,
   .printBtn {
     display: none;
   }
