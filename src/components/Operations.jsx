@@ -404,7 +404,7 @@ export default function Operations({ authToken, user }) {
         {canManageOrders && shiftSummary && (
           <section className={`${styles.panel} ${styles.summaryPanel}`}>
             <div className={styles.panelHeader}>
-              <h2>Today's Multi-Till Shift Summary</h2>
+              <h2>Today&apos;s Multi-Till Shift Summary</h2>
               <span>{shiftSummary.date}</span>
             </div>
             <div className={styles.tableWrap}>

@@ -42,6 +42,7 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     paranoid: true,
     indexes: [
+      { fields: ['tenantId'] },
       { fields: ['name'] }
     ]
   });

@@ -1,10 +1,6 @@
 const {
-  Order,
-  OrderItem,
   Product,
-  Payment,
-  InventoryTransaction,
-  EtimsInvoice
+  InventoryTransaction
 } = require('../models');
 
 /**

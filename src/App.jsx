@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 const Checkout = lazy(() => import('./components/Checkout.jsx'));
 const ProductAdmin = lazy(() => import('./components/ProductAdmin.jsx'));
 const Dashboard = lazy(() => import('./components/Dashboard.jsx'));
@@ -94,6 +94,8 @@ export default function App() {
     tenant: null
   });
   const [installPrompt, setInstallPrompt] = useState(null);
+  const [syncStatus, setSyncStatus] = useState({ type: 'idle', message: '' });
+  const syncTimeoutRef = useRef(null);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -139,26 +141,56 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (!authToken) return;
+    if (!authToken) {
+      setSyncStatus({ type: 'idle', message: '' });
+      return undefined;
+    }
+
+    function showSyncStatus(nextStatus, hideAfterMs = 0) {
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+
+      setSyncStatus(nextStatus);
+      if (hideAfterMs > 0) {
+        syncTimeoutRef.current = window.setTimeout(() => {
+          setSyncStatus({ type: 'idle', message: '' });
+          syncTimeoutRef.current = null;
+        }, hideAfterMs);
+      }
+    }
 
     async function handleOnline() {
-      console.log('Back online! Syncing offline orders...');
-      const { synced, failed } = await syncOfflineOrders(authToken);
-      if (synced > 0) {
-        alert(`Successfully synced ${synced} offline order(s).`);
-      }
-      if (failed > 0) {
-        alert(`Failed to sync ${failed} offline order(s). They will be retried later.`);
+      showSyncStatus({ type: 'syncing', message: 'Syncing offline transactions...' });
+      try {
+        const { synced, failed } = await syncOfflineOrders(authToken);
+        if (synced > 0 && failed === 0) {
+          showSyncStatus({ type: 'success', message: `Synchronized ${synced} sales successfully.` }, 3000);
+        } else if (synced > 0 && failed > 0) {
+          showSyncStatus({ type: 'error', message: `Synced ${synced} sales, but ${failed} failed. Retrying later.` }, 6000);
+        } else if (failed > 0) {
+          showSyncStatus({ type: 'error', message: `Sync failed: ${failed} sales queued offline.` }, 6000);
+        } else {
+          showSyncStatus({ type: 'idle', message: '' });
+        }
+      } catch {
+        showSyncStatus({ type: 'error', message: 'Sync connection error. Retrying later.' }, 6000);
       }
     }
 
     window.addEventListener('online', handleOnline);
-    // Also try syncing when the workspace loads (if already online)
     if (navigator.onLine) {
       handleOnline();
     }
 
-    return () => window.removeEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      if (syncTimeoutRef.current) {
+        window.clearTimeout(syncTimeoutRef.current);
+        syncTimeoutRef.current = null;
+      }
+    };
   }, [authToken]);
 
   const visibleNavItems = useMemo(() => {
@@ -439,6 +471,13 @@ export default function App() {
           </Suspense>
         </ErrorBoundary>
       </main>
+
+      {syncStatus.type !== 'idle' && (
+        <div className={`${styles.syncIndicator} ${syncStatus.type === 'success' ? styles.syncSuccess : syncStatus.type === 'error' ? styles.syncError : ''}`}>
+          {syncStatus.type === 'syncing' && <div className={styles.syncSpinner} />}
+          <span>{syncStatus.message}</span>
+        </div>
+      )}
     </div>
   );
 }

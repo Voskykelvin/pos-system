@@ -1,4 +1,37 @@
 const { Op } = require('sequelize');
+
+const ANALYTICS_CACHE = {};
+const CACHE_TTL_MS = 60 * 1000;
+
+function getCacheKey(req, endpointName) {
+  const queryStr = JSON.stringify(req.query || {});
+  return `${req.tenantId || 'global'}-${req.user?.id || 'public'}-${endpointName}-${queryStr}`;
+}
+
+function getCachedData(key) {
+  const entry = ANALYTICS_CACHE[key];
+  if (entry && (Date.now() - entry.timestamp < CACHE_TTL_MS)) {
+    return entry.data;
+  }
+  return null;
+}
+
+function setCacheData(key, data) {
+  ANALYTICS_CACHE[key] = {
+    timestamp: Date.now(),
+    data
+  };
+}
+
+function invalidateTenantCache(tenantId) {
+  const prefix = `${tenantId || 'global'}-`;
+  for (const key of Object.keys(ANALYTICS_CACHE)) {
+    if (key.startsWith(prefix)) {
+      delete ANALYTICS_CACHE[key];
+    }
+  }
+}
+
 const {
   sequelize,
   Product,
@@ -95,6 +128,18 @@ function parseAnalyticsRange(query) {
 }
 
 async function today(req, res) {
+  const cacheKey = getCacheKey(req, 'today');
+  const cached = getCachedData(cacheKey);
+  if (cached) return res.json(cached);
+
+  const originalJson = res.json;
+  res.json = function(data) {
+    if (res.statusCode === 200) {
+      setCacheData(cacheKey, data);
+    }
+    return originalJson.call(this, data);
+  };
+
   try {
     const { start, end, businessDate, timeZone } = getBusinessDayRange();
 
@@ -182,6 +227,18 @@ async function today(req, res) {
 }
 
 async function analytics(req, res) {
+  const cacheKey = getCacheKey(req, 'analytics');
+  const cached = getCachedData(cacheKey);
+  if (cached) return res.json(cached);
+
+  const originalJson = res.json;
+  res.json = function(data) {
+    if (res.statusCode === 200) {
+      setCacheData(cacheKey, data);
+    }
+    return originalJson.call(this, data);
+  };
+
   try {
     const { start, end, days } = parseAnalyticsRange(req.query);
     const leadTimeDays = Math.min(Math.max(Number(req.query.leadTimeDays || 7), 1), 90);
@@ -625,12 +682,12 @@ async function exportCsv(req, res) {
       order: [['createdAt', 'ASC']]
     });
 
-    function csvEscape(value) {
+    const csvEscape = (value) => {
       const str = String(value ?? '');
       return str.includes(',') || str.includes('"') || str.includes('\n')
         ? `"${str.replace(/"/g, '""')}"`
         : str;
-    }
+    };
 
     const rows = [
       // header
@@ -791,4 +848,4 @@ async function reorderSuggestions(req, res) {
   }
 }
 
-module.exports = { analytics, exportCsv, reorderSuggestions, today, vatProducts };
+module.exports = { analytics, exportCsv, reorderSuggestions, today, vatProducts, invalidateTenantCache };

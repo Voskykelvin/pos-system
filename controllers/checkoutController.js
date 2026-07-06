@@ -20,6 +20,7 @@ const logger = require('../utils/logger');
 const { sendReceipt } = require('../services/smsService');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
+const { invalidateTenantCache } = require('./reportController');
 const { assertPlanFeature } = require('../middleware/planEnforcement');
 const {
   resolveProductTaxCategory,
@@ -494,6 +495,8 @@ async function checkout(req, res) {
       total: order.total,
       paymentStatus: order.paymentStatus
     });
+
+    invalidateTenantCache(req.tenantId);
 
     return res.status(201).json({
       orderId: order.id,

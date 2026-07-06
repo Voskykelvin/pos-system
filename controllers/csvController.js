@@ -26,6 +26,11 @@ function normalizeCsvTaxCategory(value, fallback) {
   return normalizeTaxCategory(aliases[raw] || raw, fallback);
 }
 
+function csvEscape(val) {
+  const s = String(val ?? '');
+  return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
 async function exportCatalogCsv(req, res) {
   try {
     const products = await Product.findAll({
@@ -38,24 +43,19 @@ async function exportCatalogCsv(req, res) {
       ['sku', 'barcode', 'name', 'category', 'taxCategory', 'unit', 'isWeighted', 'costPrice', 'sellingPrice', 'reorderLevel', 'stockQuantity'].join(',')
     ];
 
-    function esc(val) {
-      const s = String(val ?? '');
-      return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
-    }
-
     for (const p of products) {
       rows.push([
-        esc(p.sku),
-        esc(p.barcode),
-        esc(p.name),
-        esc(p.Category?.name || ''),
-        esc(p.taxCategory),
-        esc(p.unit),
-        esc(p.isWeighted),
-        esc(Number(p.costPrice).toFixed(2)),
-        esc(Number(p.sellingPrice).toFixed(2)),
-        esc(p.reorderLevel),
-        esc(Number(p.stockQuantity))
+        csvEscape(p.sku),
+        csvEscape(p.barcode),
+        csvEscape(p.name),
+        csvEscape(p.Category?.name || ''),
+        csvEscape(p.taxCategory),
+        csvEscape(p.unit),
+        csvEscape(p.isWeighted),
+        csvEscape(Number(p.costPrice).toFixed(2)),
+        csvEscape(Number(p.sellingPrice).toFixed(2)),
+        csvEscape(p.reorderLevel),
+        csvEscape(Number(p.stockQuantity))
       ].join(','));
     }
 

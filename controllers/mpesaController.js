@@ -85,7 +85,7 @@ async function callback(req, res) {
       return ack();
     }
 
-    const { CheckoutRequestID, ResultCode, ResultDesc, CallbackMetadata } = stkCallback;
+    const { CheckoutRequestID, ResultCode, CallbackMetadata } = stkCallback;
 
     const payment = await Payment.findOne({
       where: { mpesaCheckoutRequestId: CheckoutRequestID },

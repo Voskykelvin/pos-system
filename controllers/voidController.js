@@ -9,6 +9,7 @@ const { reverseOrder } = require('../services/orderReversal');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere } = require('../utils/tenantScope');
+const { invalidateTenantCache } = require('./reportController');
 
 /**
  * POST /api/orders/:id/void
@@ -79,6 +80,8 @@ async function voidOrder(req, res) {
     });
 
     await t.commit();
+
+    invalidateTenantCache(req.tenantId);
 
     return res.json({
       orderId: order.id,

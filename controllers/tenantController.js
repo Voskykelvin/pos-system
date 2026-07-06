@@ -89,7 +89,8 @@ function buildDailySeries(start, end) {
 
 function sanitizeTenant(tenant) {
   const plain = typeof tenant.get === 'function' ? tenant.get({ plain: true }) : tenant;
-  const { settings, ...safe } = plain;
+  const safe = { ...plain };
+  delete safe.settings;
   return safe;
 }
 

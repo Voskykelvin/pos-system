@@ -13,7 +13,7 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-export default function CustomerAdmin({ authToken, user }) {
+export default function CustomerAdmin({ authToken }) {
   const [query, setQuery] = useState('');
   const [customers, setCustomers] = useState([]);
   const [error, setError] = useState(null);
@@ -161,7 +161,7 @@ export default function CustomerAdmin({ authToken, user }) {
       {selectedCustomer && (
         <div className={styles.modalOverlay}>
           <div className={styles.modal}>
-            <h2>{selectedCustomer.name || selectedCustomer.phone}'s Ledger</h2>
+            <h2>{selectedCustomer.name || selectedCustomer.phone}&apos;s Ledger</h2>
 
             {!ledgerData ? (
               <p>Loading ledger...</p>

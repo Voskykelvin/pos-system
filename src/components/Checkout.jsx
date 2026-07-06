@@ -489,6 +489,18 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [isWholesale, setIsWholesale] = useState(false);
+  const [autoPrint, setAutoPrint] = useState(() => {
+    try {
+      const saved = localStorage.getItem('pos_auto_print');
+      return saved !== null ? JSON.parse(saved) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('pos_auto_print', JSON.stringify(autoPrint));
+  }, [autoPrint]);
   const [customer, setCustomer] = useState(null);
 
   // Payments: array of { method, amount, mpesaPhone }
@@ -826,7 +838,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         if (data.paymentStatus === 'paid') {
           clearInterval(pollRef.current);
           setOrderStatus('paid');
-          setLastReceipt({
+          const newReceipt = {
             orderId,
             orderNumber: data.orderNumber,
             total,
@@ -834,7 +846,11 @@ export default function Checkout({ authToken, cashierId, user }) {
             cashierName: user?.name,
             createdAt: new Date().toISOString(),
             changeDue: 0
-          });
+          };
+          setLastReceipt(newReceipt);
+          if (autoPrint) {
+            printLastReceipt(newReceipt);
+          }
           resetSale();
           setStatusMessage('Sale completed successfully.');
           showToast('Sale completed successfully.');
@@ -849,7 +865,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       if (pollRef.current) clearInterval(pollRef.current);
       setOrderStatus((s) => s === 'waiting' ? 'failed' : s);
     }, 120000);
-  }, [authToken, cartItemCount, loadEtimsStatus, total, user?.name]);
+  }, [authToken, autoPrint, cartItemCount, loadEtimsStatus, total, user?.name]);
 
   function resetSale({ clearReceipt = false } = {}) {
     setCart([]);
@@ -922,7 +938,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         await addOrderToQueue({ ...orderPayload, idempotencyKey: checkoutIdempotencyKey });
         registerBackgroundSync(authToken).catch(() => {});
         setOrderStatus('paid');
-        setLastReceipt({
+        const newReceipt = {
           orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4),
           total,
           itemCount: cartItemCount,
@@ -930,7 +946,11 @@ export default function Checkout({ authToken, cashierId, user }) {
           changeDue: paymentSummary.changeDue,
           cashierName: user?.name,
           createdAt: new Date().toISOString()
-        });
+        };
+        setLastReceipt(newReceipt);
+        if (autoPrint) {
+          printLastReceipt(newReceipt);
+        }
         setStatusMessage('Sale queued offline and will sync automatically.');
         showToast('Sale queued offline and will sync automatically.');
         resetSale();
@@ -961,7 +981,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       if (!hasMpesa) {
         // All cash
         setOrderStatus('paid');
-        setLastReceipt({
+        const newReceipt = {
           orderId: data.orderId,
           orderNumber: data.orderNumber,
           total: data.total,
@@ -970,7 +990,11 @@ export default function Checkout({ authToken, cashierId, user }) {
           changeDue: Number(data.changeDue || paymentSummary.changeDue),
           cashierName: user?.name,
           createdAt: data.createdAt || new Date().toISOString()
-        });
+        };
+        setLastReceipt(newReceipt);
+        if (autoPrint) {
+          printLastReceipt(newReceipt);
+        }
         setStatusMessage('Sale completed successfully.');
         showToast('Sale completed successfully.');
         resetSale();
@@ -1060,13 +1084,14 @@ export default function Checkout({ authToken, cashierId, user }) {
     setToast({ message, tone });
   }
 
-  async function printLastReceipt() {
-    if (!lastReceipt) return;
+  async function printLastReceipt(receiptParam = null) {
+    const activeReceipt = receiptParam?.orderNumber ? receiptParam : lastReceipt;
+    if (!activeReceipt) return;
 
     let receipt = null;
-    if (lastReceipt.orderId && navigator.onLine) {
+    if (activeReceipt.orderId && navigator.onLine) {
       try {
-        const res = await fetch(`/api/orders/${lastReceipt.orderId}/receipt`, {
+        const res = await fetch(`/api/orders/${activeReceipt.orderId}/receipt`, {
           headers: { Authorization: `Bearer ${authToken}` }
         });
         const data = await res.json();
@@ -1076,11 +1101,11 @@ export default function Checkout({ authToken, cashierId, user }) {
       }
     }
 
-    const receiptNumber = receipt?.orderNumber || lastReceipt.orderNumber;
-    const totalPaid = receipt?.total ?? lastReceipt.total;
-    const saleDate = receipt?.createdAt || lastReceipt.createdAt || new Date().toISOString();
+    const receiptNumber = receipt?.orderNumber || activeReceipt.orderNumber;
+    const totalPaid = receipt?.total ?? activeReceipt.total;
+    const saleDate = receipt?.createdAt || activeReceipt.createdAt || new Date().toISOString();
     const saleDateText = new Date(saleDate).toLocaleString();
-    const cashierName = receipt?.cashier?.name || lastReceipt.cashierName || user?.name || 'Cashier';
+    const cashierName = receipt?.cashier?.name || activeReceipt.cashierName || user?.name || 'Cashier';
     const businessName = receipt?.business?.name || 'Jijenge POS';
     const sellerPin = receipt?.business?.kraPin || '';
     const receiptPolicy = receipt?.business?.receiptPolicy || '';
@@ -1109,9 +1134,9 @@ export default function Checkout({ authToken, cashierId, user }) {
       : receipt
         ? 'NOT FISCAL UNTIL ETIMS CONFIRMS'
         : 'OFFLINE COPY - ETIMS PENDING';
-    const receiptChange = Number(receipt?.tender?.changeDue ?? lastReceipt.changeDue ?? 0);
-    const receiptTendered = Number(receipt?.tender?.amountTendered ?? lastReceipt.amountTendered ?? totalPaid + receiptChange);
-    const receiptItemCount = Number(receipt?.itemCount ?? lastReceipt.itemCount ?? 0);
+    const receiptChange = Number(receipt?.tender?.changeDue ?? activeReceipt.changeDue ?? 0);
+    const receiptTendered = Number(receipt?.tender?.amountTendered ?? activeReceipt.amountTendered ?? totalPaid + receiptChange);
+    const receiptItemCount = Number(receipt?.itemCount ?? activeReceipt.itemCount ?? 0);
     const receiptBarcodeSvg = createReceiptBarcodeSvg(receiptNumber);
     const receiptTaxSummary = receipt?.items?.length
       ? summarizeTaxFromLines(
@@ -1321,6 +1346,14 @@ export default function Checkout({ authToken, cashierId, user }) {
             />
             Wholesale Pricing Mode
           </label>
+          <label className={styles.toggleLabel} style={{ marginLeft: '20px' }}>
+            <input
+              type="checkbox"
+              checked={autoPrint}
+              onChange={(e) => setAutoPrint(e.target.checked)}
+            />
+            Auto-print Receipts
+          </label>
         </div>
 
         {results.length === 0 ? (
@@ -1524,7 +1557,7 @@ export default function Checkout({ authToken, cashierId, user }) {
             <div className={styles.receiptDivider} />
             <div className={styles.receiptAmountRow}><span>Sale total</span><strong>{formatKes(lastReceipt.total)}</strong></div>
             <div className={styles.receiptChangeRow}><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
-            <button className={styles.receiptPrintBtn} type="button" onClick={printLastReceipt}>
+            <button className={styles.receiptPrintBtn} type="button" onClick={() => printLastReceipt()}>
               Print receipt
             </button>
           </div>

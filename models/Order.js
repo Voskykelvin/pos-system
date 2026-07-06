@@ -66,6 +66,7 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'orders',
     timestamps: true,
     indexes: [
+      { fields: ['tenantId'] },
       { fields: ['orderNumber'] },
       { fields: ['createdAt'] },
       { fields: ['cashierId', 'createdAt'] },   // shift-scoped queries

@@ -12,6 +12,7 @@ const {
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere } = require('../utils/tenantScope');
+const { invalidateTenantCache } = require('./reportController');
 
 /**
  * POST /api/orders/:id/refund/partial
@@ -134,6 +135,8 @@ async function partialRefund(req, res) {
     });
 
     await t.commit();
+
+    invalidateTenantCache(req.tenantId);
 
     return res.json({
       orderId: order.id,

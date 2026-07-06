@@ -9,6 +9,7 @@ const { reverseOrder } = require('../services/orderReversal');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere } = require('../utils/tenantScope');
+const { invalidateTenantCache } = require('./reportController');
 
 async function refundOrder(req, res) {
   const { id } = req.params;
@@ -70,6 +71,8 @@ async function refundOrder(req, res) {
     });
 
     await t.commit();
+
+    invalidateTenantCache(req.tenantId);
 
     return res.json({
       orderId: order.id,

@@ -331,7 +331,7 @@ export default function Homepage({
           <p className={styles.kicker}>POS, inventory, payments, and reports</p>
           <h1>Run your shop without guessing.</h1>
           <p className={styles.heroCopy}>
-            Jijenge POS helps a shop owner sell at the counter, track stock, manage staff actions, handle customer credit, and see the day's numbers clearly.
+            Jijenge POS helps a shop owner sell at the counter, track stock, manage staff actions, handle customer credit, and see the day&apos;s numbers clearly.
           </p>
           <div className={styles.heroActions}>
             <button className={styles.primaryBtn} type="button" onClick={() => startSignup(featuredPlan?.id || 'starter')}>

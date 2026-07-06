@@ -4,6 +4,11 @@
     "es2021": true,
     "node": true
   },
+  "ignorePatterns": [
+    "dist/",
+    "dev-dist/",
+    "mnt/"
+  ],
   "extends": [
     "eslint:recommended",
     "plugin:react/recommended"
@@ -17,6 +22,7 @@
   },
   "rules": {
     "no-console": ["warn", { "allow": ["warn", "error"] }],
+    "react/prop-types": "off",
     "react/react-in-jsx-scope": "off"
   },
   "settings": {
