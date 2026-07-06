@@ -39,6 +39,11 @@ function taxAmountFromGross(grossAmount, taxRate) {
   return gross * (rate / (1 + rate));
 }
 
+function productItemCode(product) {
+  const metadata = product.metadata && typeof product.metadata === 'object' ? product.metadata : {};
+  return metadata.kraItemCode || metadata.itemCode || product.barcode || product.sku || product.id;
+}
+
 function normalizeTenderedPayments(payments, total) {
   const normalized = payments.map((payment) => ({
     ...payment,
@@ -229,8 +234,12 @@ async function checkout(req, res) {
       });
 
       etimsLineItems.push({
+        itemCode: productItemCode(product),
+        sku: product.sku,
+        barcode: product.barcode,
         productName: product.name,
         quantity: line.quantity,
+        unit: product.unit,
         unitPrice,
         taxRate,
         taxCategory,

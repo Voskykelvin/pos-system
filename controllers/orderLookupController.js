@@ -6,9 +6,17 @@ const {
   Payment,
   Customer,
   User,
-  EtimsInvoice
+  EtimsInvoice,
+  Branch
 } = require('../models');
 const { tenantWhere } = require('../utils/tenantScope');
+const { resolveTenantConfig } = require('../utils/tenantConfig');
+
+function productItemCode(product) {
+  if (!product) return null;
+  const metadata = product.metadata && typeof product.metadata === 'object' ? product.metadata : {};
+  return metadata.kraItemCode || metadata.itemCode || product.barcode || product.sku || null;
+}
 
 function mapPayment(payment) {
   return {
@@ -67,7 +75,8 @@ async function receipt(req, res) {
         { model: Payment },
         { model: Customer },
         { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] },
-        { model: EtimsInvoice }
+        { model: EtimsInvoice },
+        { model: Branch, attributes: ['id', 'name', 'code'] }
       ]
     });
 
@@ -75,6 +84,7 @@ async function receipt(req, res) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    const runtimeConfig = await resolveTenantConfig(order.tenantId || req.tenantId);
     const metadata = order.metadata || {};
     const paymentTotal = order.Payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const changeDue = Number(metadata.changeDue || 0);
@@ -102,6 +112,9 @@ async function receipt(req, res) {
         productId: item.productId,
         name: item.Product?.name || 'Unknown product',
         sku: item.Product?.sku || null,
+        barcode: item.Product?.barcode || null,
+        itemCode: productItemCode(item.Product),
+        unit: item.Product?.unit || null,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         taxRate: Number(item.taxRate),
@@ -120,11 +133,24 @@ async function receipt(req, res) {
         status: order.EtimsInvoice.status,
         cuInvoiceNumber: order.EtimsInvoice.cuInvoiceNumber,
         qrCodeUrl: order.EtimsInvoice.qrCodeUrl,
-        transmittedAt: order.EtimsInvoice.transmittedAt
+        transmittedAt: order.EtimsInvoice.transmittedAt,
+        deviceSerial: runtimeConfig.etims.deviceSerial || null
+      } : {
+        status: 'not_created',
+        cuInvoiceNumber: null,
+        qrCodeUrl: null,
+        transmittedAt: null,
+        deviceSerial: runtimeConfig.etims.deviceSerial || null
+      },
+      branch: order.Branch ? {
+        id: order.Branch.id,
+        name: order.Branch.name,
+        code: order.Branch.code
       } : null,
       business: {
-        name: process.env.BUSINESS_NAME || 'Jijenge POS',
-        kraPin: process.env.BUSINESS_KRA_PIN || null
+        name: runtimeConfig.business.name,
+        kraPin: runtimeConfig.business.kraPin || null,
+        receiptFooter: runtimeConfig.business.receiptFooter || ''
       }
     });
   } catch (err) {

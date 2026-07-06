@@ -17,8 +17,10 @@ function buildEtimsPayload({ order, orderItems, business }) {
       (taxBreakdown[item.taxCategory] || 0) + Number(item.lineTotal);
 
     return {
+      itemCode: item.itemCode || item.barcode || item.sku || null,
       itemName: item.productName,
       quantity: Number(item.quantity),
+      unitOfMeasure: item.unit || 'each',
       unitPrice: Number(item.unitPrice),
       taxRate: Number(item.taxRate),
       taxCategory: item.taxCategory,

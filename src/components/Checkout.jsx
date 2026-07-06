@@ -987,6 +987,24 @@ export default function Checkout({ authToken, cashierId, user }) {
     const saleDate = receipt?.createdAt || lastReceipt.createdAt || new Date().toISOString();
     const saleDateText = new Date(saleDate).toLocaleString();
     const cashierName = receipt?.cashier?.name || lastReceipt.cashierName || user?.name || 'Cashier';
+    const businessName = receipt?.business?.name || 'Jijenge POS';
+    const sellerPin = receipt?.business?.kraPin || '';
+    const receiptFooter = receipt?.business?.receiptFooter || 'Thank you';
+    const branchLabel = receipt?.branch
+      ? [receipt.branch.code, receipt.branch.name].filter(Boolean).join(' - ')
+      : '';
+    const etimsStatus = receipt?.etims?.status || 'not_created';
+    const cuInvoiceNumber = receipt?.etims?.cuInvoiceNumber || '';
+    const qrCodeUrl = receipt?.etims?.qrCodeUrl || '';
+    const deviceSerial = receipt?.etims?.deviceSerial || '';
+    const fiscalReady = Boolean(cuInvoiceNumber && qrCodeUrl);
+    const etimsStatusText = etimsStatus === 'transmitted'
+      ? 'eTIMS: TRANSMITTED'
+      : etimsStatus === 'queued'
+        ? 'eTIMS: QUEUED'
+        : etimsStatus === 'failed'
+          ? 'eTIMS: FAILED'
+          : 'eTIMS: NOT CREATED';
     const receiptChange = Number(receipt?.tender?.changeDue ?? lastReceipt.changeDue ?? 0);
     const receiptTendered = Number(receipt?.tender?.amountTendered ?? lastReceipt.amountTendered ?? totalPaid + receiptChange);
     const receiptTaxSummary = receipt?.items?.length
@@ -996,15 +1014,20 @@ export default function Checkout({ authToken, cashierId, user }) {
         )
       : taxSummary;
     const rows = receipt?.items?.length
-      ? receipt.items.map((item) => `
+      ? receipt.items.map((item) => {
+          const itemCode = item.itemCode || item.barcode || item.sku || '';
+          const unit = item.unit || 'each';
+          return `
           <tr>
             <td>
-              ${escapeHtml(item.name)} x ${Number(item.quantity)}
-              <div class="muted">${formatTaxPercent(item.taxRate)} VAT</div>
+              <div class="item-code">${escapeHtml(itemCode || '-')}</div>
+              <div>${escapeHtml(item.name)}</div>
+              <div class="muted">${Number(item.quantity)} ${escapeHtml(unit)} x ${formatKes(item.unitPrice)} | VAT ${formatTaxPercent(item.taxRate)}</div>
             </td>
             <td>${formatKes(item.lineTotal)}</td>
           </tr>
-        `).join('')
+        `;
+        }).join('')
       : `<tr><td>Sale total</td><td>${formatKes(totalPaid)}</td></tr>`;
 
     const paymentRows = receipt?.payments?.length
@@ -1051,14 +1074,19 @@ export default function Checkout({ authToken, cashierId, user }) {
             h1 { font-size: 16px; margin: 0 0 4px; }
             .muted { color: #4b5563; }
             table { width: 100%; border-collapse: collapse; margin: 10px 0; }
+            th { font-size: 11px; text-align: left; border-bottom: 1px dashed #111827; padding-bottom: 4px; }
+            th:last-child { text-align: right; }
             td { padding: 3px 0; vertical-align: top; }
             td:last-child { text-align: right; white-space: nowrap; }
             .line { border-top: 1px dashed #111827; margin: 8px 0; }
             .total { font-size: 15px; font-weight: 800; }
+            .warning { color: #991b1b; font-weight: 800; }
+            .item-code { font-weight: 800; letter-spacing: 0; }
             .served { font-size: 11px; margin: 10px 0 6px; }
             .receipt-meta { margin: 8px 0 4px; }
             .receipt-meta td { font-size: 11px; }
             .receipt-title { font-size: 16px; font-weight: 900; letter-spacing: 1px; margin-top: 4px; }
+            .qr { width: 96px; height: 96px; object-fit: contain; margin: 6px auto 0; display: block; }
             .vat-summary th,
             .vat-summary td { font-size: 11px; }
             .vat-summary th { text-align: right; font-weight: 800; }
@@ -1073,13 +1101,18 @@ export default function Checkout({ authToken, cashierId, user }) {
         <body>
           <main class="receipt">
             <div class="center">
-              <h1>${escapeHtml(receipt?.business?.name || 'Jijenge POS')}</h1>
-              ${receipt?.business?.kraPin ? `<div class="muted">KRA PIN: ${escapeHtml(receipt.business.kraPin)}</div>` : ''}
+              <h1>${escapeHtml(businessName)}</h1>
+              ${sellerPin ? `<div class="muted">PIN: ${escapeHtml(sellerPin)}</div>` : receipt ? '<div class="warning">PIN NOT SET</div>' : ''}
+              ${branchLabel ? `<div class="muted">Store: ${escapeHtml(branchLabel)}</div>` : ''}
+              <div class="muted">USER: ${escapeHtml(cashierName)}</div>
               <div class="muted">${escapeHtml(receiptNumber)}</div>
               <div class="muted">${escapeHtml(saleDateText)}</div>
             </div>
             <div class="line"></div>
-            <table>${rows}</table>
+            <table>
+              <thead><tr><th>ITEM</th><th>AMOUNT</th></tr></thead>
+              <tbody>${rows}</tbody>
+            </table>
             <div class="line"></div>
             <table>
               <tr><td>Items total</td><td>${formatKes(totalPaid + Number(receipt?.discountTotal || 0))}</td></tr>
@@ -1096,15 +1129,18 @@ export default function Checkout({ authToken, cashierId, user }) {
             <div class="center muted">Prices include VAT where applicable</div>
             <div class="line"></div>
             <table>${paymentRows}</table>
-            ${receipt?.etims?.cuInvoiceNumber ? `<div class="center muted">CU: ${escapeHtml(receipt.etims.cuInvoiceNumber)}</div>` : ''}
+            <div class="center muted">${escapeHtml(etimsStatusText)}</div>
+            ${cuInvoiceNumber ? `<div class="center muted">CU Invoice: ${escapeHtml(cuInvoiceNumber)}</div>` : '<div class="center muted">CU Invoice: pending</div>'}
+            ${deviceSerial ? `<div class="center muted">M/C ID: ${escapeHtml(deviceSerial)}</div>` : ''}
+            ${qrCodeUrl ? `<img class="qr" src="${escapeHtml(qrCodeUrl)}" alt="eTIMS QR code" />` : '<div class="center muted">QR code pending</div>'}
             <div class="line"></div>
             <div class="center served">You were served by ${escapeHtml(cashierName)}</div>
-            <div class="center">Thank you</div>
+            <div class="center">${escapeHtml(receiptFooter)}</div>
             <table class="receipt-meta">
               <tr><td>Receipt #</td><td>${escapeHtml(receiptNumber)}</td></tr>
               <tr><td>Date/Time</td><td>${escapeHtml(saleDateText)}</td></tr>
             </table>
-            <div class="center receipt-title">${receipt?.etims?.cuInvoiceNumber ? 'FISCAL RECEIPT' : 'SALES RECEIPT'}</div>
+            <div class="center receipt-title">${fiscalReady ? 'FISCAL RECEIPT' : 'SALES RECEIPT'}</div>
           </main>
           <script>
             window.addEventListener('load', () => {
