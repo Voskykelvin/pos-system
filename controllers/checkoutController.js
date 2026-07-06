@@ -16,6 +16,7 @@ const { generateOrderNumber } = require('../utils/orderNumber');
 const { buildEtimsPayload } = require('../utils/etimsPayload');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
+const logger = require('../utils/logger');
 const { sendReceipt } = require('../services/smsService');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
@@ -141,6 +142,14 @@ async function checkout(req, res) {
     redeemPoints = 0  // optional loyalty points to redeem
   } = req.body;
   const cashierId = req.user?.id || bodyCashierId;
+
+  logger.info('Audit Payload: Checkout request received', {
+    requestId: req.id,
+    cashierId,
+    customerId: customerId || null,
+    itemsCount: items?.length || 0,
+    paymentMethods: payments?.map((p) => p.method) || []
+  });
 
   if (!cashierId) {
     return res.status(400).json({ error: 'cashierId is required' });
@@ -478,6 +487,14 @@ async function checkout(req, res) {
       Promotion.increment('usedCount', { where: { id: appliedPromotion.id } }).catch(() => {});
     }
 
+    logger.info('Audit Payload: Checkout order created successfully', {
+      requestId: req.id,
+      orderId: order.id,
+      orderNumber: order.orderNumber,
+      total: order.total,
+      paymentStatus: order.paymentStatus
+    });
+
     return res.status(201).json({
       orderId: order.id,
       orderNumber: order.orderNumber,
@@ -496,6 +513,10 @@ async function checkout(req, res) {
     });
   } catch (err) {
     await t.rollback();
+    logger.error('Audit Payload: Checkout failed', err, {
+      requestId: req.id,
+      cashierId
+    });
     return res.status(err.status || 400).json({ error: err.message });
   }
 }

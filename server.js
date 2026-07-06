@@ -1,5 +1,6 @@
 require('dotenv').config();
 const fs = require('fs');
+const logger = require('./utils/logger');
 const path = require('path');
 const express = require('express');
 const helmet = require('helmet');
@@ -34,8 +35,15 @@ const { tenantApiLimiter } = require('./middleware/tenantRateLimit');
 const tenantRoutes = require('./routes/tenants');
 const billingRoutes = require('./routes/billing');
 
+const compression = require('compression');
+const { requestIdMiddleware } = require('./middleware/requestId');
+const { responseTimeMiddleware } = require('./middleware/responseTime');
+
 const app = express();
 
+app.use(requestIdMiddleware);
+app.use(responseTimeMiddleware);
+app.use(compression());
 app.disable('x-powered-by');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -46,10 +54,10 @@ app.use(helmet({
     directives: {
       defaultSrc: ["'self'"],
       scriptSrc:  ["'self'", "'unsafe-inline'"], // Vite injects inline scripts in dev
-      styleSrc:   ["'self'", "'unsafe-inline'"],
+      styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc:     ["'self'", 'data:'],
       connectSrc: ["'self'"],
-      fontSrc:    ["'self'", 'data:']
+      fontSrc:    ["'self'", "https://fonts.gstatic.com", 'data:']
     }
   },
   crossOriginEmbedderPolicy: false // required when serving Vite on same origin
@@ -73,10 +81,37 @@ const apiLimiter = rateLimit({
   legacyHeaders:    false,
   message:          { error: 'Too many requests. Slow down.' }
 });
-app.get('/api/health', (req, res) => {
-  res.json({
-    ok: true,
-    database: isUsingMemoryDatabase() ? 'memory' : 'postgres',
+app.get('/api/health', async (req, res) => {
+  const start = process.hrtime();
+  let dbOk = false;
+  let dbLatencyMs = null;
+
+  try {
+    await sequelize.authenticate();
+    const diff = process.hrtime(start);
+    dbLatencyMs = Number((diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2));
+    dbOk = true;
+  } catch (err) {
+    logger.error('Health check database check failed', err);
+  }
+
+  const memory = process.memoryUsage();
+
+  res.status(dbOk ? 200 : 500).json({
+    ok: dbOk,
+    database: {
+      status: dbOk ? 'healthy' : 'unhealthy',
+      type: isUsingMemoryDatabase() ? 'memory' : 'postgres',
+      latencyMs: dbLatencyMs
+    },
+    system: {
+      uptimeSeconds: Math.floor(process.uptime()),
+      memoryUsageMb: {
+        rss: Math.round(memory.rss / 1024 / 1024),
+        heapTotal: Math.round(memory.heapTotal / 1024 / 1024),
+        heapUsed: Math.round(memory.heapUsed / 1024 / 1024)
+      }
+    },
     timestamp: new Date().toISOString()
   });
 });
@@ -86,6 +121,15 @@ app.get('/api/site-map', (req, res) => {
 });
 
 app.get('/api/bootstrap', authenticate, async (req, res) => {
+  if (req.tenant) {
+    const { isExpired } = require('./services/subscriptionBilling');
+    if (req.tenant.status === 'active' && isExpired(req.tenant)) {
+      const { Tenant } = require('./models');
+      await Tenant.update({ status: 'past_due' }, { where: { id: req.tenant.id } }).catch(() => {});
+      req.tenant.status = 'past_due';
+    }
+  }
+
   const tenantPlan = req.tenant?.plan ? getPlan(req.tenant.plan) : null;
   const billingStatus = resolveBillingStatus(req.tenant);
   res.json({
@@ -134,15 +178,32 @@ if (fs.existsSync(indexPath)) {
   app.get('*', (req, res) => {
     res.sendFile(indexPath);
   });
+} else {
+  // No built frontend -- return 404 for non-API requests so the error is
+  // clear during development when running only the API server.
+  app.use((req, res) => {
+    res.status(404).json({ error: 'Route not found' });
+  });
 }
 
-app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found' });
-});
-
+// eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
-  console.error('Unhandled error:', err);
-  res.status(err.status || 500).json({
+  logger.error('Unhandled error', err);
+  
+  // Only trigger webhook alerts for internal server errors (500+)
+  const status = err.status || 500;
+  if (status >= 500) {
+    const { sendErrorAlert } = require('./services/alertService');
+    sendErrorAlert(err, {
+      requestId: req.id,
+      method: req.method,
+      url: req.originalUrl || req.url,
+      userId: req.userId || null,
+      tenantId: req.tenantId || null
+    }).catch(() => {});
+  }
+
+  res.status(status).json({
     error: err.message || 'Internal server error'
   });
 });
@@ -152,7 +213,7 @@ const HOST = process.env.HOST || '0.0.0.0';
 
 async function start({ port = PORT, host = HOST } = {}) {
   await sequelize.authenticate();
-  console.log(`Database connection established (${isUsingMemoryDatabase() ? 'memory demo' : 'postgres'})`);
+  logger.info(`Database connection established (${isUsingMemoryDatabase() ? 'memory demo' : 'postgres'})`);
 
   if (isUsingMemoryDatabase()) {
     try {
@@ -160,7 +221,7 @@ async function start({ port = PORT, host = HOST } = {}) {
     } catch { /* ignore drop errors */ }
     await sequelize.sync({ force: true });
     await seedDemoData();
-    console.log('Demo data loaded');
+    logger.info('Demo data loaded');
   } else if (process.env.DB_SYNC === 'true') {
     // Run pending SQL migrations instead of the unsafe alter:true sync.
     // This preserves existing data and applies only incremental changes.
@@ -168,7 +229,7 @@ async function start({ port = PORT, host = HOST } = {}) {
     await runMigrations(sequelize);
     if (process.env.SEED_DEMO_DATA === 'true') {
       await seedDemoData();
-      console.log('Demo data loaded into configured database');
+      logger.info('Demo data loaded into configured database');
     }
   }
 
@@ -182,7 +243,7 @@ async function start({ port = PORT, host = HOST } = {}) {
     const server = app.listen(port, host, () => {
       const address = server.address();
       const actualPort = typeof address === 'object' && address ? address.port : port;
-      console.log(`Jijenge POS listening on port ${actualPort}`);
+      logger.info(`Jijenge POS listening on port ${actualPort}`);
       resolve(server);
     });
     server.on('error', reject);
@@ -191,7 +252,7 @@ async function start({ port = PORT, host = HOST } = {}) {
 
 if (require.main === module) {
   start().catch((err) => {
-    console.error('Failed to start Jijenge POS:', err);
+    logger.error('Failed to start Jijenge POS', err);
     process.exit(1);
   });
 }

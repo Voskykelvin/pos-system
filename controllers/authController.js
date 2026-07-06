@@ -4,6 +4,8 @@ const { createAuthToken } = require('../utils/authToken');
 const { verifyPassword } = require('../utils/passwords');
 const { getPlan } = require('../utils/planCatalog');
 const { isExpired, resolveBillingStatus } = require('../services/subscriptionBilling');
+const { logAudit } = require('../services/auditLogger');
+const logger = require('../utils/logger');
 
 function publicUser(user) {
   return {
@@ -38,6 +40,20 @@ async function login(req, res) {
     });
 
     if (!user || !verifyPassword(password, user.passwordHash)) {
+      logAudit({
+        req,
+        action: 'auth.login_failed',
+        entityType: 'user',
+        entityId: null,
+        metadata: { identifier: trimmed }
+      }).catch(() => {});
+      
+      logger.warn('Audit Payload: Login failed', {
+        requestId: req.id,
+        identifier: trimmed,
+        reason: 'invalid_credentials'
+      });
+
       return res.status(401).json({ error: 'Invalid login details' });
     }
     if (user.Tenant?.status === 'active' && isExpired(user.Tenant)) {
@@ -47,6 +63,22 @@ async function login(req, res) {
 
     const tenantPlan = user.Tenant?.plan ? getPlan(user.Tenant.plan) : null;
     const billingStatus = resolveBillingStatus(user.Tenant);
+
+    logAudit({
+      req,
+      userId: user.id,
+      action: 'auth.login',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: { role: user.role, tenantId: user.tenantId || null }
+    }).catch(() => {});
+
+    logger.info('Audit Payload: Login successful', {
+      requestId: req.id,
+      userId: user.id,
+      role: user.role,
+      tenantId: user.tenantId || null
+    });
 
     return res.json({
       token: createAuthToken(user),

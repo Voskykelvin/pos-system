@@ -38,4 +38,18 @@ async function search(req, res) {
   }
 }
 
-module.exports = { search };
+// GET /api/products
+async function list(req, res) {
+  try {
+    const products = await Product.findAll({
+      where: tenantWhere(req, { isActive: true }),
+      include: [{ model: Category, attributes: ['id', 'name', 'taxCategory'] }],
+      order: [['name', 'ASC']]
+    });
+    res.json(products);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { list, search };

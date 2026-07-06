@@ -10,6 +10,7 @@ const {
   publicPayment,
   sanitizePaymentSubmission
 } = require('../services/subscriptionBilling');
+const { logAudit } = require('../services/auditLogger');
 
 const PAYMENT_METHODS = ['mpesa_manual', 'till_manual', 'paybill_manual', 'bank_transfer', 'card_gateway', 'other'];
 
@@ -230,6 +231,21 @@ async function confirmSubscriptionPayment(req, res) {
 
     await t.commit();
 
+    logAudit({
+      req,
+      action: 'billing.payment_confirmed',
+      entityType: 'subscription_payment',
+      entityId: payment.id,
+      metadata: {
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        plan: payment.plan,
+        amount: Number(payment.amount),
+        periodStart,
+        periodEnd
+      }
+    }).catch(() => {});
+
     return res.json({
       message: 'Subscription payment confirmed.',
       paymentId: payment.id,
@@ -295,6 +311,19 @@ async function rejectSubscriptionPayment(req, res) {
     }, { transaction: t });
 
     await t.commit();
+
+    logAudit({
+      req,
+      action: 'billing.payment_rejected',
+      entityType: 'subscription_payment',
+      entityId: payment.id,
+      metadata: {
+        tenantId: tenant.id,
+        tenantName: tenant.name,
+        reference: payment.reference,
+        adminNotes
+      }
+    }).catch(() => {});
 
     return res.json({
       message: 'Subscription payment rejected.',

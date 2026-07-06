@@ -127,3 +127,7 @@ The recommended Kenya rollout is manual M-Pesa first, then Till/PayBill, then Da
 - [docs/SUBSCRIPTION_BILLING_MVP.md](docs/SUBSCRIPTION_BILLING_MVP.md) - Subscription billing product decision and rollout notes
 - [docs/SITE_MAP.md](docs/SITE_MAP.md) - Screens and API map
 - [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md) - Security Audit & Hardening Notes
+- [docs/IMPROVEMENT_SUMMARY.md](docs/IMPROVEMENT_SUMMARY.md) - Summary of completed project improvements and future roadmap
+- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deployment Guide & Environment Variables
+- [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) - M-Pesa, eTIMS, & Subscription Billing Integration Guide
+- [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) - Main API Request & Response Schemas Guide

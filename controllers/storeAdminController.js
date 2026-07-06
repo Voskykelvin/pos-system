@@ -4,6 +4,7 @@ const { Op } = require('sequelize');
 const { Branch, Tenant, User } = require('../models');
 const { hashPassword } = require('../utils/passwords');
 const { getPlan, getPlanLimit } = require('../utils/planCatalog');
+const { logAudit } = require('../services/auditLogger');
 
 const STAFF_ROLES = new Set(['admin', 'manager', 'cashier']);
 
@@ -246,6 +247,14 @@ async function createBranch(req, res) {
       isActive: willBeActive
     });
 
+    logAudit({
+      req,
+      action: 'branch.create',
+      entityType: 'branch',
+      entityId: branch.id,
+      metadata: { name: branch.name }
+    }).catch(() => {});
+
     return res.status(201).json(publicBranch(branch));
   } catch (err) {
     return res.status(400).json({ error: err.message });
@@ -274,6 +283,15 @@ async function updateBranch(req, res) {
     }
 
     await branch.update(updates);
+
+    logAudit({
+      req,
+      action: 'branch.update',
+      entityType: 'branch',
+      entityId: branch.id,
+      metadata: { name: branch.name, updates: Object.keys(updates) }
+    }).catch(() => {});
+
     return res.json(publicBranch(branch));
   } catch (err) {
     return res.status(400).json({ error: err.message });
@@ -327,6 +345,14 @@ async function createStaff(req, res) {
       isActive: true
     });
 
+    logAudit({
+      req,
+      action: 'staff.create',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: { name: user.name, role: user.role }
+    }).catch(() => {});
+
     return res.status(201).json(publicStaff(user));
   } catch (err) {
     return res.status(err.status || 400).json({ error: err.message });
@@ -371,6 +397,15 @@ async function updateStaff(req, res) {
     const refreshed = await User.findByPk(user.id, {
       include: [{ model: Branch, attributes: ['id', 'name', 'code', 'isActive'] }]
     });
+
+    logAudit({
+      req,
+      action: 'staff.update',
+      entityType: 'user',
+      entityId: user.id,
+      metadata: { name: user.name, updates: Object.keys(updates) }
+    }).catch(() => {});
+
     return res.json(publicStaff(refreshed));
   } catch (err) {
     return res.status(err.status || 400).json({ error: err.message });
@@ -446,6 +481,15 @@ async function updateSettings(req, res) {
     if (settings.business.country) updates.country = settings.business.country.toUpperCase();
 
     await tenant.update(updates);
+
+    logAudit({
+      req,
+      action: 'settings.update',
+      entityType: 'tenant',
+      entityId: tenant.id,
+      metadata: { sections: Object.keys(req.body || {}) }
+    }).catch(() => {});
+
     return res.json(publicTenant(tenant));
   } catch (err) {
     return res.status(400).json({ error: err.message });

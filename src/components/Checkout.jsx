@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
 import styles from './Checkout.module.css';
-import { addOrderToQueue, getCachedCatalog, cacheCatalog } from '../utils/offlineQueue';
+import { addOrderToQueue, getCachedCatalog, cacheCatalog, registerBackgroundSync } from '../utils/offlineQueue';
 import {
   createHeldSaleSnapshot,
   formatHeldSaleAge,
@@ -554,6 +554,26 @@ export default function Checkout({ authToken, cashierId, user }) {
     saveHeldSales(user, heldSales);
   }, [heldSales, user?.id, user?.tenantId]);
 
+  useEffect(() => {
+    async function hydrateCatalog() {
+      if (!navigator.onLine) return;
+      try {
+        const res = await fetch('/api/products', {
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+        if (res.ok) {
+          const products = await res.json();
+          if (Array.isArray(products) && products.length > 0) {
+            await cacheCatalog(products);
+          }
+        }
+      } catch (err) {
+        // Fallback silently if offline/error during startup
+      }
+    }
+    hydrateCatalog();
+  }, [authToken]);
+
   const addToCart = useCallback((product) => {
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
@@ -900,6 +920,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       }
       try {
         await addOrderToQueue({ ...orderPayload, idempotencyKey: checkoutIdempotencyKey });
+        registerBackgroundSync(authToken).catch(() => {});
         setOrderStatus('paid');
         setLastReceipt({
           orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4),

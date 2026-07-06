@@ -5,7 +5,7 @@ const { VitePWA } = require('vite-plugin-pwa');
 module.exports = defineConfig({
   build: {
     sourcemap: false,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -18,6 +18,12 @@ module.exports = defineConfig({
             normalizedId.includes('/node_modules/scheduler/')
           ) {
             return 'vendor-react';
+          }
+          if (
+            normalizedId.includes('/node_modules/axios/') ||
+            normalizedId.includes('/node_modules/idb/')
+          ) {
+            return 'vendor-utils';
           }
           return undefined;
         }
@@ -52,6 +58,7 @@ module.exports = defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        importScripts: ['/sw-sync.js'],
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

@@ -2,6 +2,7 @@
 
 const { User } = require('../models');
 const { hashPassword } = require('../utils/passwords');
+const logger = require('../utils/logger');
 
 async function bootstrapSuperAdmin() {
   const email = process.env.SUPER_ADMIN_EMAIL;
@@ -24,7 +25,7 @@ async function bootstrapSuperAdmin() {
       tenantId: null,
       isActive: true
     });
-    console.log(`Super admin bootstrap updated ${normalizedEmail}`);
+    logger.info(`Super admin bootstrap updated ${normalizedEmail}`, { email: normalizedEmail });
     return;
   }
 
@@ -37,7 +38,7 @@ async function bootstrapSuperAdmin() {
     isActive: true
   });
 
-  console.log(`Super admin bootstrap created ${normalizedEmail}`);
+  logger.info(`Super admin bootstrap created ${normalizedEmail}`, { email: normalizedEmail });
 }
 
 module.exports = { bootstrapSuperAdmin };

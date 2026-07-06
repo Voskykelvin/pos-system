@@ -259,6 +259,123 @@ const schemas = {
     startsAt:      { type: 'string', required: false, maxLength: 50 },
     expiresAt:     { type: 'string', required: false, maxLength: 50 },
     isActive:      { type: 'boolean', required: false }
+  },
+
+  // -- Store admin schemas ---------------------------------------------------
+
+  createBranch: {
+    name:     { type: 'string', minLength: 1, maxLength: 255 },
+    code:     { type: 'string', required: false, maxLength: 50 },
+    phone:    { type: 'string', required: false, maxLength: 50 },
+    address:  { type: 'string', required: false, maxLength: 255 },
+    city:     { type: 'string', required: false, maxLength: 100 },
+    isActive: { type: 'boolean', required: false }
+  },
+
+  updateBranch: {
+    name:     { type: 'string', required: false, minLength: 1, maxLength: 255 },
+    code:     { type: 'string', required: false, maxLength: 50 },
+    phone:    { type: 'string', required: false, maxLength: 50 },
+    address:  { type: 'string', required: false, maxLength: 255 },
+    city:     { type: 'string', required: false, maxLength: 100 },
+    isActive: { type: 'boolean', required: false }
+  },
+
+  createStaff: {
+    name:     { type: 'string', minLength: 1, maxLength: 255 },
+    email:    { type: 'string', required: false, maxLength: 255 },
+    phone:    { type: 'string', required: false, maxLength: 50 },
+    role:     { type: 'string', required: false, enumValues: ['admin', 'manager', 'cashier'] },
+    password: { type: 'string', minLength: 1, maxLength: 1024 },
+    branchId: { type: 'string', required: false, maxLength: 255 }
+  },
+
+  updateStaff: {
+    name:     { type: 'string', required: false, minLength: 1, maxLength: 255 },
+    email:    { type: 'string', required: false, maxLength: 255 },
+    phone:    { type: 'string', required: false, maxLength: 50 },
+    role:     { type: 'string', required: false, enumValues: ['admin', 'manager', 'cashier'] },
+    password: { type: 'string', required: false, minLength: 1, maxLength: 1024 },
+    branchId: { type: 'string', required: false, maxLength: 255 },
+    isActive: { type: 'boolean', required: false }
+  },
+
+  // -- Tenant schemas --------------------------------------------------------
+
+  signup: {
+    businessName: { type: 'string', minLength: 1, maxLength: 255 },
+    email:        { type: 'string', minLength: 1, maxLength: 255 },
+    password:     { type: 'string', minLength: 6, maxLength: 1024 },
+    currency:     { type: 'string', required: false, maxLength: 10 },
+    country:      { type: 'string', required: false, maxLength: 10 },
+    plan:         { type: 'string', required: false, enumValues: ['starter', 'growth', 'enterprise'] }
+  },
+
+  updateTenant: {
+    status:   { type: 'string', required: false, enumValues: ['pending_payment', 'active', 'past_due', 'suspended'] },
+    plan:     { type: 'string', required: false, enumValues: ['starter', 'growth', 'enterprise'] },
+    currency: { type: 'string', required: false, maxLength: 10 },
+    settings: { type: 'object', required: false }
+  },
+
+  // -- Billing schemas -------------------------------------------------------
+
+  submitPayment: {
+    method:    { type: 'string', enumValues: ['mpesa_manual', 'till_manual', 'paybill_manual', 'bank_transfer', 'card_gateway', 'other'] },
+    reference: { type: 'string', minLength: 4, maxLength: 255 },
+    payerName:  { type: 'string', required: false, maxLength: 255 },
+    payerPhone: { type: 'string', required: false, maxLength: 30 },
+    notes:      { type: 'string', required: false, maxLength: 500 }
+  },
+
+  // -- Supplier schemas ------------------------------------------------------
+
+  createSupplier: {
+    name:          { type: 'string', minLength: 1, maxLength: 255 },
+    email:         { type: 'string', required: false, maxLength: 255 },
+    phone:         { type: 'string', required: false, maxLength: 50 },
+    address:       { type: 'string', required: false, maxLength: 500 },
+    contactPerson: { type: 'string', required: false, maxLength: 255 },
+    kraPin:        { type: 'string', required: false, maxLength: 50 }
+  },
+
+  updateSupplier: {
+    name:          { type: 'string', required: false, minLength: 1, maxLength: 255 },
+    email:         { type: 'string', required: false, maxLength: 255 },
+    phone:         { type: 'string', required: false, maxLength: 50 },
+    address:       { type: 'string', required: false, maxLength: 500 },
+    contactPerson: { type: 'string', required: false, maxLength: 255 },
+    kraPin:        { type: 'string', required: false, maxLength: 50 },
+    isActive:      { type: 'boolean', required: false }
+  },
+
+  // -- Purchase order schemas ------------------------------------------------
+
+  createPurchaseOrder: {
+    supplierId: { type: 'string', minLength: 1 },
+    expectedDelivery: { type: 'string', required: false, maxLength: 50 },
+    notes: { type: 'string', required: false, maxLength: 500 },
+    items: {
+      type: 'array',
+      nonEmpty: true,
+      items: {
+        productId:      { type: 'string', minLength: 1 },
+        orderedQuantity: { type: 'number', min: 0.001 },
+        unitCostPrice:   { type: 'number', min: 0 }
+      }
+    }
+  },
+
+  receivePurchaseOrder: {
+    items: {
+      type: 'array',
+      nonEmpty: true,
+      items: {
+        itemId:           { type: 'string', minLength: 1 },
+        receivedQuantity: { type: 'number', min: 0 },
+        unitCostPrice:    { type: 'number', required: false, min: 0 }
+      }
+    }
   }
 };
 

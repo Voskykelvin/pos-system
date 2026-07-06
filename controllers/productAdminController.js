@@ -28,13 +28,36 @@ async function assertUniqueProductIdentity(req, { sku, barcode, excludeId = null
   throw Object.assign(new Error('A product with that barcode already exists in this store'), { status: 409 });
 }
 
-// GET /api/admin/products?includeInactive=true
+// GET /api/admin/products?includeInactive=true&page=1&limit=50
 async function list(req, res) {
   try {
     const where = tenantWhere(req, req.query.includeInactive === 'true' ? {} : { isActive: true });
+
+    if (req.query.page || req.query.limit) {
+      const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+      const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 50));
+      const offset = (page - 1) * limit;
+
+      const { rows, count } = await Product.findAndCountAll({
+        where,
+        include: [{ model: Category, attributes: ['id', 'name', 'taxCategory'] }],
+        order: [['name', 'ASC']],
+        limit,
+        offset
+      });
+
+      return res.json({
+        items: rows,
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil(count / limit)
+      });
+    }
+
     const products = await Product.findAll({
       where,
-      include: [{ model: Category }],
+      include: [{ model: Category, attributes: ['id', 'name', 'taxCategory'] }],
       order: [['name', 'ASC']]
     });
     res.json(products);

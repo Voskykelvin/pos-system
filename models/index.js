@@ -59,6 +59,12 @@ function createSequelize() {
       ssl: process.env.DB_SSL === 'true'
         ? { require: true, rejectUnauthorized: false }
         : false
+    },
+    pool: {
+      max: Number(process.env.DB_POOL_MAX || 10),
+      min: Number(process.env.DB_POOL_MIN || 2),
+      acquire: Number(process.env.DB_POOL_ACQUIRE || 30000),
+      idle: Number(process.env.DB_POOL_IDLE || 10000)
     }
   });
 }

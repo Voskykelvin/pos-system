@@ -1,16 +1,17 @@
-import { useEffect, useMemo, useState } from 'react';
-import Checkout from './components/Checkout.jsx';
-import ProductAdmin from './components/ProductAdmin.jsx';
-import Dashboard from './components/Dashboard.jsx';
-import Analytics from './components/Analytics.jsx';
-import Login from './components/Login.jsx';
-import Operations from './components/Operations.jsx';
-import CustomerAdmin from './components/CustomerAdmin.jsx';
-import Signup from './components/Signup.jsx';
-import SuperAdmin from './components/SuperAdmin.jsx';
-import Homepage from './components/Homepage.jsx';
-import StoreAdmin from './components/StoreAdmin.jsx';
-import Billing from './components/Billing.jsx';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
+const Checkout = lazy(() => import('./components/Checkout.jsx'));
+const ProductAdmin = lazy(() => import('./components/ProductAdmin.jsx'));
+const Dashboard = lazy(() => import('./components/Dashboard.jsx'));
+const Analytics = lazy(() => import('./components/Analytics.jsx'));
+const Login = lazy(() => import('./components/Login.jsx'));
+const Operations = lazy(() => import('./components/Operations.jsx'));
+const CustomerAdmin = lazy(() => import('./components/CustomerAdmin.jsx'));
+const Signup = lazy(() => import('./components/Signup.jsx'));
+const SuperAdmin = lazy(() => import('./components/SuperAdmin.jsx'));
+const Homepage = lazy(() => import('./components/Homepage.jsx'));
+const StoreAdmin = lazy(() => import('./components/StoreAdmin.jsx'));
+const Billing = lazy(() => import('./components/Billing.jsx'));
+import ErrorBoundary from './components/ErrorBoundary.jsx';
 import styles from './App.module.css';
 import { syncOfflineOrders } from './utils/offlineQueue';
 import {
@@ -92,6 +93,16 @@ export default function App() {
     user: null,
     tenant: null
   });
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
 
   useEffect(() => {
     async function loadBootstrap() {
@@ -241,92 +252,102 @@ export default function App() {
 
   if (authMode === 'signup' && !authToken) {
     return (
-      <Signup
-        initialPlan={signupPlan}
-        onSignupSuccess={(token, user, tenant) => {
-          localStorage.setItem('pos_auth_token', token);
-          setAuthReady(false);
-          setAuthToken(token);
-          setAuthMode(null);
-          setBootstrap((current) => ({
-            ...current,
-            userId: user?.id || null,
-            cashierId: user?.id || null,
-            user: user || null,
-            tenant: tenant || null
-          }));
-          setView(tenant?.status === 'active' ? 'store_admin' : 'billing');
-          window.history.replaceState({}, '', tenant?.status === 'active' ? '/store' : '/billing');
-        }}
-        onNavigateLogin={() => {
-          goToLogin();
-        }}
-        onNavigateHome={() => {
-          goToMasterHomepage();
-        }}
-      />
+      <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+        <Signup
+          initialPlan={signupPlan}
+          onSignupSuccess={(token, user, tenant) => {
+            localStorage.setItem('pos_auth_token', token);
+            setAuthReady(false);
+            setAuthToken(token);
+            setAuthMode(null);
+            setBootstrap((current) => ({
+              ...current,
+              userId: user?.id || null,
+              cashierId: user?.id || null,
+              user: user || null,
+              tenant: tenant || null
+            }));
+            setView(tenant?.status === 'active' ? 'store_admin' : 'billing');
+            window.history.replaceState({}, '', tenant?.status === 'active' ? '/store' : '/billing');
+          }}
+          onNavigateLogin={() => {
+            goToLogin();
+          }}
+          onNavigateHome={() => {
+            goToMasterHomepage();
+          }}
+        />
+      </Suspense>
     );
   }
 
   if ((authMode === 'login' || requestedProtectedLogin) && !authToken) {
     return (
-      <Login
-        onLogin={(payload) => {
-          const token = typeof payload === 'string' ? payload : payload.token;
-          localStorage.setItem('pos_auth_token', token);
-          setAuthToken(token);
-          setAuthMode(null);
-          if (payload.user) {
-            const landing = landingForUser(payload.user, payload.tenant);
-            setBootstrap({
-              userId: payload.user.id,
-              cashierId: payload.user.id,
-              user: payload.user,
-              tenant: payload.tenant || null
-            });
-            setView(landing.id);
-            window.history.replaceState({}, '', landing.path);
-          } else {
-            window.history.replaceState({}, '', '/');
-          }
-        }}
-        onNavigateHome={goToMasterHomepage}
-      />
+      <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+        <Login
+          onLogin={(payload) => {
+            const token = typeof payload === 'string' ? payload : payload.token;
+            localStorage.setItem('pos_auth_token', token);
+            setAuthToken(token);
+            setAuthMode(null);
+            if (payload.user) {
+              const landing = landingForUser(payload.user, payload.tenant);
+              setBootstrap({
+                userId: payload.user.id,
+                cashierId: payload.user.id,
+                user: payload.user,
+                tenant: payload.tenant || null
+              });
+              setView(landing.id);
+              window.history.replaceState({}, '', landing.path);
+            } else {
+              window.history.replaceState({}, '', '/');
+            }
+          }}
+          onNavigateHome={goToMasterHomepage}
+        />
+      </Suspense>
     );
   }
 
   if (!authToken) {
     return (
-      <Homepage
-        onNavigateLogin={goToLogin}
-        onNavigateSignup={goToSignup}
-      />
+      <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+        <Homepage
+          onNavigateLogin={goToLogin}
+          onNavigateSignup={goToSignup}
+        />
+      </Suspense>
     );
   }
 
   if (view === 'billing') {
     return (
-      <Billing
-        authToken={authToken}
-        onLogout={handleLogout}
-        onContinue={() => {
-          setAuthReady(false);
-          setBootstrapRefresh((current) => current + 1);
-          setView('store_admin');
-          window.history.replaceState({}, '', '/store');
-        }}
-      />
+      <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+        <Billing
+          authToken={authToken}
+          onLogout={handleLogout}
+          onContinue={() => {
+            setAuthReady(false);
+            setBootstrapRefresh((current) => current + 1);
+            setView('store_admin');
+            window.history.replaceState({}, '', '/store');
+          }}
+        />
+      </Suspense>
     );
   }
 
   if (view === 'home') {
     return (
-      <Homepage
-        isAuthenticated
-        accountActionLabel="Back to workspace"
-        onNavigateLogin={goToAppLanding}
-        onNavigateSignup={goToAppLanding}
-      />
+      <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+        <Homepage
+          isAuthenticated
+          accountActionLabel="Back to workspace"
+          onNavigateLogin={goToAppLanding}
+          onNavigateSignup={goToAppLanding}
+        />
+      </Suspense>
     );
   }
 
@@ -354,6 +375,23 @@ export default function App() {
           ))}
         </nav>
 
+        {installPrompt && (
+          <button
+            type="button"
+            className={styles.installBtn}
+            onClick={async () => {
+              if (!installPrompt) return;
+              installPrompt.prompt();
+              const { outcome } = await installPrompt.userChoice;
+              if (outcome === 'accepted') {
+                setInstallPrompt(null);
+              }
+            }}
+          >
+            Install Desktop App
+          </button>
+        )}
+
         <div className={styles.statusBox}>
           <div className={styles.statusLabel}>{bootstrap.user.role}</div>
           <div className={styles.statusValue}>{bootstrap.user.name}</div>
@@ -370,32 +408,36 @@ export default function App() {
       </aside>
 
       <main className={styles.main}>
-        {view === 'store_admin' && allowedIds.includes('store_admin') && (
-          <StoreAdmin
-            authToken={authToken}
-            user={bootstrap.user}
-            onOpenBilling={() => navigate({ id: 'billing', path: '/billing' })}
-          />
-        )}
-        {view === 'dashboard' && <Dashboard authToken={authToken} />}
-        {view === 'checkout' && (
-          <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
-        )}
-        {view === 'inventory' && allowedIds.includes('inventory') && (
-          <ProductAdmin authToken={authToken} userId={bootstrap.userId} tenant={bootstrap.tenant} />
-        )}
-        {view === 'analytics' && allowedIds.includes('analytics') && (
-          <Analytics authToken={authToken} />
-        )}
-        {view === 'operations' && allowedIds.includes('operations') && (
-          <Operations authToken={authToken} user={bootstrap.user} />
-        )}
-        {view === 'customers' && allowedIds.includes('customers') && (
-          <CustomerAdmin authToken={authToken} user={bootstrap.user} />
-        )}
-        {view === 'saas_owner' && allowedIds.includes('saas_owner') && (
-          <SuperAdmin authToken={authToken} />
-        )}
+        <ErrorBoundary>
+          <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
+            {view === 'store_admin' && allowedIds.includes('store_admin') && (
+              <StoreAdmin
+                authToken={authToken}
+                user={bootstrap.user}
+                onOpenBilling={() => navigate({ id: 'billing', path: '/billing' })}
+              />
+            )}
+            {view === 'dashboard' && <Dashboard authToken={authToken} />}
+            {view === 'checkout' && (
+              <Checkout authToken={authToken} cashierId={bootstrap.cashierId} user={bootstrap.user} />
+            )}
+            {view === 'inventory' && allowedIds.includes('inventory') && (
+              <ProductAdmin authToken={authToken} userId={bootstrap.userId} tenant={bootstrap.tenant} />
+            )}
+            {view === 'analytics' && allowedIds.includes('analytics') && (
+              <Analytics authToken={authToken} />
+            )}
+            {view === 'operations' && allowedIds.includes('operations') && (
+              <Operations authToken={authToken} user={bootstrap.user} />
+            )}
+            {view === 'customers' && allowedIds.includes('customers') && (
+              <CustomerAdmin authToken={authToken} user={bootstrap.user} />
+            )}
+            {view === 'saas_owner' && allowedIds.includes('saas_owner') && (
+              <SuperAdmin authToken={authToken} />
+            )}
+          </Suspense>
+        </ErrorBoundary>
       </main>
     </div>
   );

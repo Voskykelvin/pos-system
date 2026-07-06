@@ -1,0 +1,106 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  padding: 40px 24px;
+  text-align: center;
+  background: var(--pos-surface);
+  border: 1px solid var(--pos-line);
+  border-radius: 12px;
+  margin: 24px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background: var(--pos-danger-bg);
+  color: var(--pos-danger);
+  display: grid;
+  place-items: center;
+  font-size: 32px;
+  font-weight: bold;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--pos-ink);
+  margin: 0 0 12px 0;
+}
+
+.message {
+  font-size: 16px;
+  color: var(--pos-ink-soft);
+  max-width: 480px;
+  margin: 0 0 24px 0;
+  line-height: 1.5;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+}
+
+.primaryBtn {
+  background: var(--pos-accent);
+  color: #ffffff;
+  border: 0;
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.primaryBtn:hover {
+  background: var(--pos-accent-dark);
+}
+
+.secondaryBtn {
+  background: var(--pos-panel);
+  color: var(--pos-ink-mid);
+  border: 1px solid var(--pos-line-strong);
+  padding: 10px 20px;
+  border-radius: 6px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.secondaryBtn:hover {
+  background: var(--pos-panel-strong);
+}
+
+.details {
+  margin-top: 32px;
+  text-align: left;
+  max-width: 600px;
+  width: 100%;
+}
+
+.detailsSummary {
+  font-size: 14px;
+  color: var(--pos-ink-soft);
+  cursor: pointer;
+  user-select: none;
+  font-weight: 600;
+}
+
+.detailsContent {
+  margin-top: 12px;
+  padding: 16px;
+  background: #0f172a;
+  color: #f8fafc;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  max-height: 200px;
+}

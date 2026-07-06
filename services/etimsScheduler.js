@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { processQueue } = require('./etimsSyncWorker');
+const logger = require('../utils/logger');
 
 let isRunning = false;
 
@@ -13,18 +14,19 @@ function startEtimsScheduler() {
     try {
       const results = await processQueue();
       if (results.transmitted || results.failed) {
-        console.log(
-          `eTIMS sync: ${results.transmitted} transmitted, ${results.failed} failed, ${results.skipped} still queued`
+        logger.info(
+          `eTIMS sync: ${results.transmitted} transmitted, ${results.failed} failed, ${results.skipped} still queued`,
+          results
         );
       }
     } catch (err) {
-      console.error('eTIMS scheduler error:', err.message);
+      logger.error('eTIMS scheduler error', err);
     } finally {
       isRunning = false;
     }
   });
 
-  console.log('eTIMS sync scheduler started (runs every minute)');
+  logger.info('eTIMS sync scheduler started (runs every minute)');
 }
 
 module.exports = { startEtimsScheduler };

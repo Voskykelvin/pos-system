@@ -38,17 +38,22 @@ async function searchOrders(req, res) {
   }
 
   try {
-    const orders = await Order.findAll({
+    const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 30));
+    const offset = (page - 1) * limit;
+
+    const { rows, count } = await Order.findAndCountAll({
       where: tenantWhere(req, where),
       include: [
-        { model: Payment },
+        { model: Payment, attributes: ['id', 'method', 'amount', 'status', 'mpesaReceiptNumber', 'mpesaPhone'] },
         { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] }
       ],
       order: [['createdAt', 'DESC']],
-      limit: 30
+      limit,
+      offset
     });
 
-    res.json(orders.map((order) => ({
+    const mapped = rows.map((order) => ({
       id: order.id,
       orderNumber: order.orderNumber,
       total: Number(order.total),
@@ -57,7 +62,19 @@ async function searchOrders(req, res) {
       cashier: order.cashier?.name || null,
       createdAt: order.createdAt,
       payments: order.Payments.map(mapPayment)
-    })));
+    }));
+
+    if (req.query.page || req.query.limit) {
+      return res.json({
+        items: mapped,
+        total: count,
+        page,
+        limit,
+        pages: Math.ceil(count / limit)
+      });
+    }
+
+    res.json(mapped);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
