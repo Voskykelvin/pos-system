@@ -56,6 +56,7 @@ async function resolveTenantConfig(tenantOrId) {
       callbackUrl: configValue(mpesa, 'callbackUrl', 'MPESA_CALLBACK_URL', null)
     },
     etims: {
+      status: configValue(etims, 'status', 'ETIMS_STATUS', 'not_configured'),
       env: configValue(etims, 'env', 'ETIMS_ENV', 'sandbox'),
       baseUrl: configValue(etims, 'baseUrl', 'ETIMS_BASE_URL', null),
       apiKey: configValue(etims, 'apiKey', 'ETIMS_API_KEY', null),

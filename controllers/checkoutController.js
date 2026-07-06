@@ -44,6 +44,10 @@ function productItemCode(product) {
   return metadata.kraItemCode || metadata.itemCode || product.barcode || product.sku || product.id;
 }
 
+function isProductionFiscalMode(runtimeConfig) {
+  return String(runtimeConfig?.etims?.env || '').toLowerCase() === 'production';
+}
+
 function normalizeTenderedPayments(payments, total) {
   const normalized = payments.map((payment) => ({
     ...payment,
@@ -157,6 +161,12 @@ async function checkout(req, res) {
   }
 
   const runtimeConfig = await resolveTenantConfig(req.tenantId);
+  if (isProductionFiscalMode(runtimeConfig) && !runtimeConfig.business.kraPin) {
+    return res.status(400).json({
+      error: 'Seller KRA PIN is required before production eTIMS receipts can be issued.'
+    });
+  }
+
   const t = await sequelize.transaction();
 
   try {

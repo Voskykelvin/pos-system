@@ -136,6 +136,7 @@ module.exports = {
     { method: 'POST', path: '/api/purchase-orders', purpose: 'Create purchase order' },
     { method: 'POST', path: '/api/purchase-orders/:id/receive', purpose: 'Receive stock from purchase order' },
     { method: 'GET', path: '/api/audit-logs', purpose: 'Manager/admin audit trail' },
+    { method: 'GET', path: '/api/etims/dashboard', purpose: 'Tenant eTIMS queue, retry, and readiness dashboard' },
     { method: 'POST', path: '/api/etims/sync', purpose: 'Process queued eTIMS invoices' },
     { method: 'POST', path: '/api/etims/requeue-failed', purpose: 'Retry failed eTIMS invoices' }
   ]

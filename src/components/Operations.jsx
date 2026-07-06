@@ -47,6 +47,9 @@ export default function Operations({ authToken, user }) {
   const [auditLogs, setAuditLogs] = useState([]);
   const [auditError, setAuditError] = useState(null);
   const [heldSales, setHeldSales] = useState([]);
+  const [etimsDashboard, setEtimsDashboard] = useState(null);
+  const [etimsError, setEtimsError] = useState(null);
+  const [etimsBusy, setEtimsBusy] = useState(false);
 
   // Multi-till shift summary state for managers
   const [shiftSummary, setShiftSummary] = useState(null);
@@ -83,6 +86,36 @@ export default function Operations({ authToken, user }) {
       const payload = await api('/api/shifts/summary');
       setShiftSummary(payload);
     } catch { /* ignore */ }
+  }
+
+  async function loadEtimsDashboard() {
+    if (!canManageOrders) return;
+    try {
+      const payload = await api('/api/etims/dashboard');
+      setEtimsDashboard(payload);
+      setEtimsError(null);
+    } catch (err) {
+      setEtimsError(err.message);
+    }
+  }
+
+  async function runEtimsAction(action) {
+    if (!canManageOrders) return;
+    setEtimsBusy(true);
+    try {
+      const path = action === 'requeue' ? '/api/etims/requeue-failed' : '/api/etims/sync';
+      const payload = await api(path, { method: 'POST' });
+      const message = action === 'requeue'
+        ? `Requeued ${payload.requeued || 0} failed eTIMS invoice${payload.requeued === 1 ? '' : 's'}.`
+        : `eTIMS sync: ${payload.transmitted || 0} transmitted, ${payload.failed || 0} failed, ${payload.skipped || 0} queued for retry.`;
+      setShiftMessage(message);
+      setEtimsError(null);
+      await loadEtimsDashboard();
+    } catch (err) {
+      setEtimsError(err.message);
+    } finally {
+      setEtimsBusy(false);
+    }
   }
 
   async function openShift() {
@@ -210,7 +243,8 @@ export default function Operations({ authToken, user }) {
     searchOrders('');
     loadAuditLogs();
     loadShiftSummary();
-  }, [authToken, canViewAudit]);
+    loadEtimsDashboard();
+  }, [authToken, canViewAudit, canManageOrders]);
 
   useEffect(() => {
     const refreshHeldSales = () => setHeldSales(loadHeldSales(user));
@@ -224,6 +258,8 @@ export default function Operations({ authToken, user }) {
   }, [user?.id, user?.tenantId]);
 
   const staleHeldSales = heldSales.filter((sale) => isHeldSaleStale(sale));
+  const etimsSummary = etimsDashboard?.summary || {};
+  const etimsReadiness = etimsDashboard?.readiness || {};
 
   return (
     <section className={styles.page}>
@@ -393,6 +429,65 @@ export default function Operations({ authToken, user }) {
           </section>
         )}
 
+        {canManageOrders && (
+          <section className={`${styles.panel} ${styles.etimsPanel}`}>
+            <div className={styles.panelHeader}>
+              <h2>eTIMS control</h2>
+              <span>{etimsReadiness.productionMode ? 'production' : (etimsReadiness.env || 'sandbox')}</span>
+            </div>
+            <div className={styles.etimsBody}>
+              <div className={styles.etimsStats}>
+                <div><span>Queued</span><strong>{etimsSummary.queued || 0}</strong></div>
+                <div><span>Transmitted</span><strong>{etimsSummary.transmitted || 0}</strong></div>
+                <div><span>Failed</span><strong>{etimsSummary.failed || 0}</strong></div>
+                <div><span>Retrying</span><strong>{etimsSummary.retrying || 0}</strong></div>
+              </div>
+              <div className={styles.etimsReadiness}>
+                <span className={etimsReadiness.sellerPinSet ? styles.readyPill : styles.blockedPill}>
+                  Seller PIN {etimsReadiness.sellerPinSet ? 'set' : 'missing'}
+                </span>
+                <span className={etimsReadiness.deviceSerialSet ? styles.readyPill : styles.pendingPill}>
+                  Device serial {etimsReadiness.deviceSerialSet ? 'set' : 'missing'}
+                </span>
+                <span className={etimsReadiness.baseUrlSet && etimsReadiness.apiKeySet ? styles.readyPill : styles.pendingPill}>
+                  API {etimsReadiness.baseUrlSet && etimsReadiness.apiKeySet ? 'configured' : 'pending'}
+                </span>
+              </div>
+              <div className={styles.etimsActions}>
+                <button type="button" onClick={() => runEtimsAction('sync')} disabled={etimsBusy}>
+                  Sync now
+                </button>
+                <button type="button" onClick={() => runEtimsAction('requeue')} disabled={etimsBusy || !etimsSummary.failed}>
+                  Requeue failed
+                </button>
+                <button type="button" onClick={loadEtimsDashboard} disabled={etimsBusy}>
+                  Refresh
+                </button>
+              </div>
+              {etimsError && <div className={styles.error}>{etimsError}</div>}
+              <div className={styles.etimsList}>
+                {(etimsDashboard?.recent || []).length === 0 ? (
+                  <p className={styles.empty}>No queued or failed eTIMS invoices need attention.</p>
+                ) : (
+                  etimsDashboard.recent.map((invoice) => (
+                    <div className={styles.etimsRow} key={invoice.id}>
+                      <div>
+                        <strong>{invoice.orderNumber || invoice.orderId}</strong>
+                        <small>
+                          {invoice.status.toUpperCase()} - retry {invoice.retryCount}/{invoice.maxRetries}
+                          {invoice.fiscalReady ? ' - fiscal ready' : ''}
+                        </small>
+                        {invoice.error && <small className={styles.etimsErrorText}>{invoice.error}</small>}
+                      </div>
+                      <b>{formatKes(invoice.orderTotal)}</b>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </section>
+        )}
+
         {/* Receipt search */}
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
@@ -433,14 +528,21 @@ export default function Operations({ authToken, user }) {
             <div className={styles.receipt}>
               <div className={styles.receiptTop}>
                 <strong>{receipt.business.name}</strong>
+                {receipt.business.kraPin && <small>PIN {receipt.business.kraPin}</small>}
                 <span>{receipt.orderNumber}</span>
                 <small>{formatDate(receipt.createdAt)}</small>
                 <small>Served by {receipt.cashier?.name || 'Cashier'}</small>
+                <small>
+                  {receipt.etims?.fiscalReady ? 'Fiscal ready' : `${receipt.etims?.status || 'eTIMS pending'} - CU/QR pending`}
+                </small>
               </div>
               <div className={styles.receiptLines}>
                 {receipt.items.map((item) => (
                   <div className={styles.receiptLine} key={item.id}>
-                    <span>{item.name} x {item.quantity}</span>
+                    <span>
+                      {item.name} x {item.quantity}
+                      <small>{item.itemCode || item.barcode || item.sku || '-'} - VAT {(Number(item.taxRate || 0) * 100).toFixed(0)}%</small>
+                    </span>
                     <b>{formatKes(item.lineTotal)}</b>
                   </div>
                 ))}

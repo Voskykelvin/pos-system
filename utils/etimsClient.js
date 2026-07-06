@@ -46,15 +46,22 @@ async function transmitInvoice(payload, inputConfig = {}) {
     }
   );
 
-  // Adjust these field lookups to match KRA's real response shape
+  // Adjust these field lookups to match KRA's real response shape.
+  // The worker only marks an invoice transmitted when both customer-facing
+  // verification values are available for the printed receipt.
+  const qrCodeUrl = data.qrCodeUrl || data.qrUrl || data.qrCode || null;
+
   if (!data.cuInvoiceNumber) {
     throw new Error('eTIMS response missing cuInvoiceNumber');
+  }
+  if (!qrCodeUrl) {
+    throw new Error('eTIMS response missing qrCodeUrl');
   }
 
   return {
     success: true,
     cuInvoiceNumber: data.cuInvoiceNumber,
-    qrCodeUrl: data.qrCodeUrl || null,
+    qrCodeUrl,
     raw: data
   };
 }

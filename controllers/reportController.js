@@ -29,6 +29,23 @@ function ratio(numerator, denominator) {
   return denominator > 0 ? percent((numerator / denominator) * 100) : 0;
 }
 
+function etimsOrderScope(req) {
+  const scope = {
+    model: Order,
+    attributes: [],
+    required: true
+  };
+  if (req.tenantId) scope.where = { tenantId: req.tenantId };
+  return scope;
+}
+
+function countEtims(req, where) {
+  return EtimsInvoice.count({
+    where,
+    include: [etimsOrderScope(req)]
+  });
+}
+
 function dateKey(value) {
   return new Date(value).toISOString().slice(0, 10);
 }
@@ -125,7 +142,7 @@ async function today(req, res) {
         category: product.Category?.name || null
       }));
 
-    const pendingEtimsCount = await EtimsInvoice.count({ where: { status: 'queued' } });
+    const pendingEtimsCount = await countEtims(req, { status: 'queued' });
 
     const activeProductCount = await Product.count({
       where: tenantWhere(req, { isActive: true })
@@ -196,8 +213,8 @@ async function analytics(req, res) {
         where: tenantWhere(req),
         order: [['createdAt', 'DESC']]
       }),
-      EtimsInvoice.count({ where: { status: 'queued' } }),
-      EtimsInvoice.count({ where: { status: 'failed' } })
+      countEtims(req, { status: 'queued' }),
+      countEtims(req, { status: 'failed' })
     ]);
 
     const paidOrders = orders.filter(

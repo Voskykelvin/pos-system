@@ -245,6 +245,14 @@
   border-bottom: 1px dashed var(--line);
 }
 
+.receiptLine span small {
+  display: block;
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
 .grand {
   font-size: 18px;
   font-weight: 900;
@@ -445,6 +453,120 @@
   gap: 12px;
 }
 
+.etimsPanel {
+  grid-column: 1 / -1;
+}
+
+.etimsBody {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+}
+
+.etimsStats {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.etimsStats div {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--panel);
+}
+
+.etimsStats span,
+.etimsRow small {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.etimsStats strong {
+  display: block;
+  margin-top: 4px;
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 24px;
+}
+
+.etimsReadiness,
+.etimsActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.readyPill,
+.pendingPill,
+.blockedPill {
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.readyPill {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.pendingPill {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.blockedPill {
+  background: var(--pos-danger-bg);
+  color: var(--pos-danger);
+}
+
+.etimsActions button {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+  font-weight: 900;
+  padding: 0 12px;
+}
+
+.etimsActions button:first-child {
+  background: var(--accent);
+}
+
+.etimsActions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.etimsList {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.etimsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.etimsRow:last-child {
+  border-bottom: 0;
+}
+
+.etimsErrorText {
+  color: var(--pos-danger) !important;
+  margin-top: 3px;
+}
+
 
 .auditList {
   max-height: 340px;
@@ -514,9 +636,15 @@
   .actionButtons,
   .auditRow,
   .orderList button,
+  .etimsActions,
+  .etimsRow,
   .summaryTotalsRow {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .etimsStats {
+    grid-template-columns: 1fr 1fr;
   }
 
   .actionButtons button,

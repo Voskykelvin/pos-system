@@ -167,6 +167,16 @@ async function main() {
     if (Math.abs(Number(receipt.tender?.amountTendered) - tenderedTotal) > 0.01) {
       throw new Error('Receipt did not keep the tendered cash amount');
     }
+    if (!receipt.business?.name || !receipt.items[0]?.itemCode) {
+      throw new Error('Receipt is missing fiscal display fields');
+    }
+
+    const etimsDashboard = await request(baseUrl, '/api/etims/dashboard', {
+      headers: authHeaders
+    });
+    if (etimsDashboard.summary.queued < 1 || !Array.isArray(etimsDashboard.recent)) {
+      throw new Error('eTIMS dashboard did not return queued invoice status');
+    }
 
     const orderSearch = await request(
       baseUrl,

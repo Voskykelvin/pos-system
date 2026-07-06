@@ -997,7 +997,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     const cuInvoiceNumber = receipt?.etims?.cuInvoiceNumber || '';
     const qrCodeUrl = receipt?.etims?.qrCodeUrl || '';
     const deviceSerial = receipt?.etims?.deviceSerial || '';
-    const fiscalReady = Boolean(cuInvoiceNumber && qrCodeUrl);
+    const fiscalReady = Boolean(receipt?.etims?.fiscalReady ?? (cuInvoiceNumber && qrCodeUrl));
     const etimsStatusText = etimsStatus === 'transmitted'
       ? 'eTIMS: TRANSMITTED'
       : etimsStatus === 'queued'
@@ -1005,6 +1005,11 @@ export default function Checkout({ authToken, cashierId, user }) {
         : etimsStatus === 'failed'
           ? 'eTIMS: FAILED'
           : 'eTIMS: NOT CREATED';
+    const fiscalNotice = fiscalReady
+      ? ''
+      : receipt
+        ? 'NOT FISCAL UNTIL ETIMS CONFIRMS'
+        : 'OFFLINE COPY - ETIMS PENDING';
     const receiptChange = Number(receipt?.tender?.changeDue ?? lastReceipt.changeDue ?? 0);
     const receiptTendered = Number(receipt?.tender?.amountTendered ?? lastReceipt.amountTendered ?? totalPaid + receiptChange);
     const receiptTaxSummary = receipt?.items?.length
@@ -1130,6 +1135,7 @@ export default function Checkout({ authToken, cashierId, user }) {
             <div class="line"></div>
             <table>${paymentRows}</table>
             <div class="center muted">${escapeHtml(etimsStatusText)}</div>
+            ${fiscalNotice ? `<div class="center warning">${escapeHtml(fiscalNotice)}</div>` : ''}
             ${cuInvoiceNumber ? `<div class="center muted">CU Invoice: ${escapeHtml(cuInvoiceNumber)}</div>` : '<div class="center muted">CU Invoice: pending</div>'}
             ${deviceSerial ? `<div class="center muted">M/C ID: ${escapeHtml(deviceSerial)}</div>` : ''}
             ${qrCodeUrl ? `<img class="qr" src="${escapeHtml(qrCodeUrl)}" alt="eTIMS QR code" />` : '<div class="center muted">QR code pending</div>'}

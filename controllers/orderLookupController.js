@@ -90,6 +90,9 @@ async function receipt(req, res) {
     const changeDue = Number(metadata.changeDue || 0);
     const amountTendered = Number(metadata.amountTendered || paymentTotal + changeDue);
 
+    const etimsInvoice = order.EtimsInvoice;
+    const fiscalReady = Boolean(etimsInvoice?.cuInvoiceNumber && etimsInvoice?.qrCodeUrl);
+
     res.json({
       id: order.id,
       orderNumber: order.orderNumber,
@@ -129,18 +132,22 @@ async function receipt(req, res) {
         amountTendered,
         changeDue
       },
-      etims: order.EtimsInvoice ? {
-        status: order.EtimsInvoice.status,
-        cuInvoiceNumber: order.EtimsInvoice.cuInvoiceNumber,
-        qrCodeUrl: order.EtimsInvoice.qrCodeUrl,
-        transmittedAt: order.EtimsInvoice.transmittedAt,
-        deviceSerial: runtimeConfig.etims.deviceSerial || null
+      etims: etimsInvoice ? {
+        status: etimsInvoice.status,
+        cuInvoiceNumber: etimsInvoice.cuInvoiceNumber,
+        qrCodeUrl: etimsInvoice.qrCodeUrl,
+        transmittedAt: etimsInvoice.transmittedAt,
+        retryCount: Number(etimsInvoice.retryCount || 0),
+        deviceSerial: runtimeConfig.etims.deviceSerial || null,
+        fiscalReady
       } : {
         status: 'not_created',
         cuInvoiceNumber: null,
         qrCodeUrl: null,
         transmittedAt: null,
-        deviceSerial: runtimeConfig.etims.deviceSerial || null
+        retryCount: 0,
+        deviceSerial: runtimeConfig.etims.deviceSerial || null,
+        fiscalReady: false
       },
       branch: order.Branch ? {
         id: order.Branch.id,
