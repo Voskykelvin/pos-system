@@ -739,12 +739,14 @@ export default function Checkout({ authToken, cashierId, user }) {
         if (data.paymentStatus === 'paid') {
           clearInterval(pollRef.current);
           setOrderStatus('paid');
-          setLastReceipt({
-            orderId,
-            orderNumber: data.orderNumber,
-            total,
-            changeDue: 0
-          });
+        setLastReceipt({
+          orderId,
+          orderNumber: data.orderNumber,
+          total,
+          cashierName: user?.name,
+          createdAt: new Date().toISOString(),
+          changeDue: 0
+        });
           resetSale();
           setStatusMessage('Sale completed successfully.');
           showToast('Sale completed successfully.');
@@ -834,7 +836,9 @@ export default function Checkout({ authToken, cashierId, user }) {
           orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4),
           total,
           amountTendered: paymentSummary.cashTendered || total,
-          changeDue: paymentSummary.changeDue
+          changeDue: paymentSummary.changeDue,
+          cashierName: user?.name,
+          createdAt: new Date().toISOString()
         });
         setStatusMessage('Sale queued offline and will sync automatically.');
         showToast('Sale queued offline and will sync automatically.');
@@ -870,7 +874,9 @@ export default function Checkout({ authToken, cashierId, user }) {
           orderNumber: data.orderNumber,
           total: data.total,
           amountTendered: Number(data.amountTendered || paymentSummary.cashTendered || data.total),
-          changeDue: Number(data.changeDue || paymentSummary.changeDue)
+          changeDue: Number(data.changeDue || paymentSummary.changeDue),
+          cashierName: user?.name,
+          createdAt: data.createdAt || new Date().toISOString()
         });
         setStatusMessage('Sale completed successfully.');
         showToast('Sale completed successfully.');
@@ -978,6 +984,9 @@ export default function Checkout({ authToken, cashierId, user }) {
 
     const receiptNumber = receipt?.orderNumber || lastReceipt.orderNumber;
     const totalPaid = receipt?.total ?? lastReceipt.total;
+    const saleDate = receipt?.createdAt || lastReceipt.createdAt || new Date().toISOString();
+    const saleDateText = new Date(saleDate).toLocaleString();
+    const cashierName = receipt?.cashier?.name || lastReceipt.cashierName || user?.name || 'Cashier';
     const receiptChange = Number(receipt?.tender?.changeDue ?? lastReceipt.changeDue ?? 0);
     const receiptTendered = Number(receipt?.tender?.amountTendered ?? lastReceipt.amountTendered ?? totalPaid + receiptChange);
     const receiptTaxSummary = receipt?.items?.length
@@ -1046,6 +1055,10 @@ export default function Checkout({ authToken, cashierId, user }) {
             td:last-child { text-align: right; white-space: nowrap; }
             .line { border-top: 1px dashed #111827; margin: 8px 0; }
             .total { font-size: 15px; font-weight: 800; }
+            .served { font-size: 11px; margin: 10px 0 6px; }
+            .receipt-meta { margin: 8px 0 4px; }
+            .receipt-meta td { font-size: 11px; }
+            .receipt-title { font-size: 16px; font-weight: 900; letter-spacing: 1px; margin-top: 4px; }
             .vat-summary th,
             .vat-summary td { font-size: 11px; }
             .vat-summary th { text-align: right; font-weight: 800; }
@@ -1063,7 +1076,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               <h1>${escapeHtml(receipt?.business?.name || 'Jijenge POS')}</h1>
               ${receipt?.business?.kraPin ? `<div class="muted">KRA PIN: ${escapeHtml(receipt.business.kraPin)}</div>` : ''}
               <div class="muted">${escapeHtml(receiptNumber)}</div>
-              <div class="muted">${escapeHtml(new Date(receipt?.createdAt || Date.now()).toLocaleString())}</div>
+              <div class="muted">${escapeHtml(saleDateText)}</div>
             </div>
             <div class="line"></div>
             <table>${rows}</table>
@@ -1085,7 +1098,13 @@ export default function Checkout({ authToken, cashierId, user }) {
             <table>${paymentRows}</table>
             ${receipt?.etims?.cuInvoiceNumber ? `<div class="center muted">CU: ${escapeHtml(receipt.etims.cuInvoiceNumber)}</div>` : ''}
             <div class="line"></div>
+            <div class="center served">You were served by ${escapeHtml(cashierName)}</div>
             <div class="center">Thank you</div>
+            <table class="receipt-meta">
+              <tr><td>Receipt #</td><td>${escapeHtml(receiptNumber)}</td></tr>
+              <tr><td>Date/Time</td><td>${escapeHtml(saleDateText)}</td></tr>
+            </table>
+            <div class="center receipt-title">${receipt?.etims?.cuInvoiceNumber ? 'FISCAL RECEIPT' : 'SALES RECEIPT'}</div>
           </main>
           <script>
             window.addEventListener('load', () => {
@@ -1324,6 +1343,8 @@ export default function Checkout({ authToken, cashierId, user }) {
               <span>Receipt</span>
               <strong>{lastReceipt.orderNumber}</strong>
             </div>
+            <div className={styles.receiptMetaRow}><span>Served by</span><strong>{lastReceipt.cashierName || user?.name || 'Cashier'}</strong></div>
+            <div className={styles.receiptMetaRow}><span>Time</span><strong>{new Date(lastReceipt.createdAt || Date.now()).toLocaleString()}</strong></div>
             <div className={styles.receiptDivider} />
             <div className={styles.receiptAmountRow}><span>Sale total</span><strong>{formatKes(lastReceipt.total)}</strong></div>
             <div className={styles.receiptChangeRow}><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>

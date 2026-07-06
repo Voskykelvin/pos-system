@@ -630,6 +630,21 @@
   color: var(--ink);
 }
 
+.receiptMetaRow {
+  align-items: baseline;
+  padding: 2px 0;
+}
+
+.receiptMetaRow strong {
+  max-width: 58%;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  color: var(--ink);
+}
+
 .receiptAmountRow,
 .receiptChangeRow {
   align-items: baseline;

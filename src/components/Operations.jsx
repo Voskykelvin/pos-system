@@ -435,6 +435,7 @@ export default function Operations({ authToken, user }) {
                 <strong>{receipt.business.name}</strong>
                 <span>{receipt.orderNumber}</span>
                 <small>{formatDate(receipt.createdAt)}</small>
+                <small>Served by {receipt.cashier?.name || 'Cashier'}</small>
               </div>
               <div className={styles.receiptLines}>
                 {receipt.items.map((item) => (

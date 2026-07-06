@@ -450,6 +450,7 @@ async function checkout(req, res) {
     return res.status(201).json({
       orderId: order.id,
       orderNumber: order.orderNumber,
+      createdAt: order.createdAt,
       total: order.total,
       amountTendered: tender.amountTendered,
       changeDue: tender.changeDue,
