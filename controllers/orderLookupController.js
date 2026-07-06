@@ -75,6 +75,11 @@ async function receipt(req, res) {
       return res.status(404).json({ error: 'Order not found' });
     }
 
+    const metadata = order.metadata || {};
+    const paymentTotal = order.Payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+    const changeDue = Number(metadata.changeDue || 0);
+    const amountTendered = Number(metadata.amountTendered || paymentTotal + changeDue);
+
     res.json({
       id: order.id,
       orderNumber: order.orderNumber,
@@ -107,6 +112,10 @@ async function receipt(req, res) {
       taxTotal: Number(order.taxTotal),
       discountTotal: Number(order.discountTotal),
       total: Number(order.total),
+      tender: {
+        amountTendered,
+        changeDue
+      },
       etims: order.EtimsInvoice ? {
         status: order.EtimsInvoice.status,
         cuInvoiceNumber: order.EtimsInvoice.cuInvoiceNumber,

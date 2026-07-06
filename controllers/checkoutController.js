@@ -28,12 +28,87 @@ const {
 // Loyalty: 1 point earned per KES 100 spent (configurable)
 const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
 
+function roundMoney(value) {
+  return Number(Number(value || 0).toFixed(2));
+}
+
+function taxAmountFromGross(grossAmount, taxRate) {
+  const gross = Number(grossAmount || 0);
+  const rate = Number(taxRate || 0);
+  if (rate <= 0) return 0;
+  return gross * (rate / (1 + rate));
+}
+
+function normalizeTenderedPayments(payments, total) {
+  const normalized = payments.map((payment) => ({
+    ...payment,
+    method: String(payment.method || '').trim().toLowerCase(),
+    amount: roundMoney(payment.amount)
+  }));
+
+  if (normalized.some((payment) => !payment.method || !Number.isFinite(payment.amount) || payment.amount < 0)) {
+    throw Object.assign(new Error('Each payment requires a valid method and non-negative amount'), { status: 400 });
+  }
+
+  const cashPayments = normalized.filter((payment) => payment.method === 'cash');
+  if (cashPayments.length > 1) {
+    throw Object.assign(new Error('Use one cash payment row per sale'), { status: 400 });
+  }
+
+  const nonCashTotal = roundMoney(
+    normalized
+      .filter((payment) => payment.method !== 'cash')
+      .reduce((sum, payment) => sum + payment.amount, 0)
+  );
+  const totalDue = roundMoney(total);
+
+  if (nonCashTotal > totalDue + 0.01) {
+    throw Object.assign(new Error('M-Pesa and credit payments cannot exceed the sale total'), { status: 400 });
+  }
+
+  const cashTendered = cashPayments[0]?.amount || 0;
+  const cashDue = roundMoney(Math.max(totalDue - nonCashTotal, 0));
+  const changeDue = cashPayments.length ? roundMoney(Math.max(cashTendered - cashDue, 0)) : 0;
+  const shortAmount = cashPayments.length
+    ? roundMoney(Math.max(cashDue - cashTendered, 0))
+    : roundMoney(Math.max(totalDue - nonCashTotal, 0));
+
+  if (shortAmount > 0.01) {
+    throw Object.assign(new Error(`Payment is short by ${shortAmount.toFixed(2)}`), { status: 400 });
+  }
+
+  const appliedPayments = normalized
+    .map((payment) => payment.method === 'cash'
+      ? {
+          ...payment,
+          amount: cashDue,
+          amountTendered: cashTendered,
+          changeDue
+        }
+      : payment)
+    .filter((payment) => payment.amount > 0 || payment.method === 'cash');
+
+  const paymentSum = roundMoney(appliedPayments.reduce((sum, payment) => sum + payment.amount, 0));
+  if (Math.abs(paymentSum - totalDue) > 0.01) {
+    throw Object.assign(
+      new Error(`Payment total (${paymentSum.toFixed(2)}) does not match order total (${totalDue.toFixed(2)})`),
+      { status: 400 }
+    );
+  }
+
+  return {
+    amountTendered: cashPayments.length ? cashTendered : paymentSum,
+    changeDue,
+    payments: appliedPayments
+  };
+}
+
 /**
  * POST /api/orders/checkout
  * Body: {
  *   cashierId, customerId (optional),
  *   items: [{ productId, quantity }],
- *   payments: [{ method, amount, mpesaPhone (optional) }],
+ *   payments: [{ method, amount, mpesaPhone (optional) }], // cash amount may be tendered cash
  *   discountTotal (optional)
  * }
  */
@@ -118,8 +193,8 @@ async function checkout(req, res) {
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     // 2. Validate stock and compute totals
-    let subtotal = 0;
-    let taxTotal = 0;
+    let grossSubtotal = 0;
+    let taxTotalBeforeDiscount = 0;
     const orderItemRows = [];
     const etimsLineItems = [];
 
@@ -138,11 +213,11 @@ async function checkout(req, res) {
       const unitPrice = Number(product.sellingPrice);
       const taxCategory = resolveProductTaxCategory(product);
       const taxRate = taxRateForCategory(taxCategory);
-      const lineSubtotal = unitPrice * Number(line.quantity);
-      const lineTax = lineSubtotal * taxRate;
+      const lineGross = unitPrice * Number(line.quantity);
+      const lineTax = taxAmountFromGross(lineGross, taxRate);
 
-      subtotal += lineSubtotal;
-      taxTotal += lineTax;
+      grossSubtotal += lineGross;
+      taxTotalBeforeDiscount += lineTax;
 
       orderItemRows.push({
         productId: product.id,
@@ -150,7 +225,7 @@ async function checkout(req, res) {
         unitPrice,
         costPrice: product.costPrice || 0,
         taxRate,
-        lineTotal: lineSubtotal + lineTax
+        lineTotal: lineGross
       });
 
       etimsLineItems.push({
@@ -159,17 +234,17 @@ async function checkout(req, res) {
         unitPrice,
         taxRate,
         taxCategory,
-        lineTotal: lineSubtotal + lineTax
+        lineTotal: lineGross
       });
     }
 
-    if (normalizedDiscount >= subtotal + taxTotal) {
+    if (normalizedDiscount >= grossSubtotal) {
       throw new Error('discountTotal cannot be equal to or greater than the sale total');
     }
 
     // Apply promotion on top of any manual discount
     if (appliedPromotion) {
-      const base = subtotal + taxTotal - normalizedDiscount;
+      const base = grossSubtotal - normalizedDiscount;
       promoDiscount = appliedPromotion.type === 'percent'
         ? base * (Number(appliedPromotion.value) / 100)
         : Math.min(Number(appliedPromotion.value), base);
@@ -188,17 +263,14 @@ async function checkout(req, res) {
     }
 
     const combinedDiscount = normalizedDiscount + promoDiscount + loyaltyDiscount;
-    const total = Math.max(subtotal + taxTotal - combinedDiscount, 0);
-
-    const paymentSum = payments.reduce((sum, p) => sum + Number(p.amount), 0);
-    if (Math.abs(paymentSum - total) > 0.01) {
-      throw new Error(
-        `Payment total (${paymentSum.toFixed(2)}) does not match order total (${total.toFixed(2)})`
-      );
-    }
+    const total = roundMoney(Math.max(grossSubtotal - combinedDiscount, 0));
+    const discountRatio = grossSubtotal > 0 ? total / grossSubtotal : 1;
+    const taxTotal = roundMoney(taxTotalBeforeDiscount * discountRatio);
+    const subtotal = roundMoney(total - taxTotal);
+    const tender = normalizeTenderedPayments(payments, total);
 
     // 3. Create the order
-    const anyPending = payments.some((p) => !['cash', 'credit'].includes(p.method));
+    const anyPending = tender.payments.some((p) => !['cash', 'credit'].includes(p.method));
     const orderNumber = await generateOrderNumber();
     const order = await Order.create({
       orderNumber,
@@ -210,6 +282,10 @@ async function checkout(req, res) {
       total,
       status: 'completed',
       paymentStatus: anyPending ? 'pending' : 'paid',
+      metadata: {
+        amountTendered: tender.amountTendered,
+        changeDue: tender.changeDue
+      },
       tenantId: req.tenantId || null,
       branchId: req.user?.branchId || null
     }, { transaction: t });
@@ -236,7 +312,7 @@ async function checkout(req, res) {
 
     // 5. Create payment records and customer ledgers for credit
     const createdPayments = [];
-    for (const p of payments) {
+    for (const p of tender.payments) {
       const isCredit = p.method === 'credit';
       const paymentRow = await Payment.create({
         orderId: order.id,
@@ -302,7 +378,7 @@ async function checkout(req, res) {
         total,
         discountTotal: combinedDiscount,
         promoCode: appliedPromotion?.code || null,
-        paymentMethods: payments.map((p) => p.method)
+        paymentMethods: tender.payments.map((p) => p.method)
       },
       transaction: t
     });
@@ -375,6 +451,8 @@ async function checkout(req, res) {
       orderId: order.id,
       orderNumber: order.orderNumber,
       total: order.total,
+      amountTendered: tender.amountTendered,
+      changeDue: tender.changeDue,
       paymentStatus: order.paymentStatus,
       promoApplied: appliedPromotion ? { code: appliedPromotion.code, discount: promoDiscount } : null,
       payments: createdPayments.map((p) => ({

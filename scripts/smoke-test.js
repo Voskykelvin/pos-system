@@ -8,7 +8,6 @@ try {
 }
 
 const { start } = require('../server');
-const { taxRateForCategory } = require('../utils/taxCategories');
 
 async function request(baseUrl, path, options) {
   const response = await fetch(`${baseUrl}${path}`, options);
@@ -135,8 +134,8 @@ async function main() {
     if (!products.length) throw new Error('Seed product search returned no products');
 
     const product = products[0];
-    const taxRate = taxRateForCategory(product.taxCategory || product.Category?.taxCategory);
-    const total = Number(product.sellingPrice) * (1 + taxRate);
+    const total = Number(product.sellingPrice);
+    const tenderedTotal = total + 50;
 
     const checkout = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
@@ -148,12 +147,15 @@ async function main() {
       body: JSON.stringify({
         cashierId: bootstrap.cashierId,
         items: [{ productId: product.id, quantity: 1 }],
-        payments: [{ method: 'cash', amount: total.toFixed(2) }]
+        payments: [{ method: 'cash', amount: tenderedTotal.toFixed(2) }]
       })
     });
 
     if (checkout.paymentStatus !== 'paid') {
       throw new Error(`Expected paid checkout, got ${checkout.paymentStatus}`);
+    }
+    if (Math.abs(Number(checkout.changeDue) - 50) > 0.01) {
+      throw new Error(`Expected KES 50.00 change, got ${checkout.changeDue}`);
     }
 
     const receipt = await request(baseUrl, `/api/orders/${checkout.orderId}/receipt`, {
@@ -161,6 +163,9 @@ async function main() {
     });
     if (receipt.orderNumber !== checkout.orderNumber) {
       throw new Error('Receipt lookup returned the wrong order');
+    }
+    if (Math.abs(Number(receipt.tender?.amountTendered) - tenderedTotal) > 0.01) {
+      throw new Error('Receipt did not keep the tendered cash amount');
     }
 
     const orderSearch = await request(
@@ -192,8 +197,7 @@ async function main() {
       headers: authHeaders
     });
     const creditProduct = creditProducts[0];
-    const creditTaxRate = taxRateForCategory(creditProduct.taxCategory || creditProduct.Category?.taxCategory);
-    const creditTotal = Number(creditProduct.sellingPrice) * (1 + creditTaxRate);
+    const creditTotal = Number(creditProduct.sellingPrice);
     const creditCheckout = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
       headers: {
@@ -358,8 +362,7 @@ async function main() {
       headers: cashierHeaders
     });
     const discountedProduct = cashierProducts[0];
-    const discountedTaxRate = taxRateForCategory(discountedProduct.taxCategory || discountedProduct.Category?.taxCategory);
-    const discountedGross = Number(discountedProduct.sellingPrice) * (1 + discountedTaxRate);
+    const discountedGross = Number(discountedProduct.sellingPrice);
     const discountTotal = Number((discountedGross > 1 ? 1 : discountedGross / 2).toFixed(2));
     const discountedTotal = discountedGross - discountTotal;
 

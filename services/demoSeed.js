@@ -12,6 +12,13 @@ const { getBusinessDate } = require('../utils/businessTime');
 const { hashPassword } = require('../utils/passwords');
 const { taxRateForProduct } = require('../utils/taxCategories');
 
+function taxAmountFromGross(grossAmount, taxRate) {
+  const gross = Number(grossAmount || 0);
+  const rate = Number(taxRate || 0);
+  if (rate <= 0) return 0;
+  return gross * (rate / (1 + rate));
+}
+
 const DEMO_IDS = {
   superAdmin: '00000000-0000-0000-0000-000000000000',
   admin: '00000000-0000-0000-0000-000000000001',
@@ -41,14 +48,14 @@ async function createProduct(product) {
 async function createDemoOrder({ sequence, cashierId, items, minutesAgo }) {
   const now = new Date(Date.now() - minutesAgo * 60 * 1000);
   const datePart = getBusinessDate(now).compact;
-  let subtotal = 0;
+  let grossSubtotal = 0;
   let taxTotal = 0;
 
   const lines = items.map(({ product, quantity }) => {
     const taxRate = taxRateForProduct(product);
-    const lineSubtotal = Number(product.sellingPrice) * quantity;
-    const lineTax = lineSubtotal * taxRate;
-    subtotal += lineSubtotal;
+    const lineGross = Number(product.sellingPrice) * quantity;
+    const lineTax = taxAmountFromGross(lineGross, taxRate);
+    grossSubtotal += lineGross;
     taxTotal += lineTax;
 
     return {
@@ -56,11 +63,12 @@ async function createDemoOrder({ sequence, cashierId, items, minutesAgo }) {
       quantity,
       unitPrice: Number(product.sellingPrice),
       taxRate,
-      lineTotal: lineSubtotal + lineTax
+      lineTotal: lineGross
     };
   });
 
-  const total = subtotal + taxTotal;
+  const total = grossSubtotal;
+  const subtotal = total - taxTotal;
   const order = await Order.create({
     orderNumber: `SUP-${datePart}-${String(sequence).padStart(4, '0')}`,
     cashierId,

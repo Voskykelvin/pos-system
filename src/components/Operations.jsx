@@ -445,17 +445,20 @@ export default function Operations({ authToken, user }) {
                 ))}
               </div>
               <div className={styles.totals}>
-                <div><span>Subtotal</span><b>{formatKes(receipt.subtotal)}</b></div>
-                <div><span>VAT</span><b>{formatKes(receipt.taxTotal)}</b></div>
+                <div><span>Before VAT</span><b>{formatKes(receipt.subtotal)}</b></div>
+                <div><span>VAT included</span><b>{formatKes(receipt.taxTotal)}</b></div>
                 <div><span>Discount</span><b>{formatKes(receipt.discountTotal)}</b></div>
                 <div className={styles.grand}><span>Total</span><b>{formatKes(receipt.total)}</b></div>
               </div>
               <div className={styles.paymentList}>
                 {receipt.payments.map((payment) => (
                   <div key={payment.id}>
-                    {payment.method} - {payment.status} - {formatKes(payment.amount)}
+                    {payment.method} - {payment.status} - {formatKes(payment.method === 'cash' ? receipt.tender?.amountTendered || payment.amount : payment.amount)}
                   </div>
                 ))}
+                {Number(receipt.tender?.changeDue || 0) > 0 && (
+                  <div>change - {formatKes(receipt.tender.changeDue)}</div>
+                )}
               </div>
               {canManageOrders && ['completed', 'partial_refund'].includes(receipt.status) && (
                 <div className={styles.actionBox}>

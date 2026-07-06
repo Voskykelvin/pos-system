@@ -31,6 +31,77 @@ function formatKes(amount) {
   return `KES ${Number(amount).toFixed(2)}`;
 }
 
+function roundMoney(amount) {
+  return Number(Number(amount || 0).toFixed(2));
+}
+
+function taxAmountFromGross(grossAmount, rate) {
+  const gross = Number(grossAmount || 0);
+  const taxRate = Number(rate || 0);
+  if (taxRate <= 0) return 0;
+  return gross * (taxRate / (1 + taxRate));
+}
+
+function formatTaxPercent(rate) {
+  return `${(Number(rate || 0) * 100).toFixed(0)}%`;
+}
+
+function summarizeTaxFromLines(lines, discountTotal = 0) {
+  const grossTotal = lines.reduce((sum, line) => sum + Number(line.gross || 0), 0);
+  const discountRatio = grossTotal > 0
+    ? Math.max((grossTotal - Number(discountTotal || 0)) / grossTotal, 0)
+    : 1;
+  const groups = new Map();
+
+  for (const line of lines) {
+    const rate = Number(line.rate || 0);
+    const key = rate.toFixed(4);
+    const current = groups.get(key) || { rate, gross: 0, taxable: 0, tax: 0 };
+    const gross = Number(line.gross || 0) * discountRatio;
+    const tax = taxAmountFromGross(gross, rate);
+    current.gross += gross;
+    current.taxable += gross - tax;
+    current.tax += tax;
+    groups.set(key, current);
+  }
+
+  return Array.from(groups.values())
+    .sort((a, b) => b.rate - a.rate)
+    .map((group) => ({
+      ...group,
+      gross: roundMoney(group.gross),
+      taxable: roundMoney(group.taxable),
+      tax: roundMoney(group.tax)
+    }));
+}
+
+function summarizePayments(payments, total) {
+  const totalDue = roundMoney(total);
+  const cashPayment = payments.find((payment) => payment.method === 'cash');
+  const cashTendered = roundMoney(cashPayment?.amount);
+  const nonCashTotal = roundMoney(
+    payments
+      .filter((payment) => payment.method !== 'cash')
+      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+  );
+  const dueBeforeCash = roundMoney(Math.max(totalDue - nonCashTotal, 0));
+  const changeDue = cashPayment ? roundMoney(Math.max(cashTendered - dueBeforeCash, 0)) : 0;
+  const shortAmount = cashPayment
+    ? roundMoney(Math.max(dueBeforeCash - cashTendered, 0))
+    : roundMoney(Math.max(totalDue - nonCashTotal, 0));
+  const overpaidNonCash = !cashPayment && nonCashTotal > totalDue + 0.01;
+
+  return {
+    cashTendered,
+    changeDue,
+    dueBeforeCash,
+    isSatisfied: !overpaidNonCash && shortAmount <= 0.01,
+    nonCashTotal,
+    overpaidNonCash,
+    shortAmount
+  };
+}
+
 function createClientIdempotencyKey(prefix) {
   const randomPart = globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
   return `${prefix}-${randomPart}`;
@@ -178,8 +249,24 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
 
 // --- Split-tender payments panel ----------------------------------------------
 function PaymentsPanel({ total, payments, onChange, customer }) {
+  const [settledCashAmount, setSettledCashAmount] = useState(payments[0]?.method === 'cash' ? payments[0].amount : '');
+  const [cashEditing, setCashEditing] = useState(false);
+
   function addRow(method) {
-    const existingSum = payments.filter((p) => p.method !== method).reduce((s, p) => s + Number(p.amount || 0), 0);
+    if (
+      method !== 'cash' &&
+      payments.length === 1 &&
+      payments[0].method === 'cash' &&
+      Number(payments[0].amount || 0) <= 0
+    ) {
+      onChange([{ method, amount: total.toFixed(2), mpesaPhone: '' }]);
+      return;
+    }
+
+    const existingSummary = summarizePayments(payments, total);
+    const existingSum = method === 'cash'
+      ? existingSummary.nonCashTotal
+      : payments.reduce((s, p) => s + Number(p.amount || 0), 0);
     const remaining = Math.max(total - existingSum, 0);
     onChange([...payments, { method, amount: remaining.toFixed(2), mpesaPhone: '' }]);
   }
@@ -197,12 +284,92 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
     onChange(payments.map((p) => ({ ...p, amount: share })));
   }
 
-  const paymentSum = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
-  const remaining = Number((total - paymentSum).toFixed(2));
+  const paymentSummary = summarizePayments(payments, total);
+  const singleCash = payments.length === 1 && payments[0].method === 'cash';
+  const cashAmount = singleCash ? payments[0].amount : '';
+  const cashDisplaySummary = summarizePayments([{ method: 'cash', amount: settledCashAmount }], total);
 
-  const canAddCash  = !payments.find((p) => p.method === 'cash');
+  useEffect(() => {
+    if (!singleCash) return;
+    if (!cashEditing) setSettledCashAmount(cashAmount);
+  }, [cashAmount, cashEditing, singleCash]);
+
+  const canAddCash = !payments.find((p) => p.method === 'cash');
   const canAddMpesa = !payments.find((p) => p.method === 'mpesa');
   const canAddCredit = customer && !payments.find((p) => p.method === 'credit');
+  const quickCashValues = Array.from(new Set([
+    roundMoney(total),
+    Math.ceil(total / 10) * 10,
+    Math.ceil(total / 50) * 50,
+    500,
+    1000
+  ].filter((amount) => amount > 0 && amount >= total))).slice(0, 4);
+
+  if (singleCash) {
+    const cashValueSettled = settledCashAmount === cashAmount;
+
+    return (
+      <div className={styles.paymentsPanel}>
+        <div className={styles.paymentsPanelHeader}>
+          <span className={styles.paymentsPanelTitle}>Payment</span>
+        </div>
+
+        <div className={styles.cashBox}>
+          <label className={styles.cashLabel} htmlFor="cashReceived">Cash received</label>
+          <input
+            id="cashReceived"
+            className={styles.cashInput}
+            type="number"
+            min="0"
+            step="1"
+            value={cashAmount}
+            onFocus={() => setCashEditing(true)}
+            onBlur={() => {
+              setSettledCashAmount(cashAmount);
+              setCashEditing(false);
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+            }}
+            onChange={(e) => {
+              setCashEditing(true);
+              updateRow(0, 'amount', e.target.value);
+            }}
+            placeholder="0.00"
+          />
+          <div className={styles.cashChips}>
+            {quickCashValues.map((amt) => (
+              <button
+                key={amt}
+                type="button"
+                className={styles.cashChip}
+                onClick={() => {
+                  const nextAmount = String(roundMoney(amt));
+                  updateRow(0, 'amount', nextAmount);
+                  setSettledCashAmount(nextAmount);
+                  setCashEditing(false);
+                }}
+              >
+                {formatKes(amt)}
+              </button>
+            ))}
+          </div>
+
+          {cashAmount !== '' && cashValueSettled && (
+            <div className={`${styles.changeRow} ${cashDisplaySummary.shortAmount > 0 ? styles.changeShort : styles.changePositive}`}>
+              <span>{cashDisplaySummary.shortAmount > 0 ? 'Short' : 'Change'}</span>
+              <span>{formatKes(cashDisplaySummary.shortAmount > 0 ? cashDisplaySummary.shortAmount : cashDisplaySummary.changeDue)}</span>
+            </div>
+          )}
+        </div>
+
+        <div className={styles.addPaymentOptions}>
+          {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
+          {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.paymentsPanel}>
@@ -241,7 +408,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
         </div>
       ))}
 
-      {remaining > 0 && (
+      {paymentSummary.shortAmount > 0 && (
         <div className={styles.addPaymentOptions}>
           {canAddCash && <button onClick={() => addRow('cash')} type="button">+ Cash</button>}
           {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
@@ -249,49 +416,37 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
         </div>
       )}
 
-      {remaining > 0 && <div className={styles.remainingWarn}>Remaining: {formatKes(remaining)}</div>}
-      {remaining < 0 && payments.some(p => p.method === 'cash') && (
-        <div className={styles.changeDue}>Change due: {formatKes(Math.abs(remaining))}</div>
+      {paymentSummary.shortAmount > 0 && <div className={styles.remainingWarn}>Remaining: {formatKes(paymentSummary.shortAmount)}</div>}
+      {paymentSummary.changeDue > 0 && (
+        <div className={styles.changeDue}>Change due: {formatKes(paymentSummary.changeDue)}</div>
       )}
+    </div>
+  );
+}
 
-      {/* Cash-specific: cash chips + change */}
-      {payments.length === 1 && payments[0].method === 'cash' && (
-        <div className={styles.cashBox}>
-          <label className={styles.cashLabel} htmlFor="cashReceived">Cash received</label>
-          <input
-            id="cashReceived"
-            className={styles.phoneInput}
-            type="number"
-            min="0"
-            step="1"
-            value={payments[0].amount}
-            onChange={(e) => updateRow(0, 'amount', e.target.value)}
-            placeholder="0.00"
-          />
-          <div className={styles.cashChips}>
-            {[total, 500, 1000, 2000].map((amt) => (
-              <button
-                key={amt}
-                type="button"
-                className={styles.cashChip}
-                onClick={() => updateRow(0, 'amount', String(Math.ceil(amt)))}
-              >
-                {formatKes(Math.ceil(amt))}
-              </button>
-            ))}
+function HeldSalesPanel({ heldSales, onResume, onRemove }) {
+  if (heldSales.length === 0) return null;
+
+  return (
+    <div className={styles.heldSales}>
+      <div className={styles.heldSalesHeader}>
+        <strong>Held sales</strong>
+        <span>{heldSales.length}</span>
+      </div>
+      <div className={styles.heldSalesList}>
+        {heldSales.map((heldSale) => (
+          <div className={styles.heldSaleRow} key={heldSale.id}>
+            <button className={styles.heldSaleMain} type="button" onClick={() => onResume(heldSale)}>
+              <strong>{heldSale.label}</strong>
+              <span>{formatKes(heldSale.total)} - {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} - {formatHeldSaleAge(heldSale)}</span>
+              <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' - ') || 'No note'}</small>
+            </button>
+            <button className={styles.heldSaleRemove} type="button" onClick={() => onRemove(heldSale.id)}>
+              x
+            </button>
           </div>
-          {(() => {
-            const cashVal = Number(payments[0].amount || 0);
-            const change = cashVal - total;
-            return (
-              <div className={`${styles.totalsRow} ${styles.changeRow} ${change < 0 ? styles.changeShort : styles.changePositive}`}>
-                <span>{change < 0 ? 'Short' : 'Change'}</span>
-                <span>{formatKes(Math.abs(change))}</span>
-              </div>
-            );
-          })()}
-        </div>
-      )}
+        ))}
+      </div>
     </div>
   );
 }
@@ -305,7 +460,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [customer, setCustomer] = useState(null);
 
   // Payments: array of { method, amount, mpesaPhone }
-  const [payments, setPayments] = useState([{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+  const [payments, setPayments] = useState([{ method: 'cash', amount: '', mpesaPhone: '' }]);
 
   const [discountTotal, setDiscountTotal] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -324,6 +479,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [statusMessage, setStatusMessage] = useState(null);
   const [toast, setToast] = useState(null);
   const [heldSales, setHeldSales] = useState(() => loadHeldSales(user));
+  const [showHeldSales, setShowHeldSales] = useState(false);
   const [holdNote, setHoldNote] = useState('');
   const pollRef = useRef(null);
   const searchInputRef = useRef(null);
@@ -454,23 +610,21 @@ export default function Checkout({ authToken, cashierId, user }) {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [addScannedProduct]);
 
-  // Sync payment total with cart total whenever total changes
-  const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const taxTotal = cart.reduce((sum, i) => {
-    const rate = taxRateForCategory(i.taxCategory);
-    return sum + i.unitPrice * i.quantity * rate;
-  }, 0);
+  const itemsTotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const discountValue = Number(discountTotal || 0);
   const promoDiscount = promoResult ? Number(promoResult.discountAmount) : 0;
   const loyaltyDiscount = redeemLoyalty && customer?.loyaltyPoints > 0 ? Math.floor(customer.loyaltyPoints / 100) : 0;
-  const total = Math.max(subtotal + taxTotal - discountValue - promoDiscount - loyaltyDiscount, 0);
-
-  // When total changes and there's a single payment row, auto-update its amount
-  useEffect(() => {
-    if (payments.length === 1 && payments[0].method === 'cash') {
-      setPayments((prev) => [{ ...prev[0], amount: total.toFixed(2) }]);
-    }
-  }, [total, payments.length]);
+  const totalDiscount = discountValue + promoDiscount + loyaltyDiscount;
+  const total = Math.max(itemsTotal - totalDiscount, 0);
+  const taxSummary = summarizeTaxFromLines(
+    cart.map((item) => ({
+      gross: item.unitPrice * item.quantity,
+      rate: taxRateForCategory(item.taxCategory)
+    })),
+    totalDiscount
+  );
+  const taxTotal = roundMoney(taxSummary.reduce((sum, group) => sum + group.tax, 0));
+  const netSubtotal = roundMoney(total - taxTotal);
 
   function changeQty(productId, delta) {
     setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
@@ -504,6 +658,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     });
 
     setHeldSales((current) => insertHeldSale(current, snapshot));
+    setShowHeldSales(true);
     resetSale({ clearReceipt: true });
     setStatusMessage('Sale held. You can recall it from the held sales list.');
     showToast('Sale held.');
@@ -521,7 +676,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     }
 
     setCart(heldSale.cart || []);
-    setPayments(heldSale.payments?.length ? heldSale.payments : [{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+    setPayments(heldSale.payments?.length ? heldSale.payments : [{ method: 'cash', amount: '', mpesaPhone: '' }]);
     setCustomer(heldSale.customer || null);
     setDiscountTotal(heldSale.discountTotal || '');
     setPromoCode(heldSale.promoCode || '');
@@ -538,11 +693,13 @@ export default function Checkout({ authToken, cashierId, user }) {
     setStatusMessage('Held sale recalled.');
     setToast(null);
     setHeldSales((current) => current.filter((sale) => sale.id !== heldSale.id));
+    setShowHeldSales(false);
     showToast('Held sale recalled.');
   }
 
   function removeHeldSale(heldSaleId) {
     setHeldSales((current) => current.filter((sale) => sale.id !== heldSaleId));
+    if (heldSales.length <= 1) setShowHeldSales(false);
     showToast('Held sale removed.');
   }
 
@@ -585,7 +742,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           setLastReceipt({
             orderId,
             orderNumber: data.orderNumber,
-            total: payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0),
+            total,
             changeDue: 0
           });
           resetSale();
@@ -605,7 +762,7 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   function resetSale({ clearReceipt = false } = {}) {
     setCart([]);
-    setPayments([{ method: 'cash', amount: '0', mpesaPhone: '' }]);
+    setPayments([{ method: 'cash', amount: '', mpesaPhone: '' }]);
     setDiscountTotal('');
     setPromoCode('');
     setPromoResult(null);
@@ -626,7 +783,9 @@ export default function Checkout({ authToken, cashierId, user }) {
       return;
     }
     if (!paymentsBalanced) {
-      setError('Payment amount must match the total before checkout.');
+      setError(paymentSummary.overpaidNonCash
+        ? 'M-Pesa and credit payments cannot be more than the sale total.'
+        : `Payment is short by ${formatKes(paymentSummary.shortAmount)}.`);
       return;
     }
     if (!mpesaComplete) {
@@ -670,10 +829,13 @@ export default function Checkout({ authToken, cashierId, user }) {
       }
       try {
         await addOrderToQueue({ ...orderPayload, idempotencyKey: checkoutIdempotencyKey });
-        const cashPayment = payments.find((p) => p.method === 'cash');
-        const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
-        setLastReceipt({ orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4), total, changeDue });
+        setLastReceipt({
+          orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4),
+          total,
+          amountTendered: paymentSummary.cashTendered || total,
+          changeDue: paymentSummary.changeDue
+        });
         setStatusMessage('Sale queued offline and will sync automatically.');
         showToast('Sale queued offline and will sync automatically.');
         resetSale();
@@ -702,10 +864,14 @@ export default function Checkout({ authToken, cashierId, user }) {
 
       if (!hasMpesa) {
         // All cash
-        const cashPayment = payments.find((p) => p.method === 'cash');
-        const changeDue = cashPayment ? Math.max(Number(cashPayment.amount) - total, 0) : 0;
         setOrderStatus('paid');
-        setLastReceipt({ orderId: data.orderId, orderNumber: data.orderNumber, total: data.total, changeDue });
+        setLastReceipt({
+          orderId: data.orderId,
+          orderNumber: data.orderNumber,
+          total: data.total,
+          amountTendered: Number(data.amountTendered || paymentSummary.cashTendered || data.total),
+          changeDue: Number(data.changeDue || paymentSummary.changeDue)
+        });
         setStatusMessage('Sale completed successfully.');
         showToast('Sale completed successfully.');
         resetSale();
@@ -749,10 +915,10 @@ export default function Checkout({ authToken, cashierId, user }) {
     }
   }
 
-  const paymentSum = payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+  const paymentSummary = summarizePayments(payments, total);
   const mpesaRows = payments.filter((p) => p.method === 'mpesa');
   const mpesaComplete = mpesaRows.every((p) => p.mpesaPhone?.trim().length >= 9);
-  const paymentsBalanced = Math.abs(paymentSum - total) <= 0.01;
+  const paymentsBalanced = paymentSummary.isSatisfied;
 
   const canConfirm =
     cart.length > 0 &&
@@ -812,10 +978,21 @@ export default function Checkout({ authToken, cashierId, user }) {
 
     const receiptNumber = receipt?.orderNumber || lastReceipt.orderNumber;
     const totalPaid = receipt?.total ?? lastReceipt.total;
+    const receiptChange = Number(receipt?.tender?.changeDue ?? lastReceipt.changeDue ?? 0);
+    const receiptTendered = Number(receipt?.tender?.amountTendered ?? lastReceipt.amountTendered ?? totalPaid + receiptChange);
+    const receiptTaxSummary = receipt?.items?.length
+      ? summarizeTaxFromLines(
+          receipt.items.map((item) => ({ gross: Number(item.lineTotal || 0), rate: Number(item.taxRate || 0) })),
+          receipt?.discountTotal || 0
+        )
+      : taxSummary;
     const rows = receipt?.items?.length
       ? receipt.items.map((item) => `
           <tr>
-            <td>${escapeHtml(item.name)} x ${Number(item.quantity)}</td>
+            <td>
+              ${escapeHtml(item.name)} x ${Number(item.quantity)}
+              <div class="muted">${formatTaxPercent(item.taxRate)} VAT</div>
+            </td>
             <td>${formatKes(item.lineTotal)}</td>
           </tr>
         `).join('')
@@ -825,10 +1002,19 @@ export default function Checkout({ authToken, cashierId, user }) {
       ? receipt.payments.map((payment) => `
           <tr>
             <td>${escapeHtml(payment.method)} ${escapeHtml(payment.status)}</td>
-            <td>${formatKes(payment.amount)}</td>
+            <td>${formatKes(payment.method === 'cash' ? receiptTendered : payment.amount)}</td>
+          </tr>
+        `).join('') + (receiptChange > 0 ? `<tr><td>Change</td><td>${formatKes(receiptChange)}</td></tr>` : '')
+      : `<tr><td>Payment</td><td>${formatKes(totalPaid)}</td></tr>`;
+    const taxSummaryRows = receiptTaxSummary.length
+      ? receiptTaxSummary.map((row) => `
+          <tr>
+            <td>${formatTaxPercent(row.rate)}</td>
+            <td>${formatKes(row.taxable)}</td>
+            <td>${formatKes(row.tax)}</td>
           </tr>
         `).join('')
-      : `<tr><td>Payment</td><td>${formatKes(totalPaid)}</td></tr>`;
+      : '<tr><td>0%</td><td>KES 0.00</td><td>KES 0.00</td></tr>';
 
     const printWindow = window.open('', '_blank', 'width=420,height=640');
     if (!printWindow) {
@@ -860,6 +1046,11 @@ export default function Checkout({ authToken, cashierId, user }) {
             td:last-child { text-align: right; white-space: nowrap; }
             .line { border-top: 1px dashed #111827; margin: 8px 0; }
             .total { font-size: 15px; font-weight: 800; }
+            .vat-summary th,
+            .vat-summary td { font-size: 11px; }
+            .vat-summary th { text-align: right; font-weight: 800; }
+            .vat-summary th:first-child,
+            .vat-summary td:first-child { text-align: left; }
             @media print {
               body { padding: 0; }
               .receipt { width: 76mm; }
@@ -878,12 +1069,18 @@ export default function Checkout({ authToken, cashierId, user }) {
             <table>${rows}</table>
             <div class="line"></div>
             <table>
-              <tr><td>Subtotal</td><td>${formatKes(receipt?.subtotal ?? totalPaid)}</td></tr>
-              <tr><td>VAT</td><td>${formatKes(receipt?.taxTotal || 0)}</td></tr>
+              <tr><td>Items total</td><td>${formatKes(totalPaid + Number(receipt?.discountTotal || 0))}</td></tr>
+              <tr><td>Before VAT</td><td>${formatKes(receipt?.subtotal ?? totalPaid - Number(receipt?.taxTotal || 0))}</td></tr>
+              <tr><td>VAT included</td><td>${formatKes(receipt?.taxTotal || 0)}</td></tr>
               <tr><td>Discount</td><td>${formatKes(receipt?.discountTotal || 0)}</td></tr>
               <tr class="total"><td>Total</td><td>${formatKes(totalPaid)}</td></tr>
-              <tr><td>Change</td><td>${formatKes(lastReceipt.changeDue || 0)}</td></tr>
             </table>
+            <div class="line"></div>
+            <table class="vat-summary">
+              <thead><tr><th>RATE</th><th>TAXABLE</th><th>VAT</th></tr></thead>
+              <tbody>${taxSummaryRows}</tbody>
+            </table>
+            <div class="center muted">Prices include VAT where applicable</div>
             <div class="line"></div>
             <table>${paymentRows}</table>
             ${receipt?.etims?.cuInvoiceNumber ? `<div class="center muted">CU: ${escapeHtml(receipt.etims.cuInvoiceNumber)}</div>` : ''}
@@ -992,10 +1189,25 @@ export default function Checkout({ authToken, cashierId, user }) {
               <div className={styles.orderNumber}>{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
             )}
           </div>
-          <button className={styles.holdSaleBtn} type="button" onClick={holdCurrentSale} disabled={!canHoldSale} title="F2">
-            Hold sale
-          </button>
+          <div className={styles.headerActions}>
+            {heldSales.length > 0 && (
+              <button
+                className={styles.heldSalesToggle}
+                type="button"
+                onClick={() => setShowHeldSales((visible) => !visible)}
+              >
+                Held ({heldSales.length})
+              </button>
+            )}
+            <button className={styles.holdSaleBtn} type="button" onClick={holdCurrentSale} disabled={!canHoldSale} title="F2">
+              Hold sale
+            </button>
+          </div>
         </div>
+
+        {showHeldSales && (
+          <HeldSalesPanel heldSales={heldSales} onResume={resumeHeldSale} onRemove={removeHeldSale} />
+        )}
 
         {cart.length > 0 && orderStatus !== 'waiting' && (
           <div className={styles.holdNoteBox}>
@@ -1008,29 +1220,6 @@ export default function Checkout({ authToken, cashierId, user }) {
               />
             </label>
             <small>Press F2 to hold, F4 to scan/search, Ctrl+Enter to confirm.</small>
-          </div>
-        )}
-
-        {heldSales.length > 0 && (
-          <div className={styles.heldSales}>
-            <div className={styles.heldSalesHeader}>
-              <strong>Held sales</strong>
-              <span>{heldSales.length}</span>
-            </div>
-            <div className={styles.heldSalesList}>
-              {heldSales.map((heldSale) => (
-                <div className={styles.heldSaleRow} key={heldSale.id}>
-                  <button className={styles.heldSaleMain} type="button" onClick={() => resumeHeldSale(heldSale)}>
-                    <strong>{heldSale.label}</strong>
-                    <span>{formatKes(heldSale.total)} - {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} - {formatHeldSaleAge(heldSale)}</span>
-                    <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' - ') || 'No note'}</small>
-                  </button>
-                  <button className={styles.heldSaleRemove} type="button" onClick={() => removeHeldSale(heldSale.id)}>
-                    x
-                  </button>
-                </div>
-              ))}
-            </div>
           </div>
         )}
 
@@ -1057,8 +1246,14 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
 
         <div className={styles.totalsBlock}>
-          <div className={styles.totalsRow}><span>Subtotal</span><span>{formatKes(subtotal)}</span></div>
-          <div className={styles.totalsRow}><span>VAT</span><span>{formatKes(taxTotal)}</span></div>
+          <div className={styles.totalsRow}><span>Items total</span><span>{formatKes(itemsTotal)}</span></div>
+          <div className={styles.totalsRow}><span>Before VAT</span><span>{formatKes(netSubtotal)}</span></div>
+          {(taxSummary.length ? taxSummary : [{ rate: 0, tax: 0 }]).map((group) => (
+            <div className={styles.totalsRow} key={group.rate}>
+              <span>VAT {formatTaxPercent(group.rate)} incl.</span>
+              <span>{formatKes(group.tax)}</span>
+            </div>
+          ))}
 
           {/* Manual discount */}
           <div className={styles.discountRow}>
@@ -1130,7 +1325,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               <strong>{lastReceipt.orderNumber}</strong>
             </div>
             <div className={styles.receiptDivider} />
-            <div className={styles.receiptAmountRow}><span>Amount paid</span><strong>{formatKes(lastReceipt.total)}</strong></div>
+            <div className={styles.receiptAmountRow}><span>Sale total</span><strong>{formatKes(lastReceipt.total)}</strong></div>
             <div className={styles.receiptChangeRow}><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
             <button className={styles.receiptPrintBtn} type="button" onClick={printLastReceipt}>
               Print receipt
