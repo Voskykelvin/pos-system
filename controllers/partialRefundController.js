@@ -90,7 +90,7 @@ async function partialRefund(req, res) {
       }
 
       refundLines.push({ orderItem, refundQty });
-      refundSubtotal += Number(orderItem.unitPrice) * refundQty * (1 + Number(orderItem.taxRate));
+      refundSubtotal += Number(orderItem.unitPrice) * refundQty;
     }
 
     // Restore stock for each returned line
