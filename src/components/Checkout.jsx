@@ -9,6 +9,7 @@ import {
   heldSalesStorageKey,
   insertHeldSale
 } from '../utils/heldSaleState.mjs';
+import { productTaxCategory, taxLabel, taxRateForCategory } from '../utils/taxCategories';
 
 function Toast({ message, tone, onClose }) {
   useEffect(() => {
@@ -24,7 +25,6 @@ function Toast({ message, tone, onClose }) {
   );
 }
 
-const VAT_RATES = { standard: 0.16, zero_rated: 0, exempt: 0 };
 const SCAN_CODE_PATTERN = /^[A-Za-z0-9._-]{4,}$/;
 
 function formatKes(amount) {
@@ -341,7 +341,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         name: product.name,
         unitPrice: isWholesale ? Number(product.wholesalePrice || product.sellingPrice) : Number(product.sellingPrice),
         quantity: 1,
-        taxCategory: product.Category?.taxCategory || 'standard'
+        taxCategory: productTaxCategory(product)
       }];
     });
     setQuery('');
@@ -457,7 +457,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   // Sync payment total with cart total whenever total changes
   const subtotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
   const taxTotal = cart.reduce((sum, i) => {
-    const rate = VAT_RATES[i.taxCategory] ?? 0.16;
+    const rate = taxRateForCategory(i.taxCategory);
     return sum + i.unitPrice * i.quantity * rate;
   }, 0);
   const discountValue = Number(discountTotal || 0);
@@ -955,6 +955,7 @@ export default function Checkout({ authToken, cashierId, user }) {
                     ? <><del style={{fontSize: '10px'}}>{formatKes(product.sellingPrice)}</del> {formatKes(product.wholesalePrice)}</>
                     : formatKes(product.sellingPrice)} / {product.unit}
                 </div>
+                <div className={styles.stockMeta}>{taxLabel(productTaxCategory(product))}</div>
                 <div className={styles.stockMeta}>Stock: {Number(product.stockQuantity)} {product.unit}</div>
               </button>
             ))}
@@ -1041,6 +1042,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               <div className={styles.cartRow} key={item.productId}>
                 <div>
                   <div className={styles.cartItemName}>{item.name}</div>
+                  <div className={styles.cartTax}>{taxLabel(item.taxCategory)}</div>
                   <button className={styles.removeBtn} onClick={() => removeItem(item.productId)}>Remove</button>
                 </div>
                 <div className={styles.qtyControls}>

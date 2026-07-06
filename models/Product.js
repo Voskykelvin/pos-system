@@ -37,6 +37,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: false
     },
+    taxCategory: {
+      // Per-product VAT classification. Category-level tax is only a fallback.
+      type: DataTypes.STRING,
+      allowNull: false,
+      defaultValue: 'standard'
+    },
     wholesalePrice: {
       type: DataTypes.DECIMAL(12, 2),
       allowNull: true
@@ -80,6 +86,7 @@ module.exports = (sequelize, DataTypes) => {
       { unique: true, fields: ['tenantId', 'sku'] },
       { unique: true, fields: ['tenantId', 'barcode'] },
       { fields: ['categoryId'] },
+      { fields: ['taxCategory'] },
       { fields: ['isActive'] }
     ]
   });

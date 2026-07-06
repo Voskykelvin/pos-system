@@ -1,5 +1,6 @@
 const { Category } = require('../models');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
+const { normalizeTaxCategory } = require('../utils/taxCategories');
 
 // GET /api/admin/categories
 async function list(req, res) {
@@ -24,7 +25,7 @@ async function create(req, res) {
   try {
     const category = await Category.create({
       name,
-      taxCategory: taxCategory || 'standard',
+      taxCategory: normalizeTaxCategory(taxCategory),
       ...withTenant(req)
     });
     res.status(201).json(category);

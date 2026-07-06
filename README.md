@@ -30,6 +30,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Rate limiting (`express-rate-limit`: 10 auth attempts/15 min, 120 API calls/min) and `helmet` CSP security headers.
 - Transactional SQL Migration Runner (`npm run db:migrate`) replacing unsafe `alter:true` syncs.
 - eTIMS invoice queueing, automated retry worker, and transmitted invoice lock protection.
+- Product-level Kenya VAT classification (`standard`, `zero_rated`, `exempt`) with setup notes in [`docs/KENYA_VAT_PRODUCT_CLASSIFICATION.md`](docs/KENYA_VAT_PRODUCT_CLASSIFICATION.md).
 - Audit Log System recording all staff actions and manager approvals.
 
 ### Operations & Multi-Till Analytics

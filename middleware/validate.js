@@ -172,6 +172,7 @@ const schemas = {
     sellingPrice: { type: 'number', min: 0 },
     categoryId:   { type: 'string', minLength: 1 },
     costPrice:    { type: 'number', required: false, min: 0 },
+    taxCategory:  { type: 'string', required: false, enumValues: ['standard', 'zero_rated', 'exempt'] },
     reorderLevel: { type: 'number', required: false, min: 0 },
     stockQuantity:{ type: 'number', required: false, min: 0 },
     barcode:      { type: 'string', required: false, maxLength: 100 },
@@ -184,6 +185,7 @@ const schemas = {
     sku:          { type: 'string', required: false, minLength: 1, maxLength: 100 },
     sellingPrice: { type: 'number', required: false, min: 0 },
     costPrice:    { type: 'number', required: false, min: 0 },
+    taxCategory:  { type: 'string', required: false, enumValues: ['standard', 'zero_rated', 'exempt'] },
     reorderLevel: { type: 'number', required: false, min: 0 },
     barcode:      { type: 'string', required: false, maxLength: 100 },
     unit:         { type: 'string', required: false, maxLength: 50 }

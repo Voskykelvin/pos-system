@@ -10,6 +10,7 @@ const {
 } = require('../models');
 const { getBusinessDate } = require('../utils/businessTime');
 const { hashPassword } = require('../utils/passwords');
+const { taxRateForProduct } = require('../utils/taxCategories');
 
 const DEMO_IDS = {
   superAdmin: '00000000-0000-0000-0000-000000000000',
@@ -44,7 +45,7 @@ async function createDemoOrder({ sequence, cashierId, items, minutesAgo }) {
   let taxTotal = 0;
 
   const lines = items.map(({ product, quantity }) => {
-    const taxRate = product.Category?.taxCategory === 'standard' ? 0.16 : 0;
+    const taxRate = taxRateForProduct(product);
     const lineSubtotal = Number(product.sellingPrice) * quantity;
     const lineTax = lineSubtotal * taxRate;
     subtotal += lineSubtotal;
@@ -154,7 +155,7 @@ async function seedDemoData() {
 
   await Category.bulkCreate([
     { id: DEMO_IDS.groceries, name: 'Groceries', taxCategory: 'standard' },
-    { id: DEMO_IDS.produce, name: 'Fresh produce', taxCategory: 'zero_rated' },
+    { id: DEMO_IDS.produce, name: 'Fresh produce', taxCategory: 'exempt' },
     { id: DEMO_IDS.household, name: 'Household', taxCategory: 'standard' }
   ]);
 
@@ -165,6 +166,7 @@ async function seedDemoData() {
     unit: 'each',
     costPrice: 48,
     sellingPrice: 65,
+    taxCategory: 'zero_rated',
     reorderLevel: 8,
     stockQuantity: 30,
     categoryId: DEMO_IDS.groceries
@@ -177,6 +179,7 @@ async function seedDemoData() {
     unit: 'each',
     costPrice: 55,
     sellingPrice: 70,
+    taxCategory: 'zero_rated',
     reorderLevel: 10,
     stockQuantity: 7,
     categoryId: DEMO_IDS.groceries
@@ -190,6 +193,7 @@ async function seedDemoData() {
     isWeighted: true,
     costPrice: 80,
     sellingPrice: 120,
+    taxCategory: 'exempt',
     reorderLevel: 5,
     stockQuantity: 12.5,
     categoryId: DEMO_IDS.produce
@@ -202,6 +206,7 @@ async function seedDemoData() {
     unit: 'each',
     costPrice: 120,
     sellingPrice: 165,
+    taxCategory: 'standard',
     reorderLevel: 6,
     stockQuantity: 4,
     categoryId: DEMO_IDS.household

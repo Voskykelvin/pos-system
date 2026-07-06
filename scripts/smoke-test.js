@@ -8,6 +8,7 @@ try {
 }
 
 const { start } = require('../server');
+const { taxRateForCategory } = require('../utils/taxCategories');
 
 async function request(baseUrl, path, options) {
   const response = await fetch(`${baseUrl}${path}`, options);
@@ -134,7 +135,7 @@ async function main() {
     if (!products.length) throw new Error('Seed product search returned no products');
 
     const product = products[0];
-    const taxRate = product.Category?.taxCategory === 'standard' ? 0.16 : 0;
+    const taxRate = taxRateForCategory(product.taxCategory || product.Category?.taxCategory);
     const total = Number(product.sellingPrice) * (1 + taxRate);
 
     const checkout = await request(baseUrl, '/api/orders/checkout', {
@@ -191,7 +192,7 @@ async function main() {
       headers: authHeaders
     });
     const creditProduct = creditProducts[0];
-    const creditTaxRate = creditProduct.Category?.taxCategory === 'standard' ? 0.16 : 0;
+    const creditTaxRate = taxRateForCategory(creditProduct.taxCategory || creditProduct.Category?.taxCategory);
     const creditTotal = Number(creditProduct.sellingPrice) * (1 + creditTaxRate);
     const creditCheckout = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
@@ -357,7 +358,7 @@ async function main() {
       headers: cashierHeaders
     });
     const discountedProduct = cashierProducts[0];
-    const discountedTaxRate = discountedProduct.Category?.taxCategory === 'standard' ? 0.16 : 0;
+    const discountedTaxRate = taxRateForCategory(discountedProduct.taxCategory || discountedProduct.Category?.taxCategory);
     const discountedGross = Number(discountedProduct.sellingPrice) * (1 + discountedTaxRate);
     const discountTotal = Number((discountedGross > 1 ? 1 : discountedGross / 2).toFixed(2));
     const discountedTotal = discountedGross - discountTotal;

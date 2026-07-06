@@ -281,6 +281,7 @@ async function analytics(req, res) {
         const categoryName = product?.Category?.name || 'Uncategorized';
         const quantity = number(item.quantity);
         const revenue = number(item.lineTotal);
+        const netRevenue = number(item.unitPrice) * quantity;
         const cost = number(item.costPrice ?? product?.costPrice) * quantity;
 
         unitsSold += quantity;
@@ -288,7 +289,7 @@ async function analytics(req, res) {
 
         if (day) {
           day.unitsSold += quantity;
-          day.grossProfit += revenue - cost;
+          day.grossProfit += netRevenue - cost;
         }
 
         const staff = staffPerformance.get(order.cashierId);
@@ -312,7 +313,7 @@ async function analytics(req, res) {
 
         currentProduct.unitsSold += quantity;
         currentProduct.revenue += revenue;
-        currentProduct.estimatedGrossProfit += revenue - cost;
+        currentProduct.estimatedGrossProfit += netRevenue - cost;
         productSales.set(productId, currentProduct);
 
         const category = categorySales.get(categoryName) || {
@@ -323,7 +324,7 @@ async function analytics(req, res) {
         };
         category.unitsSold += quantity;
         category.revenue += revenue;
-        category.estimatedGrossProfit += revenue - cost;
+        category.estimatedGrossProfit += netRevenue - cost;
         categorySales.set(categoryName, category);
       }
     }
@@ -511,7 +512,7 @@ async function analytics(req, res) {
       summary: {
         grossSales: money(grossSales),
         netSalesBeforeTax: money(grossSales - taxTotal),
-        estimatedGrossProfit: money(grossSales - estimatedCost),
+        estimatedGrossProfit: money(grossSales - taxTotal - estimatedCost),
         taxTotal: money(taxTotal),
         discountTotal: money(discountTotal),
         orderCount: paidOrders.length,

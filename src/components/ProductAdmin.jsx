@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
 import styles from './ProductAdmin.module.css';
+import { TAX_CATEGORY_OPTIONS, normalizeTaxCategory, taxLabel } from '../utils/taxCategories';
 
 const EMPTY_FORM = {
   sku: '',
@@ -12,6 +13,7 @@ const EMPTY_FORM = {
   isWeighted: false,
   costPrice: '',
   sellingPrice: '',
+  taxCategory: 'standard',
   reorderLevel: 5,
   stockQuantity: 0,
   categoryId: '',
@@ -99,6 +101,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
   // Category inline modal
   const [newCatName, setNewCatName] = useState('');
+  const [newCatTaxCategory, setNewCatTaxCategory] = useState('standard');
   const [showCatModal, setShowCatModal] = useState(false);
 
   // Barcode sticker printing modal
@@ -226,7 +229,12 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
   function openCreate() {
     setEditingId(null);
-    setForm({ ...EMPTY_FORM, categoryId: categories[0]?.id || '' });
+    const defaultCategory = categories[0];
+    setForm({
+      ...EMPTY_FORM,
+      categoryId: defaultCategory?.id || '',
+      taxCategory: normalizeTaxCategory(defaultCategory?.taxCategory)
+    });
     setError(null);
     setMessage(null);
     setDrawerOpen(true);
@@ -242,6 +250,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       isWeighted: p.isWeighted || false,
       costPrice: p.costPrice || '',
       sellingPrice: p.sellingPrice || '',
+      taxCategory: normalizeTaxCategory(p.taxCategory || p.Category?.taxCategory),
       reorderLevel: p.reorderLevel || 5,
       stockQuantity: p.stockQuantity || 0,
       categoryId: p.categoryId,
@@ -268,6 +277,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         imageUrl: form.imageUrl.trim() || null,
         costPrice: Number(form.costPrice || 0),
         sellingPrice: Number(form.sellingPrice),
+        taxCategory: normalizeTaxCategory(form.taxCategory),
         reorderLevel: Number(form.reorderLevel),
         stockQuantity: Number(form.stockQuantity)
       };
@@ -306,11 +316,19 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       const newCat = await api('/api/admin/categories', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCatName.trim() })
+        body: JSON.stringify({
+          name: newCatName.trim(),
+          taxCategory: normalizeTaxCategory(newCatTaxCategory)
+        })
       });
       await loadCategories();
-      setForm((f) => ({ ...f, categoryId: newCat.id }));
+      setForm((f) => ({
+        ...f,
+        categoryId: newCat.id,
+        taxCategory: normalizeTaxCategory(newCat.taxCategory)
+      }));
       setNewCatName('');
+      setNewCatTaxCategory('standard');
       setShowCatModal(false);
       setMessage(`Category "${newCat.name}" created.`);
     } catch (err) { setError(err.message); }
@@ -627,6 +645,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 <th>Unit</th>
                 <th>Cost Price</th>
                 <th>Selling Price</th>
+                <th>Tax</th>
                 <th>Stock</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -643,6 +662,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                     <td>{p.unit}</td>
                     <td>KES {Number(p.costPrice).toFixed(2)}</td>
                     <td>KES {Number(p.sellingPrice).toFixed(2)}</td>
+                    <td>{taxLabel(p.taxCategory || p.Category?.taxCategory)}</td>
                     <td>
                       <span className={isLow ? styles.badgeLow : styles.badgeOk}>
                         {Number(p.stockQuantity)} {p.unit}
@@ -856,7 +876,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             <textarea
               className={styles.csvTextarea}
               rows="8"
-              placeholder="Paste CSV contents here (Headers: sku, barcode, name, category, unit, costPrice, sellingPrice, reorderLevel, stockQuantity)"
+              placeholder="Paste CSV contents here (Headers: sku, barcode, name, category, taxCategory, unit, costPrice, sellingPrice, reorderLevel, stockQuantity)"
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
             />
@@ -876,7 +896,20 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               <label className={styles.fullWidth}>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
               <label className={styles.fullWidth}>Category *
                 <div className={styles.categorySelectRow}>
-                  <select value={form.categoryId} onChange={(e) => setForm({...form, categoryId: e.target.value})} required>
+                  <select
+                    value={form.categoryId}
+                    onChange={(e) => {
+                      const category = categories.find((c) => c.id === e.target.value);
+                      setForm({
+                        ...form,
+                        categoryId: e.target.value,
+                        taxCategory: editingId
+                          ? normalizeTaxCategory(form.taxCategory)
+                          : normalizeTaxCategory(category?.taxCategory || form.taxCategory)
+                      });
+                    }}
+                    required
+                  >
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
                   <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(true)}>+ Category</button>
@@ -894,6 +927,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               <label className={styles.fullWidth}>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>
               <label>Selling Price KES * <input type="number" step="0.01" value={form.sellingPrice} onChange={(e) => setForm({...form, sellingPrice: e.target.value})} required /></label>
+              <label>Tax Category *
+                <select value={form.taxCategory} onChange={(e) => setForm({...form, taxCategory: e.target.value})} required>
+                  {TAX_CATEGORY_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>{option.label}</option>
+                  ))}
+                </select>
+              </label>
               <label>Reorder Level <input type="number" value={form.reorderLevel} onChange={(e) => setForm({...form, reorderLevel: e.target.value})} /></label>
               {!editingId && (
                 <label>Opening Stock <input type="number" step="0.001" value={form.stockQuantity} onChange={(e) => setForm({...form, stockQuantity: e.target.value})} /></label>
@@ -938,6 +978,11 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 required
                 autoFocus
               />
+              <select value={newCatTaxCategory} onChange={(e) => setNewCatTaxCategory(e.target.value)} required>
+                {TAX_CATEGORY_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
+              </select>
               <div className={styles.drawerActions}>
                 <button type="submit" className={styles.primaryBtn}>Create Category</button>
                 <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(false)}>Cancel</button>

@@ -311,9 +311,17 @@ async function signup(req, res) {
     await tenant.update({ ownerUserId: owner.id }, { transaction: t });
 
     // 3. Auto-provision default product categories for the new store
-    const defaultCats = ['General', 'Beverages', 'Groceries', 'Snacks', 'Electronics'];
-    for (const catName of defaultCats) {
-      await Category.create({ name: catName, taxCategory: 'standard', tenantId: tenant.id }, { transaction: t });
+    const defaultCats = [
+      { name: 'General', taxCategory: 'standard' },
+      { name: 'Beverages', taxCategory: 'standard' },
+      { name: 'Groceries', taxCategory: 'standard' },
+      { name: 'Bread & milk', taxCategory: 'zero_rated' },
+      { name: 'Fresh produce', taxCategory: 'exempt' },
+      { name: 'Household', taxCategory: 'standard' },
+      { name: 'Electronics', taxCategory: 'standard' }
+    ];
+    for (const category of defaultCats) {
+      await Category.create({ ...category, tenantId: tenant.id }, { transaction: t });
     }
 
     await t.commit();

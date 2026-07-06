@@ -3,6 +3,28 @@
 const { Op } = require('sequelize');
 const { Product, Category } = require('../models');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
+const { normalizeTaxCategory } = require('../utils/taxCategories');
+
+function normalizeCsvTaxCategory(value, fallback) {
+  const raw = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
+  const aliases = {
+    vat: 'standard',
+    vatable: 'standard',
+    standard_rated: 'standard',
+    '16': 'standard',
+    '16%': 'standard',
+    zero: 'zero_rated',
+    zero_rate: 'zero_rated',
+    zero_rated: 'zero_rated',
+    '0': 'zero_rated',
+    '0%': 'zero_rated',
+    exempted: 'exempt',
+    exempt: 'exempt',
+    non_vat: 'exempt',
+    non_vatable: 'exempt'
+  };
+  return normalizeTaxCategory(aliases[raw] || raw, fallback);
+}
 
 async function exportCatalogCsv(req, res) {
   try {
@@ -13,7 +35,7 @@ async function exportCatalogCsv(req, res) {
     });
 
     const rows = [
-      ['sku', 'barcode', 'name', 'category', 'unit', 'isWeighted', 'costPrice', 'sellingPrice', 'reorderLevel', 'stockQuantity'].join(',')
+      ['sku', 'barcode', 'name', 'category', 'taxCategory', 'unit', 'isWeighted', 'costPrice', 'sellingPrice', 'reorderLevel', 'stockQuantity'].join(',')
     ];
 
     function esc(val) {
@@ -27,6 +49,7 @@ async function exportCatalogCsv(req, res) {
         esc(p.barcode),
         esc(p.name),
         esc(p.Category?.name || ''),
+        esc(p.taxCategory),
         esc(p.unit),
         esc(p.isWeighted),
         esc(Number(p.costPrice).toFixed(2)),
@@ -70,13 +93,16 @@ async function importCatalogCsv(req, res) {
 
       // Find category or default
       let categoryId = row.categoryid;
+      let category = null;
       if (!categoryId && row.category) {
-        const cat = await Category.findOne({ where: tenantWhere(req, { name: row.category }) });
-        if (cat) categoryId = cat.id;
+        category = await Category.findOne({ where: tenantWhere(req, { name: row.category }) });
+        if (category) categoryId = category.id;
       }
       if (!categoryId) {
-        const defaultCat = await Category.findOne({ where: tenantWhere(req) });
-        categoryId = defaultCat?.id;
+        category = await Category.findOne({ where: tenantWhere(req) });
+        categoryId = category?.id;
+      } else if (!category) {
+        category = await Category.findOne({ where: tenantWhere(req, { id: categoryId }) });
       }
 
       const existing = await Product.findOne({ where: tenantWhere(req, { sku: row.sku }) });
@@ -102,6 +128,10 @@ async function importCatalogCsv(req, res) {
         isWeighted: row.isweighted === 'true',
         costPrice: Number(row.costprice || 0),
         sellingPrice: Number(row.sellingprice || 0),
+        taxCategory: normalizeCsvTaxCategory(
+          row.taxcategory || row.tax_category || row.vatcategory || row.vat || row.tax,
+          category?.taxCategory
+        ),
         reorderLevel: Number(row.reorderlevel || 5),
         stockQuantity: Number(row.stockquantity || 0),
         categoryId,

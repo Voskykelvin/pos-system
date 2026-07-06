@@ -104,6 +104,10 @@
   font-weight: 700;
 }
 
+.stockMeta + .stockMeta {
+  margin-top: 3px;
+}
+
 .emptyState {
   color: var(--ink-soft);
   font-size: 14px;
@@ -320,6 +324,13 @@
 .cartItemName {
   font-size: 14px;
   font-weight: 500;
+}
+
+.cartTax {
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  font-weight: 700;
 }
 
 .qtyControls {

@@ -20,18 +20,13 @@ const { sendReceipt } = require('../services/smsService');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
 const { assertPlanFeature } = require('../middleware/planEnforcement');
+const {
+  resolveProductTaxCategory,
+  taxRateForCategory
+} = require('../utils/taxCategories');
 
 // Loyalty: 1 point earned per KES 100 spent (configurable)
 const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
-
-// Maps a Category's taxCategory to the actual VAT rate applied at checkout.
-// Adjust STANDARD_VAT_RATE if the statutory rate changes.
-const STANDARD_VAT_RATE = 0.16;
-const TAX_RATES = {
-  standard: STANDARD_VAT_RATE,
-  zero_rated: 0,
-  exempt: 0
-};
 
 /**
  * POST /api/orders/checkout
@@ -141,8 +136,8 @@ async function checkout(req, res) {
       }
 
       const unitPrice = Number(product.sellingPrice);
-      const taxCategory = product.Category ? product.Category.taxCategory : 'standard';
-      const taxRate = TAX_RATES[taxCategory] ?? STANDARD_VAT_RATE;
+      const taxCategory = resolveProductTaxCategory(product);
+      const taxRate = taxRateForCategory(taxCategory);
       const lineSubtotal = unitPrice * Number(line.quantity);
       const lineTax = lineSubtotal * taxRate;
 

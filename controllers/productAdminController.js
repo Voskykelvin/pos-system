@@ -3,6 +3,7 @@ const { sequelize, Product, Category, InventoryTransaction } = require('../model
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
+const { normalizeTaxCategory } = require('../utils/taxCategories');
 
 async function assertUniqueProductIdentity(req, { sku, barcode, excludeId = null }) {
   const identityChecks = [];
@@ -46,7 +47,7 @@ async function list(req, res) {
 async function create(req, res) {
   const {
     sku, barcode, name, unit, isWeighted,
-    costPrice, sellingPrice, reorderLevel,
+    costPrice, sellingPrice, taxCategory, reorderLevel,
     stockQuantity, categoryId, imageUrl
   } = req.body;
 
@@ -59,6 +60,13 @@ async function create(req, res) {
   const t = await sequelize.transaction();
   try {
     await assertUniqueProductIdentity(req, { sku, barcode });
+    const category = await Category.findOne({
+      where: tenantWhere(req, { id: categoryId }),
+      transaction: t
+    });
+    if (!category) {
+      throw Object.assign(new Error('Category not found'), { status: 404 });
+    }
 
     const product = await Product.create({
       sku,
@@ -68,6 +76,7 @@ async function create(req, res) {
       isWeighted: !!isWeighted,
       costPrice: costPrice || 0,
       sellingPrice,
+      taxCategory: normalizeTaxCategory(taxCategory, category.taxCategory),
       reorderLevel: reorderLevel ?? 5,
       stockQuantity: stockQuantity || 0,
       categoryId,
@@ -109,7 +118,7 @@ async function update(req, res) {
   const { id } = req.params;
   const {
     sku, barcode, name, unit, isWeighted,
-    costPrice, sellingPrice, reorderLevel, categoryId, imageUrl, isActive
+    costPrice, sellingPrice, taxCategory, reorderLevel, categoryId, imageUrl, isActive
   } = req.body;
 
   try {
@@ -123,6 +132,15 @@ async function update(req, res) {
       barcode: barcode === undefined ? product.barcode : barcode,
       excludeId: product.id
     });
+    let category = null;
+    if (categoryId || taxCategory) {
+      category = await Category.findOne({
+        where: tenantWhere(req, { id: categoryId || product.categoryId })
+      });
+      if (!category) {
+        return res.status(404).json({ error: 'Category not found' });
+      }
+    }
 
     // Note: stockQuantity is deliberately NOT editable here. Stock changes
     // must go through /adjust-stock so every change leaves an audit trail.
@@ -134,6 +152,9 @@ async function update(req, res) {
       isWeighted,
       costPrice,
       sellingPrice,
+      taxCategory: taxCategory === undefined
+        ? product.taxCategory
+        : normalizeTaxCategory(taxCategory, category?.taxCategory || product.taxCategory),
       reorderLevel,
       categoryId,
       imageUrl: imageUrl || null,
