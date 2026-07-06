@@ -39,6 +39,7 @@ function publicSettings(settings = {}) {
       name: business.name || '',
       kraPin: business.kraPin || '',
       timeZone: business.timeZone || 'Africa/Nairobi',
+      receiptPolicy: business.receiptPolicy || '',
       receiptFooter: business.receiptFooter || '',
       currency: business.currency || '',
       country: business.country || ''
@@ -390,6 +391,7 @@ function mergeSettings(current, body) {
     next.business.name = cleanString(body.business.name) || '';
     next.business.kraPin = cleanString(body.business.kraPin, 50) || '';
     next.business.timeZone = cleanString(body.business.timeZone, 80) || 'Africa/Nairobi';
+    next.business.receiptPolicy = cleanString(body.business.receiptPolicy, 255) || '';
     next.business.receiptFooter = cleanString(body.business.receiptFooter, 255) || '';
     next.business.currency = cleanString(body.business.currency, 10) || '';
     next.business.country = cleanString(body.business.country, 10) || '';

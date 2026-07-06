@@ -547,8 +547,11 @@ export default function Operations({ authToken, user }) {
           ) : (
             <div className={styles.receipt}>
               <div className={styles.receiptTop}>
+                {receipt.business.receiptPolicy && <small>{receipt.business.receiptPolicy}</small>}
                 <strong>{receipt.business.name}</strong>
                 {receipt.business.kraPin && <small>PIN {receipt.business.kraPin}</small>}
+                {receipt.branch && <small>{[receipt.branch.code, receipt.branch.name].filter(Boolean).join(' - ')}</small>}
+                {receipt.branch?.phone && <small>Tel {receipt.branch.phone}</small>}
                 <span>{receipt.orderNumber}</span>
                 <small>{formatDate(receipt.createdAt)}</small>
                 <small>Served by {receipt.cashier?.name || 'Cashier'}</small>
@@ -568,6 +571,7 @@ export default function Operations({ authToken, user }) {
                 ))}
               </div>
               <div className={styles.totals}>
+                <div><span>Total items sold</span><b>{receipt.itemCount || receipt.items.length}</b></div>
                 <div><span>Before VAT</span><b>{formatKes(receipt.subtotal)}</b></div>
                 <div><span>VAT included</span><b>{formatKes(receipt.taxTotal)}</b></div>
                 <div><span>Discount</span><b>{formatKes(receipt.discountTotal)}</b></div>
@@ -585,7 +589,9 @@ export default function Operations({ authToken, user }) {
               </div>
               <div className={styles.receiptFiscal}>
                 <div><span>eTIMS</span><b>{receipt.etims?.status || 'pending'}</b></div>
+                <div><span>CU serial</span><b>{receipt.etims?.deviceSerial || 'pending'}</b></div>
                 <div><span>CU invoice</span><b>{receipt.etims?.cuInvoiceNumber || 'pending'}</b></div>
+                <div><span>Receipt no</span><b>{receipt.orderNumber}</b></div>
                 <div><span>QR</span><b>{receipt.etims?.qrCodeUrl ? 'available' : 'pending'}</b></div>
                 {receipt.etims?.qrCodeUrl && (
                   <img src={receipt.etims.qrCodeUrl} alt="eTIMS QR code" />

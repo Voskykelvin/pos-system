@@ -76,7 +76,7 @@ async function receipt(req, res) {
         { model: Customer },
         { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] },
         { model: EtimsInvoice },
-        { model: Branch, attributes: ['id', 'name', 'code'] }
+        { model: Branch, attributes: ['id', 'name', 'code', 'phone', 'address', 'city'] }
       ]
     });
 
@@ -89,6 +89,7 @@ async function receipt(req, res) {
     const paymentTotal = order.Payments.reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
     const changeDue = Number(metadata.changeDue || 0);
     const amountTendered = Number(metadata.amountTendered || paymentTotal + changeDue);
+    const itemCount = order.OrderItems.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
 
     const etimsInvoice = order.EtimsInvoice;
     const fiscalReady = Boolean(etimsInvoice?.cuInvoiceNumber && etimsInvoice?.qrCodeUrl);
@@ -118,6 +119,7 @@ async function receipt(req, res) {
         barcode: item.Product?.barcode || null,
         itemCode: productItemCode(item.Product),
         unit: item.Product?.unit || null,
+        taxCategory: item.Product?.taxCategory || null,
         quantity: Number(item.quantity),
         unitPrice: Number(item.unitPrice),
         taxRate: Number(item.taxRate),
@@ -128,6 +130,7 @@ async function receipt(req, res) {
       taxTotal: Number(order.taxTotal),
       discountTotal: Number(order.discountTotal),
       total: Number(order.total),
+      itemCount,
       tender: {
         amountTendered,
         changeDue
@@ -152,11 +155,15 @@ async function receipt(req, res) {
       branch: order.Branch ? {
         id: order.Branch.id,
         name: order.Branch.name,
-        code: order.Branch.code
+        code: order.Branch.code,
+        phone: order.Branch.phone,
+        address: order.Branch.address,
+        city: order.Branch.city
       } : null,
       business: {
         name: runtimeConfig.business.name,
         kraPin: runtimeConfig.business.kraPin || null,
+        receiptPolicy: runtimeConfig.business.receiptPolicy || '',
         receiptFooter: runtimeConfig.business.receiptFooter || ''
       }
     });

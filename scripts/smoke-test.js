@@ -170,6 +170,9 @@ async function main() {
     if (!receipt.business?.name || !receipt.items[0]?.itemCode) {
       throw new Error('Receipt is missing fiscal display fields');
     }
+    if (Number(receipt.itemCount) !== 1 || !receipt.items[0]?.taxCategory) {
+      throw new Error('Receipt is missing retail item count or VAT marker data');
+    }
 
     const etimsDashboard = await request(baseUrl, '/api/etims/dashboard', {
       headers: authHeaders

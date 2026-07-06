@@ -42,6 +42,7 @@ async function resolveTenantConfig(tenantOrId) {
     business: {
       name: configValue(business, 'name', 'BUSINESS_NAME', tenant?.name || 'Jijenge POS'),
       kraPin: configValue(business, 'kraPin', 'BUSINESS_KRA_PIN', null),
+      receiptPolicy: configValue(business, 'receiptPolicy', 'BUSINESS_RECEIPT_POLICY', ''),
       receiptFooter: configValue(business, 'receiptFooter', 'BUSINESS_RECEIPT_FOOTER', ''),
       currency: configValue(business, 'currency', 'BUSINESS_CURRENCY', tenant?.currency || 'KES'),
       country: configValue(business, 'country', 'BUSINESS_COUNTRY', tenant?.country || 'KE'),

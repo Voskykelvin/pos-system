@@ -22,6 +22,7 @@ const EMPTY_BUSINESS = {
   name: '',
   kraPin: '',
   timeZone: 'Africa/Nairobi',
+  receiptPolicy: '',
   receiptFooter: '',
   currency: 'KES',
   country: 'KE'
@@ -585,6 +586,7 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
               <label>Time zone<input value={businessForm.timeZone} onChange={(event) => setBusinessForm({ ...businessForm, timeZone: event.target.value })} disabled={!canEdit} /></label>
               <label>Currency<input value={businessForm.currency} onChange={(event) => setBusinessForm({ ...businessForm, currency: event.target.value.toUpperCase() })} disabled={!canEdit} /></label>
               <label>Country<input value={businessForm.country} onChange={(event) => setBusinessForm({ ...businessForm, country: event.target.value.toUpperCase() })} disabled={!canEdit} /></label>
+              <label>Return policy<input value={businessForm.receiptPolicy} onChange={(event) => setBusinessForm({ ...businessForm, receiptPolicy: event.target.value })} disabled={!canEdit} placeholder="e.g. 14 days exchange/refund upon approval" /></label>
               <label>Receipt footer<input value={businessForm.receiptFooter} onChange={(event) => setBusinessForm({ ...businessForm, receiptFooter: event.target.value })} disabled={!canEdit} /></label>
             </div>
           </div>

@@ -57,6 +57,7 @@ async function main() {
     const receipt = await request(baseUrl, `/api/orders/${checkout.orderId}/receipt`, { headers });
     const snapshot = {
       business: receipt.business,
+      itemCount: receipt.itemCount,
       etims: {
         status: receipt.etims.status,
         cuInvoiceNumber: receipt.etims.cuInvoiceNumber,
@@ -89,8 +90,10 @@ async function main() {
       business: {
         name: 'Receipt Snapshot Store',
         kraPin: 'P051123223C',
+        receiptPolicy: '',
         receiptFooter: ''
       },
+      itemCount: 2,
       etims: {
         status: 'queued',
         cuInvoiceNumber: null,
