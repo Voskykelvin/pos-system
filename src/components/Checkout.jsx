@@ -28,16 +28,32 @@ function Toast({ message, tone, onClose }) {
 
 const SCAN_CODE_PATTERN = /^[A-Za-z0-9._-]{4,}$/;
 
+function amountNumber(value) {
+  const amount = Number(value || 0);
+  return Number.isFinite(amount) ? amount : 0;
+}
+
+function sanitizeMoneyInput(value) {
+  const cleaned = String(value ?? '').replace(/[^\d.]/g, '');
+  const [wholePart, ...decimalParts] = cleaned.split('.');
+
+  if (decimalParts.length === 0) return wholePart;
+
+  const decimalPart = decimalParts.join('').slice(0, 2);
+  if (!wholePart && !decimalPart) return '0.';
+  return `${wholePart || '0'}.${decimalPart}`;
+}
+
 function formatKes(amount) {
-  return `KES ${Number(amount).toFixed(2)}`;
+  return `KES ${amountNumber(amount).toFixed(2)}`;
 }
 
 function roundMoney(amount) {
-  return Number(Number(amount || 0).toFixed(2));
+  return Number(amountNumber(amount).toFixed(2));
 }
 
 function taxAmountFromGross(grossAmount, rate) {
-  const gross = Number(grossAmount || 0);
+  const gross = amountNumber(grossAmount);
   const taxRate = Number(rate || 0);
   if (taxRate <= 0) return 0;
   return gross * (taxRate / (1 + taxRate));
@@ -81,7 +97,7 @@ function createReceiptBarcodeSvg(value) {
 function summarizeTaxFromLines(lines, discountTotal = 0) {
   const grossTotal = lines.reduce((sum, line) => sum + Number(line.gross || 0), 0);
   const discountRatio = grossTotal > 0
-    ? Math.max((grossTotal - Number(discountTotal || 0)) / grossTotal, 0)
+    ? Math.max((grossTotal - amountNumber(discountTotal)) / grossTotal, 0)
     : 1;
   const groups = new Map();
 
@@ -114,7 +130,7 @@ function summarizePayments(payments, total) {
   const nonCashTotal = roundMoney(
     payments
       .filter((payment) => payment.method !== 'cash')
-      .reduce((sum, payment) => sum + Number(payment.amount || 0), 0)
+      .reduce((sum, payment) => sum + amountNumber(payment.amount), 0)
   );
   const dueBeforeCash = roundMoney(Math.max(totalDue - nonCashTotal, 0));
   const changeDue = cashPayment ? roundMoney(Math.max(cashTendered - dueBeforeCash, 0)) : 0;
@@ -289,7 +305,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
       method !== 'cash' &&
       payments.length === 1 &&
       payments[0].method === 'cash' &&
-      Number(payments[0].amount || 0) <= 0
+      amountNumber(payments[0].amount) <= 0
     ) {
       onChange([{ method, amount: total.toFixed(2), mpesaPhone: '' }]);
       return;
@@ -298,7 +314,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
     const existingSummary = summarizePayments(payments, total);
     const existingSum = method === 'cash'
       ? existingSummary.nonCashTotal
-      : payments.reduce((s, p) => s + Number(p.amount || 0), 0);
+      : payments.reduce((s, p) => s + amountNumber(p.amount), 0);
     const remaining = Math.max(total - existingSum, 0);
     onChange([...payments, { method, amount: remaining.toFixed(2), mpesaPhone: '' }]);
   }
@@ -351,9 +367,9 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
           <input
             id="cashReceived"
             className={styles.cashInput}
-            type="number"
-            min="0"
-            step="1"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
             value={cashAmount}
             onFocus={() => setCashEditing(true)}
             onBlur={() => {
@@ -365,7 +381,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
             }}
             onChange={(e) => {
               setCashEditing(true);
-              updateRow(0, 'amount', e.target.value);
+              updateRow(0, 'amount', sanitizeMoneyInput(e.target.value));
             }}
             placeholder="0.00"
           />
@@ -419,11 +435,12 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
           </span>
           <input
             className={styles.paymentAmountInput}
-            type="number"
-            min="0"
-            step="0.01"
+            type="text"
+            inputMode="decimal"
+            autoComplete="off"
+            aria-label={`${p.method} payment amount`}
             value={p.amount}
-            onChange={(e) => updateRow(idx, 'amount', e.target.value)}
+            onChange={(e) => updateRow(idx, 'amount', sanitizeMoneyInput(e.target.value))}
           />
           {p.method === 'mpesa' && (
             <input
@@ -709,7 +726,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   }, [addScannedProduct]);
 
   const itemsTotal = cart.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0);
-  const discountValue = Number(discountTotal || 0);
+  const discountValue = amountNumber(discountTotal);
   const promoDiscount = promoResult ? Number(promoResult.discountAmount) : 0;
   const loyaltyDiscount = redeemLoyalty && customer?.loyaltyPoints > 0 ? Math.floor(customer.loyaltyPoints / 100) : 0;
   const totalDiscount = discountValue + promoDiscount + loyaltyDiscount;
@@ -910,7 +927,7 @@ export default function Checkout({ authToken, cashierId, user }) {
 
     const paymentPayload = payments.map((p) => ({
       method: p.method,
-      amount: Number(Number(p.amount).toFixed(2)),
+      amount: roundMoney(p.amount),
       ...(p.method === 'mpesa' ? { mpesaPhone: p.mpesaPhone } : {})
     }));
 
@@ -1480,9 +1497,11 @@ export default function Checkout({ authToken, cashierId, user }) {
           <div className={styles.discountRow}>
             <span>Discount</span>
             <input
-              type="number" min="0" step="1"
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
               value={discountTotal}
-              onChange={(e) => setDiscountTotal(e.target.value)}
+              onChange={(e) => setDiscountTotal(sanitizeMoneyInput(e.target.value))}
               placeholder="0.00"
             />
           </div>
