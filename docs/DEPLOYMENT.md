@@ -59,7 +59,7 @@ Ensure the following variables are configured in your production hosting panel:
 |---|---|---|
 | `NODE_ENV` | Mode of execution | `production` |
 | `DATABASE_URL` | PostgreSQL connection string | `postgresql://...` |
-| `AUTH_TOKEN_SECRET` | Secret key for signing JWT login tokens | Random 64-char hex string |
+| `AUTH_TOKEN_SECRET` | Required secret for signing bearer login tokens | Random 64-char hex string |
 | `SUPER_ADMIN_EMAIL` | Email of first system owner (auto-bootstrapped) | Owner email address |
 | `SUPER_ADMIN_PASSWORD` | Password of first system owner | Secure password |
 

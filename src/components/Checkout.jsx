@@ -1380,7 +1380,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         ) : (
           <div className={styles.productGrid}>
             {results.map((product) => (
-              <button key={product.id} className={styles.productCard} onClick={() => addToCart(product)}>
+              <button key={product.id} className={styles.productCard} type="button" onClick={() => addToCart(product)}>
                 {product.imageUrl && (
                   <img src={product.imageUrl} alt={product.name} className={styles.productImg} />
                 )}
@@ -1470,12 +1470,12 @@ export default function Checkout({ authToken, cashierId, user }) {
                 <div>
                   <div className={styles.cartItemName}>{item.name}</div>
                   <div className={styles.cartTax}>{taxLabel(item.taxCategory)}</div>
-                  <button className={styles.removeBtn} onClick={() => removeItem(item.productId)}>Remove</button>
+                  <button className={styles.removeBtn} type="button" onClick={() => removeItem(item.productId)}>Remove</button>
                 </div>
                 <div className={styles.qtyControls}>
-                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, -1)}>-</button>
+                  <button className={styles.qtyBtn} type="button" aria-label={`Decrease ${item.name} quantity`} onClick={() => changeQty(item.productId, -1)}>-</button>
                   <span className={styles.qtyValue}>{item.quantity}</span>
-                  <button className={styles.qtyBtn} onClick={() => changeQty(item.productId, 1)}>+</button>
+                  <button className={styles.qtyBtn} type="button" aria-label={`Increase ${item.name} quantity`} onClick={() => changeQty(item.productId, 1)}>+</button>
                 </div>
                 <div className={styles.lineTotal}>{formatKes(item.unitPrice * item.quantity)}</div>
               </div>
@@ -1546,7 +1546,7 @@ export default function Checkout({ authToken, cashierId, user }) {
           </div>
         )}
 
-        <button className={styles.confirmBtn} disabled={!canConfirm} onClick={handleConfirm}>
+        <button className={styles.confirmBtn} type="button" disabled={!canConfirm} onClick={handleConfirm}>
           {submitting ? 'Processing...' : `Confirm sale - ${formatKes(total)}`}
         </button>
 

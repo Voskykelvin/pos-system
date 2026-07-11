@@ -424,15 +424,15 @@
   justify-content: space-between;
   font-family: "IBM Plex Mono", ui-monospace, monospace;
   font-variant-numeric: tabular-nums;
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ink-soft);
   padding: 3px 0;
 }
 
 .totalsRow.grand {
   color: var(--ink);
-  font-size: 20px;
-  font-weight: 600;
+  font-size: 26px;
+  font-weight: 900;
   padding-top: 10px;
   margin-top: 6px;
   border-top: 1px solid var(--line);
@@ -554,8 +554,9 @@
 .confirmBtn {
   width: 100%;
   padding: 16px;
-  font-size: 16px;
-  font-weight: 700;
+  min-height: 60px;
+  font-size: 19px;
+  font-weight: 900;
   border: none;
   border-radius: 8px;
   background: var(--accent);
@@ -1138,6 +1139,7 @@
 
   .productCard {
     padding: 12px;
+    min-height: 116px;
   }
 
   .cartHeader,
@@ -1149,17 +1151,48 @@
   }
 
   .cartRow {
-    grid-template-columns: 1fr;
-    align-items: stretch;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 8px;
   }
 
   .qtyControls {
+    grid-column: 1;
     justify-content: flex-start;
   }
 
   .lineTotal {
+    grid-column: 2;
+    grid-row: 1 / span 2;
     min-width: 0;
-    text-align: left;
+    text-align: right;
+    font-size: 16px;
+    font-weight: 800;
+  }
+
+  .qtyBtn {
+    width: 44px;
+    height: 44px;
+    font-size: 20px;
+  }
+
+  .removeBtn {
+    min-height: 32px;
+    padding: 4px 4px 4px 0;
+  }
+
+  .totalsRow {
+    font-size: 16px;
+    padding: 5px 0;
+  }
+
+  .totalsRow.grand {
+    font-size: 28px;
+  }
+
+  .confirmBtn {
+    min-height: 64px;
+    font-size: 20px;
   }
 
   .cashChips {

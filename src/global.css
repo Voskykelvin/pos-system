@@ -57,6 +57,11 @@ textarea {
   font-family: inherit;
 }
 
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -82,4 +87,23 @@ textarea:focus-visible {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
+}
+
+@media (max-width: 600px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }

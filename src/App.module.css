@@ -257,7 +257,7 @@
 
   .navButton {
     flex: 0 0 auto;
-    min-height: 38px;
+    min-height: 44px;
     border-radius: 8px;
     padding: 0 13px;
     white-space: nowrap;
@@ -300,11 +300,38 @@
 
 @media (max-width: 520px) {
   .sidebar {
-    padding: 10px;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    padding: 8px 10px 10px;
+    gap: 8px 10px;
+  }
+
+  .nav {
+    grid-column: 1 / -1;
+    order: 3;
   }
 
   .statusBox {
+    display: flex;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    gap: 8px;
+  }
+
+  .statusLabel,
+  .statusValue {
     display: none;
+  }
+
+  .logoutBtn {
+    width: auto;
+    min-height: 44px;
+    margin: 0;
+    padding: 0 14px;
+    color: #f8fafc;
   }
 }
 
@@ -326,6 +353,15 @@
   z-index: 9999;
   border: 1px solid #1e293b;
   animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 520px) {
+  .syncIndicator {
+    right: 10px;
+    bottom: 10px;
+    left: 10px;
+    justify-content: center;
+  }
 }
 
 .syncSuccess {

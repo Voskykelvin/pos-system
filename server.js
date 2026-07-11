@@ -13,6 +13,7 @@ const siteMap = require('./utils/siteMap');
 const { authenticate } = require('./middleware/auth');
 const { getPlan } = require('./utils/planCatalog');
 const { resolveBillingStatus } = require('./services/subscriptionBilling');
+const { assertAuthTokenConfig } = require('./utils/authToken');
 
 // Routes require the route files after app and limiter are configured.
 const authRoutes = require('./routes/auth');
@@ -53,7 +54,9 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      scriptSrc:  ["'self'", "'unsafe-inline'"], // Vite injects inline scripts in dev
+      scriptSrc:  process.env.NODE_ENV === 'production'
+        ? ["'self'"]
+        : ["'self'", "'unsafe-inline'"],
       styleSrc:   ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       imgSrc:     ["'self'", 'data:'],
       connectSrc: ["'self'"],
@@ -204,7 +207,10 @@ app.use((err, req, res, next) => {
   }
 
   res.status(status).json({
-    error: err.message || 'Internal server error'
+    error: status >= 500 && process.env.NODE_ENV === 'production'
+      ? 'Internal server error'
+      : err.message || 'Internal server error',
+    requestId: req.id
   });
 });
 
@@ -212,6 +218,7 @@ const PORT = process.env.PORT || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
 
 async function start({ port = PORT, host = HOST } = {}) {
+  assertAuthTokenConfig();
   await sequelize.authenticate();
   logger.info(`Database connection established (${isUsingMemoryDatabase() ? 'memory demo' : 'postgres'})`);
 

@@ -1,6 +1,6 @@
 # Jijenge POS
 
-Jijenge POS is an enterprise-grade Point of Sale (POS) and retail management system built with Node.js, Express, Sequelize ORM, and React (Vite). Designed for high-speed checkout, queue-friendly cashier workflows, multi-tender payments, subscription billing, inventory management, supplier purchase orders, sales velocity analytics, eTIMS tax compliance, and multi-till shift reconciliation.
+Jijenge POS is a Point of Sale (POS) and retail management system built with Node.js, Express, Sequelize ORM, and React (Vite). It supports queue-friendly checkout, multi-tender payments, subscription billing, inventory management, supplier purchase orders, sales analytics, eTIMS integration workflows, and multi-till shift reconciliation.
 
 Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp **+254 703 920 254**.
 
@@ -9,7 +9,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 ## Features Delivered
 
 ### High-Speed Checkout & Payments
-- Barcode scanner & instant fuzzy text search.
+- Barcode scanner and fast substring text search.
 - Split-Tender Multi-Payment UI (Cash + M-Pesa on the same order).
 - Hold/park a current sale locally and recall it later so cashiers can keep serving the queue when a customer needs time.
 - Customer Phone Lookup & Quick-Add inside checkout with automated loyalty point earnings.
@@ -25,8 +25,8 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - `costPrice` snapshotting on every order line item for accurate gross profit tracking over time.
 
 ### Security, Compliance & Data Safety
-- Hashed passwords (`bcrypt`) & signed JWT authentication with Role-Based Access Control (`admin`, `manager`, `cashier`).
-- Schema validation middleware on all write endpoints.
+- Salted PBKDF2-SHA512 password hashes and signed bearer-token authentication with Role-Based Access Control (`admin`, `manager`, `cashier`).
+- Schema validation middleware on core write endpoints, backed by controller and database constraints.
 - Rate limiting (`express-rate-limit`: 10 auth attempts/15 min, 120 API calls/min) and `helmet` CSP security headers.
 - Transactional SQL Migration Runner (`npm run db:migrate`) replacing unsafe `alter:true` syncs.
 - eTIMS invoice queueing, automated retry worker, and transmitted invoice lock protection.

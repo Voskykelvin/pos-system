@@ -21,7 +21,7 @@
     "db:migrate:dry": "node scripts/migrate.js --dry-run",
     "db:reset-demo-catalog": "node scripts/reset-demo-catalog.js",
     "start": "node server.js",
-    "smoke": "node scripts/held-sales-smoke.mjs && node scripts/receipt-snapshot-test.js && node scripts/fiscal-guard-test.js && node scripts/smoke-test.js"
+    "smoke": "node scripts/auth-token-test.js && node scripts/held-sales-smoke.mjs && node scripts/receipt-snapshot-test.js && node scripts/fiscal-guard-test.js && node scripts/smoke-test.js"
   },
   "dependencies": {
     "axios": "^1.7.0",

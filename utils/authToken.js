@@ -16,7 +16,11 @@ function fromBase64url(input) {
 }
 
 function getSecret() {
-  return process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET || 'dev-only-change-me';
+  const secret = process.env.AUTH_TOKEN_SECRET || process.env.JWT_SECRET;
+  if (!secret && process.env.NODE_ENV === 'production') {
+    throw new Error('AUTH_TOKEN_SECRET is required in production');
+  }
+  return secret || 'dev-only-change-me';
 }
 
 function sign(data) {
@@ -25,6 +29,9 @@ function sign(data) {
 
 function createAuthToken(user) {
   const ttlHours = Number(process.env.AUTH_TOKEN_TTL_HOURS || DEFAULT_TTL_HOURS);
+  if (!Number.isFinite(ttlHours) || ttlHours <= 0) {
+    throw new Error('AUTH_TOKEN_TTL_HOURS must be a positive number');
+  }
   const payload = {
     sub: user.id,
     role: user.role,
@@ -37,12 +44,20 @@ function createAuthToken(user) {
   return `${encoded}.${sign(encoded)}`;
 }
 
+function assertAuthTokenConfig() {
+  getSecret();
+}
+
 function verifyAuthToken(token) {
   if (!token || !token.includes('.')) {
     throw new Error('Invalid auth token');
   }
 
-  const [encoded, signature] = token.split('.');
+  const parts = token.split('.');
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    throw new Error('Invalid auth token');
+  }
+  const [encoded, signature] = parts;
   const expected = sign(encoded);
   const actual = Buffer.from(signature || '');
   const expectedBuffer = Buffer.from(expected);
@@ -59,4 +74,4 @@ function verifyAuthToken(token) {
   return payload;
 }
 
-module.exports = { createAuthToken, verifyAuthToken };
+module.exports = { assertAuthTokenConfig, createAuthToken, verifyAuthToken };

@@ -1,12 +1,12 @@
 # API Documentation
 
-This document describes the request and response structures for the main API endpoints of the Jijenge POS system.
+This document describes the request and response structures for the main API endpoints of Jijenge POS. Unless marked public, requests require `Authorization: Bearer <token>`. Tokens are application-signed bearer tokens, not JSON Web Tokens, and expire after 12 hours by default (`AUTH_TOKEN_TTL_HOURS`). Monetary values are JSON numbers expressed in the tenant currency.
 
 ## Authentication & Onboarding
 
 ### 1. Staff Login
 - **Endpoint:** `POST /api/auth/login`
-- **Purpose:** Authenticate staff members and return a JWT access token.
+- **Purpose:** Authenticate staff members and return a signed bearer access token.
 - **Request Body:**
   ```json
   {
@@ -17,7 +17,7 @@ This document describes the request and response structures for the main API end
 - **Response (200 OK):**
   ```json
   {
-    "token": "eyJhbGciOiJIUzI1NiIsIn...",
+    "token": "<signed-bearer-token>",
     "user": {
       "id": "usr_90210",
       "name": "Jane Doe",
@@ -37,6 +37,7 @@ This document describes the request and response structures for the main API end
 
 ### 2. Tenant Signup
 - **Endpoint:** `POST /api/signup`
+- **Authentication:** Public
 - **Purpose:** Onboard a new store owner and auto-provision the default system configurations.
 - **Request Body:**
   ```json
@@ -53,13 +54,23 @@ This document describes the request and response structures for the main API end
   ```json
   {
     "message": "Store provisioned successfully!",
-    "token": "eyJhbGciOiJIUzI1NiIsIn...",
+    "token": "<signed-bearer-token>",
     "tenant": {
       "id": "ten_998877",
       "name": "Retail Shop",
       "currency": "KES",
       "plan": "starter",
-      "status": "pending_payment"
+      "status": "pending_payment",
+      "subscriptionStartedAt": "2026-07-12T00:00:00.000Z",
+      "subscriptionEndsAt": "2026-08-11T00:00:00.000Z"
+    },
+    "user": {
+      "id": "usr_90210",
+      "name": "Retail Shop Admin",
+      "email": "admin@retailshop.com",
+      "role": "admin",
+      "tenantId": "ten_998877",
+      "branchId": "br_445566"
     }
   }
   ```
@@ -122,6 +133,7 @@ This document describes the request and response structures for the main API end
 
 ### 5. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
+- **Required Header:** `Idempotency-Key: <unique-sale-key>` to make network retries safe
 - **Request Body:**
   ```json
   {
@@ -139,7 +151,7 @@ This document describes the request and response structures for the main API end
     ]
   }
   ```
-- **Response (200 OK):**
+- **Response (201 Created):**
   ```json
   {
     "id": "ord_554433",
