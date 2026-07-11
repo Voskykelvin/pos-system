@@ -82,7 +82,16 @@ npm run dev
 
 # Run automated smoke test suite
 npm run smoke
+
+# Run fast unit and React component tests
+npm run test:unit
+
+# Build and run desktop/phone browser tests (install Chromium once first)
+npx playwright install chromium
+npm run test:e2e
 ```
+
+See [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) for the complete test model and current coverage boundaries.
 
 ---
 

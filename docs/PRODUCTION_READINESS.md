@@ -65,6 +65,8 @@ Multi-tenant credential option:
 
 ## Go-Live Checklist
 
+- [ ] Confirm CI passes lint, unit/component, smoke, production build, browser checkout, and dependency-audit gates.
+
 - [ ] Provision Render PostgreSQL.
 - [ ] Create Render Web Service with `render.yaml`.
 - [ ] Configure all production secrets.

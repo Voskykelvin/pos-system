@@ -1,6 +1,11 @@
 export const MAX_HELD_SALES = 8;
 export const STALE_HELD_SALE_MINUTES = 30;
 
+function roundMoney(value) {
+  const amount = Number(value || 0);
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
+}
+
 export function createHeldSaleId() {
   return globalThis.crypto?.randomUUID?.() || `held-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 }
@@ -51,7 +56,7 @@ export function createHeldSaleSnapshot({
     redeemLoyalty: Boolean(redeemLoyalty),
     isWholesale: Boolean(isWholesale),
     itemCount: (Array.isArray(cart) ? cart : []).reduce((sum, item) => sum + Number(item.quantity || 0), 0),
-    total: Number(Number(total || 0).toFixed(2))
+    total: roundMoney(total)
   };
   snapshot.label = buildHeldSaleLabel(snapshot);
   return snapshot;

@@ -26,6 +26,9 @@ jobs:
       - name: Lint source
         run: npm run lint
 
+      - name: Unit and component tests
+        run: npm run test:unit
+
       - name: Build frontend
         run: npm run build
 
@@ -34,6 +37,15 @@ jobs:
         env:
           ENABLE_ETIMS_SCHEDULER: "false"
           AUTH_TOKEN_SECRET: ci-smoke-secret
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Browser checkout tests
+        run: npm run test:e2e:run
+        env:
+          ENABLE_ETIMS_SCHEDULER: "false"
+          AUTH_TOKEN_SECRET: ci-browser-secret
 
       - name: Dependency audit
         run: npm audit --omit=dev

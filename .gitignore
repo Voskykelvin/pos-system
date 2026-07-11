@@ -7,6 +7,9 @@ server.log
 server.err
 dev-server.*.log
 .DS_Store
+coverage/
+playwright-report/
+test-results/
 
 # Generated scratch output copied from an earlier export is not part of the app.
 mnt/
