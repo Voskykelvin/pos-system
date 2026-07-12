@@ -33,7 +33,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Rate limiting (`express-rate-limit`: 10 auth attempts/15 min, 120 API calls/min) and `helmet` CSP security headers.
 - Transactional SQL Migration Runner (`npm run db:migrate`) replacing unsafe `alter:true` syncs.
 - eTIMS invoice queueing, automated retry worker, and transmitted invoice lock protection.
-- Product-level Kenya VAT classification (`standard`, `zero_rated`, `exempt`) with setup notes in [`docs/KENYA_VAT_PRODUCT_CLASSIFICATION.md`](docs/KENYA_VAT_PRODUCT_CLASSIFICATION.md).
+- Product-level Kenya VAT classification (`standard`, `zero_rated`, `exempt`) with setup notes in [`docs/OPERATIONS.md`](docs/OPERATIONS.md#vat-product-classification).
 - Audit Log System recording all staff actions and manager approvals.
 
 ### Operations & Multi-Till Analytics
@@ -133,14 +133,12 @@ The recommended Kenya rollout is manual M-Pesa first, then Till/PayBill, then Da
 
 ## Project Documentation
 
-- [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) - Production Deployment & Runbook
-- [docs/PILOT_LAUNCH_CHECKLIST.md](docs/PILOT_LAUNCH_CHECKLIST.md) - Controlled first-shop rollout checklist
-- [docs/FEATURES_AND_ROADMAP.md](docs/FEATURES_AND_ROADMAP.md) - Built Features & Roadmap
-- [docs/SAAS_ARCHITECTURE.md](docs/SAAS_ARCHITECTURE.md) - SaaS Architecture Notes
-- [docs/SUBSCRIPTION_BILLING_MVP.md](docs/SUBSCRIPTION_BILLING_MVP.md) - Subscription billing product decision and rollout notes
-- [docs/SITE_MAP.md](docs/SITE_MAP.md) - Screens and API map
-- [docs/SECURITY_NOTES.md](docs/SECURITY_NOTES.md) - Security Audit & Hardening Notes
-- [docs/IMPROVEMENT_SUMMARY.md](docs/IMPROVEMENT_SUMMARY.md) - Summary of completed project improvements and future roadmap
-- [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) - Deployment Guide & Environment Variables
-- [docs/INTEGRATION_GUIDE.md](docs/INTEGRATION_GUIDE.md) - M-Pesa, eTIMS, & Subscription Billing Integration Guide
-- [docs/API_DOCUMENTATION.md](docs/API_DOCUMENTATION.md) - Main API Request & Response Schemas Guide
+- [Project status and roadmap](docs/PROJECT_STATUS.md)
+- [Operations, deployment, integrations, and launch](docs/OPERATIONS.md)
+- [Architecture and product map](docs/ARCHITECTURE.md)
+- [API documentation](docs/API_DOCUMENTATION.md)
+- [Financial and inventory invariants](docs/FINANCIAL_INVARIANTS.md)
+- [Offline sales design](docs/OFFLINE_SALES_DESIGN.md)
+- [Design system](docs/DESIGN_SYSTEM.md)
+- [Testing strategy](docs/TESTING_STRATEGY.md)
+- [Security notes](docs/SECURITY_NOTES.md)
