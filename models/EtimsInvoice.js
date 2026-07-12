@@ -42,6 +42,18 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.INTEGER,
       defaultValue: 0
     },
+    nextAttemptAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    lockedAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
+    lockToken: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     transmittedAt: {
       type: DataTypes.DATE,
       allowNull: true
@@ -50,7 +62,8 @@ module.exports = (sequelize, DataTypes) => {
     tableName: 'etims_invoices',
     timestamps: true,
     indexes: [
-      { fields: ['status'] }
+      { fields: ['status'] },
+      { fields: ['status', 'nextAttemptAt', 'createdAt'] }
     ]
   });
 
