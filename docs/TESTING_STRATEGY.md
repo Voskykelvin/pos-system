@@ -13,12 +13,17 @@ Current protected behavior includes:
 - held-sale snapshots, queue limits, labels, ageing, and monetary rounding;
 - VAT category normalization and product overrides;
 - successful login submission and visible authentication errors.
+- duplicate checkout-line consolidation and quantity precision;
+- promotion checkout constraints and idempotency payload fingerprints.
+- proportional refund tax/discount calculations and split-tender cent allocation.
+- offline device sequencing, immutable envelopes, authentication holds, conflict isolation, and server replay identity.
+- phone catalog/cart switching, persistent sale totals, cash tender, confirmation, and receipt visibility.
 
 Run once with `npm run test:unit`, or use `npm run test:unit:watch` while developing.
 
 ### API and workflow smoke tests
 
-The smoke suite starts an isolated in-memory demo database and covers authentication, tenant administration, checkout, discounts, customer credit, shifts, receipts, refunds, stock, and fiscal guards. Run it with `npm run smoke`. `npm test` runs both unit/component tests and this smoke suite.
+The smoke suite starts an isolated in-memory demo database and covers authentication, tenant administration, checkout, discounts, customer credit, shifts, receipts, refund ledgers, net reporting, stock, fiscal guards, duplicate stock requests, promotion minimums, and cumulative partial-refund limits. Run it with `npm run smoke`. `npm test` runs both unit/component tests and this smoke suite.
 
 ### Browser tests
 

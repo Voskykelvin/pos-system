@@ -1,6 +1,6 @@
 # Security Notes
 
-Last reviewed: 2026-07-04.
+Last reviewed: 2026-07-12.
 
 ## Current Controls
 
@@ -13,9 +13,10 @@ Last reviewed: 2026-07-04.
 - Write routes use `middleware/validate.js`.
 - Checkout and M-Pesa STK push use idempotency middleware.
 - Held checkout sales are stored in browser local storage per tenant/user; shared tills should use staff sign-out and clear abandoned held sales before handover.
+- Offline checkout envelopes are integrity-checked in IndexedDB; reusable authentication tokens are not persisted for service-worker synchronization.
 - SQL access is through Sequelize or migration scripts with parameterized replacements.
 - Production schema changes use `npm run db:migrate`.
-- CI runs the frontend build, smoke test, and a visible dependency audit on pushes and pull requests.
+- CI runs lint, unit/component tests, API smoke tests, browser checkout tests, the frontend build, and a dependency audit.
 
 ## Audit Notes
 
@@ -27,12 +28,7 @@ npm run build
 npm run smoke
 ```
 
-Known dependency follow-up:
-
-- Review the latest Vite/esbuild advisory status before exposing any dev server outside localhost.
-- `node-cron` is on v4.5.0.
-- `npm audit --omit=dev` still reports the Sequelize-transitive `uuid < 11.1.1` advisory. npm's forced fix downgrades Sequelize and should not be applied without a planned ORM migration.
-- `npm audit --omit=dev` is visible in CI but non-blocking until the Sequelize-transitive advisory has a safe upgrade path.
+The current full and production-only dependency audits report zero known vulnerabilities. Continue reviewing Vite/esbuild advisories before exposing any development server outside localhost.
 
 ## Production Hardening Checklist
 
@@ -41,4 +37,5 @@ Known dependency follow-up:
 - Do not expose the Vite dev server in production.
 - Configure CORS only if a separate domain, mobile app, or third-party API consumer is introduced.
 - Review audit-log metadata before any formal data-protection review.
+- Do not clear browser storage until queued and rejected offline sales have been reconciled.
 - Rotate payment, SMS, eTIMS, and auth secrets on staff turnover.

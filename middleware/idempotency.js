@@ -22,10 +22,22 @@
  *   client IP address as a fallback scope key.
  */
 
-const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const crypto = require('crypto');
 
-// Map<scopedKey, { status: 'processing'|'done', statusCode, body, expiresAt }>
+const IDEMPOTENCY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
+const MAX_KEY_LENGTH = 200;
+
+// Map<scopedKey, { status: 'processing'|'done', fingerprint, statusCode, body, expiresAt }>
 const store = new Map();
+
+function requestFingerprint(req) {
+  const canonical = JSON.stringify({
+    method: req.method,
+    path: String(req.originalUrl || req.url || '').split('?')[0],
+    body: req.body || null
+  });
+  return crypto.createHash('sha256').update(canonical).digest('hex');
+}
 
 /** Purge expired entries to prevent unbounded memory growth. */
 function purgeExpired() {
@@ -54,13 +66,24 @@ function idempotency() {
       return next();
     }
 
-    // Scope the key to the user (or IP for unauthenticated routes).
-    const scope = req.user?.id || req.ip || 'anon';
-    const scopedKey = `${scope}:${idempotencyKey.trim()}`;
+    const normalizedKey = idempotencyKey.trim();
+    if (normalizedKey.length > MAX_KEY_LENGTH) {
+      return res.status(400).json({ error: `Idempotency-Key must be ${MAX_KEY_LENGTH} characters or fewer` });
+    }
+
+    // Scope the key to the tenant and user (or IP for unauthenticated routes).
+    const scope = `${req.tenantId || req.user?.tenantId || 'single-store'}:${req.user?.id || req.ip || 'anon'}`;
+    const scopedKey = `${scope}:${normalizedKey}`;
+    const fingerprint = requestFingerprint(req);
 
     const cached = store.get(scopedKey);
 
     if (cached) {
+      if (cached.fingerprint !== fingerprint) {
+        return res.status(409).json({
+          error: 'This Idempotency-Key was already used for a different request.'
+        });
+      }
       if (cached.status === 'processing') {
         return res.status(409).json({
           error: 'A request with this Idempotency-Key is still processing. Wait and retry.'
@@ -75,6 +98,7 @@ function idempotency() {
     // Mark this key as in-flight.
     store.set(scopedKey, {
       status: 'processing',
+      fingerprint,
       expiresAt: Date.now() + IDEMPOTENCY_TTL_MS
     });
 
@@ -85,6 +109,7 @@ function idempotency() {
       if (res.statusCode >= 200 && res.statusCode < 300) {
         store.set(scopedKey, {
           status: 'done',
+          fingerprint,
           statusCode: res.statusCode,
           body: payload,
           expiresAt: Date.now() + IDEMPOTENCY_TTL_MS

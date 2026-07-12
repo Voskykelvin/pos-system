@@ -10,6 +10,7 @@ const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere } = require('../utils/tenantScope');
 const { invalidateTenantCache } = require('./reportController');
+const { fullRefundAccounting, persistRefund } = require('../services/refundLedger');
 
 async function refundOrder(req, res) {
   const { id } = req.params;
@@ -51,11 +52,27 @@ async function refundOrder(req, res) {
       });
     }
 
+    const accounting = fullRefundAccounting(order);
+    const refund = await persistRefund({
+      order,
+      userId,
+      type: 'full',
+      reason: reason || 'Order refunded',
+      accounting,
+      transaction: t
+    });
+
     await reverseOrder(
       order,
       { reason: reason || 'Order refunded', userId, status: 'refunded' },
       t
     );
+    await order.update({
+      refundedSubtotal: accounting.subtotal,
+      refundedTaxTotal: accounting.taxTotal,
+      refundedDiscountTotal: accounting.discountTotal,
+      refundedTotal: accounting.total
+    }, { transaction: t });
 
     await logAudit({
       req,
@@ -65,6 +82,7 @@ async function refundOrder(req, res) {
       approvedByUserId: approval.approvedByUserId,
       metadata: {
         orderNumber: order.orderNumber,
+        refundId: refund.id,
         reason: reason || 'Order refunded'
       },
       transaction: t
@@ -77,6 +95,8 @@ async function refundOrder(req, res) {
     return res.json({
       orderId: order.id,
       orderNumber: order.orderNumber,
+      refundId: refund.id,
+      refundTotal: accounting.total,
       status: 'refunded'
     });
   } catch (err) {

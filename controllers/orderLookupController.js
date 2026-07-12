@@ -7,7 +7,9 @@ const {
   Customer,
   User,
   EtimsInvoice,
-  Branch
+  Branch,
+  OrderRefund,
+  OrderRefundItem
 } = require('../models');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
@@ -57,6 +59,8 @@ async function searchOrders(req, res) {
       id: order.id,
       orderNumber: order.orderNumber,
       total: Number(order.total),
+      refundedTotal: Number(order.refundedTotal || 0),
+      netTotal: Math.max(Number(order.total) - Number(order.refundedTotal || 0), 0),
       status: order.status,
       paymentStatus: order.paymentStatus,
       cashier: order.cashier?.name || null,
@@ -93,6 +97,7 @@ async function receipt(req, res) {
         { model: Customer },
         { model: User, as: 'cashier', attributes: ['id', 'name', 'role'] },
         { model: EtimsInvoice },
+        { model: OrderRefund, include: [{ model: OrderRefundItem }] },
         { model: Branch, attributes: ['id', 'name', 'code', 'phone', 'address', 'city'] }
       ]
     });
@@ -138,6 +143,8 @@ async function receipt(req, res) {
         unit: item.Product?.unit || null,
         taxCategory: item.Product?.taxCategory || null,
         quantity: Number(item.quantity),
+        refundedQuantity: Number(item.refundedQuantity || 0),
+        refundableQuantity: Math.max(Number(item.quantity) - Number(item.refundedQuantity || 0), 0),
         unitPrice: Number(item.unitPrice),
         taxRate: Number(item.taxRate),
         lineTotal: Number(item.lineTotal)
@@ -147,6 +154,28 @@ async function receipt(req, res) {
       taxTotal: Number(order.taxTotal),
       discountTotal: Number(order.discountTotal),
       total: Number(order.total),
+      refundedSubtotal: Number(order.refundedSubtotal || 0),
+      refundedTaxTotal: Number(order.refundedTaxTotal || 0),
+      refundedDiscountTotal: Number(order.refundedDiscountTotal || 0),
+      refundedTotal: Number(order.refundedTotal || 0),
+      netTotal: Math.max(Number(order.total) - Number(order.refundedTotal || 0), 0),
+      refunds: (order.OrderRefunds || []).map((refund) => ({
+        id: refund.id,
+        type: refund.type,
+        subtotal: Number(refund.subtotal),
+        taxTotal: Number(refund.taxTotal),
+        discountTotal: Number(refund.discountTotal),
+        total: Number(refund.total),
+        tenderAllocations: refund.tenderAllocations || [],
+        reason: refund.reason,
+        createdAt: refund.createdAt,
+        items: (refund.OrderRefundItems || []).map((item) => ({
+          orderItemId: item.orderItemId,
+          productId: item.productId,
+          quantity: Number(item.quantity),
+          total: Number(item.total)
+        }))
+      })),
       itemCount,
       tender: {
         amountTendered,

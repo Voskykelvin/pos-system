@@ -7,7 +7,7 @@
 | `/home` | Master Homepage | Public product homepage, signup entry, pricing, and feature map back into the app. |
 | `/billing` | Subscription Billing | Tenant subscription payment instructions, manual reference submission, billing status, and payment history. |
 | `/` | Dashboard | Daily sales, payment mix, queued eTIMS invoices, low-stock watchlist, and recent orders. |
-| `/checkout` | Checkout | Product search, barcode scanner input, cart, held-sale recall, VAT totals, split payments, and M-Pesa initiation. |
+| `/checkout` | Checkout | Product search, barcode scanner input, phone catalog/cart switching, persistent mobile totals, held-sale recall, offline reconciliation, VAT totals, split payments, and M-Pesa initiation. |
 | `/inventory` | Inventory | Products, categories, suppliers, purchase orders, reorder suggestions, promotions, CSV tools, and barcode labels. |
 | `/analytics` | Analytics | Sales trends, conversion, payment mix, category mix, staff performance, stock health, restock recommendations, and export links. |
 | `/customers` | Customers | Customer profiles, loyalty balances, credit ledgers, and debt repayments. |

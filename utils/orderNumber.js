@@ -6,17 +6,20 @@ const { getBusinessDate, getBusinessDayRange } = require('./businessTime');
  * Generates a receipt-friendly order number like SUP-20260703-0001.
  * Resets the counter each business day.
  */
-async function generateOrderNumber() {
+async function generateOrderNumber({ transaction, tenantId = null } = {}) {
   const now = new Date();
   const datePart = getBusinessDate(now).compact;
   const { start } = getBusinessDayRange(now);
 
   const latestOrder = await Order.findOne({
     where: {
+      tenantId,
       createdAt: { [Op.gte]: start },
       orderNumber: { [Op.like]: `SUP-${datePart}-%` }
     },
-    order: [['orderNumber', 'DESC']]
+    order: [['orderNumber', 'DESC']],
+    transaction,
+    lock: transaction ? transaction.LOCK.UPDATE : undefined
   });
 
   const latestSequence = latestOrder

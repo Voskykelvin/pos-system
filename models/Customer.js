@@ -20,7 +20,8 @@ module.exports = (sequelize, DataTypes) => {
     },
     loyaltyPoints: {
       type: DataTypes.INTEGER,
-      defaultValue: 0
+      defaultValue: 0,
+      validate: { min: 0 }
     },
     creditLimit: {
       type: DataTypes.DECIMAL(12, 2),

@@ -4,6 +4,19 @@ const { Promotion } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
+function validatePromotionValues({ type, value, minOrderTotal, maxUses }) {
+  const amount = Number(value);
+  if (type === 'percent' && amount > 100) {
+    throw Object.assign(new Error('Percentage promotion cannot exceed 100%'), { status: 400 });
+  }
+  if (minOrderTotal !== undefined && (!Number.isFinite(Number(minOrderTotal)) || Number(minOrderTotal) < 0)) {
+    throw Object.assign(new Error('Minimum order total must be non-negative'), { status: 400 });
+  }
+  if (maxUses !== undefined && (!Number.isInteger(Number(maxUses)) || Number(maxUses) < 0)) {
+    throw Object.assign(new Error('Maximum uses must be a non-negative whole number'), { status: 400 });
+  }
+}
+
 /**
  * GET /api/promotions/validate?code=SAVE10&orderTotal=5000
  * Public endpoint - cashier types code, returns discount amount or error.
@@ -84,6 +97,7 @@ async function create(req, res) {
   }
 
   try {
+    validatePromotionValues({ type, value, minOrderTotal, maxUses });
     const normalizedCode = String(code).trim().toUpperCase();
     const existing = await Promotion.findOne({
       where: tenantWhere(req, { code: normalizedCode })
@@ -131,6 +145,12 @@ async function update(req, res) {
     if (!promo) return res.status(404).json({ error: 'Promotion not found' });
 
     const { description, type, value, minOrderTotal, maxUses, startsAt, expiresAt, isActive } = req.body;
+    validatePromotionValues({
+      type: type ?? promo.type,
+      value: value ?? promo.value,
+      minOrderTotal,
+      maxUses
+    });
     await promo.update({ description, type, value, minOrderTotal, maxUses, startsAt, expiresAt, isActive });
 
     await logAudit({

@@ -3,7 +3,16 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
 import styles from './Checkout.module.css';
-import { addOrderToQueue, getCachedCatalog, cacheCatalog, registerBackgroundSync } from '../utils/offlineQueue';
+import {
+  OFFLINE_QUEUE_EVENT,
+  addOrderToQueue,
+  cacheCatalog,
+  getCachedCatalog,
+  getOfflineQueueSummary,
+  registerBackgroundSync,
+  retryDeadLetterOrder,
+  syncOfflineOrders
+} from '../utils/offlineQueue';
 import {
   createHeldSaleSnapshot,
   formatHeldSaleAge,
@@ -506,6 +515,7 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [results, setResults] = useState([]);
   const [cart, setCart] = useState([]);
   const [isWholesale, setIsWholesale] = useState(false);
+  const [mobilePane, setMobilePane] = useState('catalog');
   const [autoPrint, setAutoPrint] = useState(() => {
     try {
       const saved = localStorage.getItem('pos_auto_print');
@@ -544,6 +554,28 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [holdNote, setHoldNote] = useState('');
   const [etimsStatus, setEtimsStatus] = useState(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
+  const [offlineSummary, setOfflineSummary] = useState({
+    queued: 0,
+    rejected: 0,
+    states: {},
+    orders: [],
+    rejectedOrders: []
+  });
+  const [offlineSyncing, setOfflineSyncing] = useState(false);
+
+  const refreshOfflineSummary = useCallback(async () => {
+    try {
+      setOfflineSummary(await getOfflineQueueSummary());
+    } catch {
+      // IndexedDB availability errors are surfaced when attempting to queue a sale.
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshOfflineSummary();
+    window.addEventListener(OFFLINE_QUEUE_EVENT, refreshOfflineSummary);
+    return () => window.removeEventListener(OFFLINE_QUEUE_EVENT, refreshOfflineSummary);
+  }, [refreshOfflineSummary]);
   const pollRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -776,6 +808,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     setHeldSales((current) => insertHeldSale(current, snapshot));
     setShowHeldSales(true);
     resetSale({ clearReceipt: true });
+    setMobilePane('catalog');
     setStatusMessage('Sale held. You can recall it from the held sales list.');
     showToast('Sale held.');
   }
@@ -792,6 +825,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     }
 
     setCart(heldSale.cart || []);
+    setMobilePane('cart');
     setPayments(heldSale.payments?.length ? heldSale.payments : [{ method: 'cash', amount: '', mpesaPhone: '' }]);
     setCustomer(heldSale.customer || null);
     setDiscountTotal(heldSale.discountTotal || '');
@@ -944,19 +978,34 @@ export default function Checkout({ authToken, cashierId, user }) {
     const checkoutIdempotencyKey = createClientIdempotencyKey('checkout');
 
     if (!navigator.onLine) {
-      if (payments.some((p) => p.method === 'mpesa')) {
-        setError('M-Pesa payments require an active internet connection.');
+      const unsafeOfflineReason = payments.some((p) => p.method !== 'cash')
+        ? 'Offline checkout currently supports cash only.'
+        : customer || promoResult || discountValue > 0 || redeemLoyalty
+          ? 'Customer credit, loyalty, promotions, and discounts require an online checkout.'
+          : null;
+      if (unsafeOfflineReason) {
+        setError(unsafeOfflineReason);
         setStatusMessage(null);
-        showToast('M-Pesa payments require an active internet connection.', 'error');
+        showToast(unsafeOfflineReason, 'error');
         setSubmitting(false);
         return;
       }
       try {
-        await addOrderToQueue({ ...orderPayload, idempotencyKey: checkoutIdempotencyKey });
-        registerBackgroundSync(authToken).catch(() => {});
+        const queuedSale = await addOrderToQueue(orderPayload, {
+          tenantId: user?.tenantId,
+          cashierId,
+          items: cart.map((item) => ({
+            productId: item.productId,
+            name: item.name,
+            quantity: item.quantity,
+            unitPrice: item.unitPrice,
+            taxCategory: item.taxCategory
+          }))
+        });
+        registerBackgroundSync().catch(() => {});
         setOrderStatus('paid');
         const newReceipt = {
-          orderNumber: 'OFFLINE-' + Date.now().toString().slice(-4),
+          orderNumber: `OFFLINE-${queuedSale.sequence}`,
           total,
           itemCount: cartItemCount,
           amountTendered: paymentSummary.cashTendered || total,
@@ -1332,12 +1381,60 @@ export default function Checkout({ authToken, cashierId, user }) {
   return (
     <div className={styles.page}>
       {!navigator.onLine && (
-        <div style={{ background: '#ef4444', color: 'white', padding: '8px', textAlign: 'center', fontWeight: 'bold', gridColumn: '1 / -1' }}>
-          OFFLINE MODE: Sales will be queued locally and synced when connection is restored. M-Pesa is disabled.
+        <div className={styles.offlineBanner}>
+          OFFLINE MODE: Cash-only sales can be queued. Payments and price-sensitive adjustments require internet.
+        </div>
+      )}
+      {(offlineSummary.queued > 0 || offlineSummary.rejected > 0) && (
+        <div className={styles.offlineQueuePanel} role="status" aria-live="polite">
+          <div>
+            <strong>Offline reconciliation</strong>
+            <span>
+              {offlineSummary.queued} waiting
+              {offlineSummary.states.auth_required ? ` · ${offlineSummary.states.auth_required} need sign-in` : ''}
+              {offlineSummary.rejected ? ` · ${offlineSummary.rejected} need review` : ''}
+            </span>
+          </div>
+          <div className={styles.offlineQueueActions}>
+            {isOnline && offlineSummary.queued > 0 && (
+              <button
+                type="button"
+                disabled={offlineSyncing}
+                onClick={async () => {
+                  setOfflineSyncing(true);
+                  try {
+                    await syncOfflineOrders(authToken, {
+                      force: true,
+                      cashierId,
+                      tenantId: user?.tenantId || null
+                    });
+                    await refreshOfflineSummary();
+                  } finally {
+                    setOfflineSyncing(false);
+                  }
+                }}
+              >
+                {offlineSyncing ? 'Syncing…' : 'Sync now'}
+              </button>
+            )}
+            {offlineSummary.rejectedOrders.slice(0, 2).map((order) => (
+              <button
+                type="button"
+                key={order.id}
+                title={order.rejectionReason}
+                onClick={async () => {
+                  await retryDeadLetterOrder(order.id);
+                  await refreshOfflineSummary();
+                }}
+              >
+                Retry offline #{order.sequence}
+              </button>
+            ))}
+          </div>
         </div>
       )}
       {/* Product search + grid */}
-      <div className={styles.catalog}>
+      <div className={`${styles.catalog} ${mobilePane === 'cart' ? styles.mobilePaneHidden : ''}`}>
         <div className={styles.searchBar}>
           <input
             ref={searchInputRef}
@@ -1399,7 +1496,7 @@ export default function Checkout({ authToken, cashierId, user }) {
       </div>
 
       {/* Cart / receipt panel */}
-      <div className={styles.cartPanel}>
+      <div className={`${styles.cartPanel} ${mobilePane === 'catalog' ? styles.mobilePaneHidden : ''}`}>
         {/* Customer lookup */}
         <div className={styles.customerSection}>
           <CustomerPanel
@@ -1556,14 +1653,14 @@ export default function Checkout({ authToken, cashierId, user }) {
           </div>
         )}
 
-        {orderStatus === 'waiting' && <div className={styles.statusBanner}>Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
-        {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`}>Payment confirmed. Sale complete.</div>}
+        {orderStatus === 'waiting' && <div className={styles.statusBanner} role="status" aria-live="polite">Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
+        {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`} role="status" aria-live="polite">Payment confirmed. Sale complete.</div>}
         {orderStatus === 'failed' && (
-          <div className={`${styles.statusBanner} ${styles.error}`}>
+          <div className={`${styles.statusBanner} ${styles.error}`} role="alert">
             Payment did not go through. Ask the customer to retry M-Pesa, switch the tender to cash, or find the receipt in Operations and void it if a backend order was created.
           </div>
         )}
-        {statusMessage && <div className={`${styles.statusBanner} ${styles.success}`}>{statusMessage}</div>}
+        {statusMessage && <div className={`${styles.statusBanner} ${styles.success}`} role="status" aria-live="polite">{statusMessage}</div>}
         {lastReceipt && (
           <div className={styles.receiptMini}>
             <div className={styles.receiptHeader}>
@@ -1581,8 +1678,33 @@ export default function Checkout({ authToken, cashierId, user }) {
             </button>
           </div>
         )}
-        {error && <p className={styles.errorText}>{error}</p>}
+        {error && <p className={styles.errorText} role="alert">{error}</p>}
       </div>
+      <nav className={styles.mobileSaleBar} aria-label="Checkout view">
+        <button
+          type="button"
+          className={mobilePane === 'catalog' ? styles.mobileSaleBarActive : ''}
+          aria-pressed={mobilePane === 'catalog'}
+          onClick={() => {
+            setMobilePane('catalog');
+            window.setTimeout(() => searchInputRef.current?.focus(), 0);
+          }}
+        >
+          Products
+        </button>
+        <div className={styles.mobileSaleSummary} aria-live="polite">
+          <span>{cartItemCount} item{cartItemCount === 1 ? '' : 's'}</span>
+          <strong>{formatKes(total)}</strong>
+        </div>
+        <button
+          type="button"
+          className={mobilePane === 'cart' ? styles.mobileSaleBarActive : ''}
+          aria-pressed={mobilePane === 'cart'}
+          onClick={() => setMobilePane('cart')}
+        >
+          Cart{cartItemCount > 0 ? ` (${formatQuantity(cartItemCount)})` : ''}
+        </button>
+      </nav>
       {toast && <Toast message={toast.message} tone={toast.tone} onClose={() => setToast(null)} />}
     </div>
   );

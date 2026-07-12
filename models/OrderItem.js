@@ -17,6 +17,12 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.DECIMAL(12, 3),
       allowNull: false
     },
+    refundedQuantity: {
+      type: DataTypes.DECIMAL(12, 3),
+      allowNull: false,
+      defaultValue: 0,
+      validate: { min: 0 }
+    },
     unitPrice: {
       // snapshot at time of sale, prices change over time
       type: DataTypes.DECIMAL(12, 2),
@@ -51,6 +57,7 @@ module.exports = (sequelize, DataTypes) => {
   OrderItem.associate = (models) => {
     OrderItem.belongsTo(models.Order, { foreignKey: 'orderId' });
     OrderItem.belongsTo(models.Product, { foreignKey: 'productId' });
+    OrderItem.hasMany(models.OrderRefundItem, { foreignKey: 'orderItemId' });
   };
 
   return OrderItem;

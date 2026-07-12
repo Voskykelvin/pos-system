@@ -31,6 +31,60 @@
   letter-spacing: 0;
 }
 
+.offlineBanner {
+  grid-column: 1 / -1;
+  padding: 10px 16px;
+  background: var(--pos-danger);
+  color: #fff;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.offlineQueuePanel {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #f59e0b;
+  background: #fffbeb;
+  color: #78350f;
+}
+
+.offlineQueuePanel > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.offlineQueuePanel span {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.offlineQueueActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.offlineQueueActions button {
+  min-height: 40px;
+  border: 1px solid #d97706;
+  border-radius: 8px;
+  background: #fff;
+  color: #92400e;
+  padding: 0 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.mobileSaleBar {
+  display: none;
+}
+
 /* ---------- Left: search + product grid ---------- */
 
 .catalog {
@@ -1120,7 +1174,93 @@
   }
 }
 
+@media (max-width: 720px) {
+  .page {
+    display: block;
+    padding-bottom: calc(76px + env(safe-area-inset-bottom));
+  }
+
+  .mobilePaneHidden {
+    display: none;
+  }
+
+  .cartHeader {
+    position: static;
+  }
+
+  .confirmBtn {
+    position: sticky;
+    bottom: calc(76px + env(safe-area-inset-bottom));
+    z-index: 16;
+    box-shadow: 0 -8px 24px rgba(15, 23, 42, 0.16);
+  }
+
+  .mobileSaleBar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 45;
+    display: grid;
+    grid-template-columns: minmax(92px, 1fr) minmax(112px, auto) minmax(92px, 1fr);
+    align-items: stretch;
+    min-height: calc(68px + env(safe-area-inset-bottom));
+    padding: 6px 8px calc(6px + env(safe-area-inset-bottom));
+    border-top: 1px solid #334155;
+    background: var(--pos-sidebar);
+    box-shadow: 0 -10px 30px rgba(15, 23, 42, 0.24);
+  }
+
+  .mobileSaleBar button {
+    min-height: 52px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #cbd5e1;
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .mobileSaleBar button.mobileSaleBarActive {
+    border-color: #34d399;
+    background: #065f46;
+    color: #fff;
+  }
+
+  .mobileSaleSummary {
+    display: grid;
+    align-content: center;
+    justify-items: center;
+    padding: 0 8px;
+    color: #d1fae5;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .mobileSaleSummary span {
+    color: #94a3b8;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+  }
+
+  .mobileSaleSummary strong {
+    font-family: "IBM Plex Mono", ui-monospace, monospace;
+    font-size: 16px;
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 560px) {
+  .offlineQueuePanel {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .offlineQueueActions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
   .catalog {
     padding: 12px;
   }

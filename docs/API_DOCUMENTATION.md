@@ -134,6 +134,7 @@ This document describes the request and response structures for the main API end
 ### 5. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
 - **Required Header:** `Idempotency-Key: <unique-sale-key>` to make network retries safe
+- **Idempotency Rules:** Maximum 200 characters. Reusing a key with a different route/body returns `409`; replayed responses include `Idempotency-Replayed: true`.
 - **Request Body:**
   ```json
   {
@@ -151,6 +152,32 @@ This document describes the request and response structures for the main API end
     ]
   }
   ```
+
+Checkout consolidates duplicate product lines, accepts quantities to three decimal places, and performs stock, promotion usage, customer credit, loyalty, payments, and inventory changes in one transaction.
+
+For a queued offline cash sale, the body also includes `offlineContext` with `schemaVersion`, `deviceId`, positive integer `sequence`, `capturedAt`, and immutable item snapshots containing `productId`, `quantity`, `unitPrice`, and `taxCategory`. The server returns `409` with `offlineConflict: true` when catalog state changed. Replaying an accepted `(tenant, deviceId, sequence)` returns the existing order with `offlineReplayed: true`.
+
+### 6. Partial Refund
+
+- **Endpoint:** `POST /api/orders/:id/refund/partial`
+- **Purpose:** Restore selected quantities while preventing cumulative returns above the quantity sold.
+- **Request Body:**
+  ```json
+  {
+    "items": [
+      { "orderItemId": "line_1", "quantity": 1 }
+    ],
+    "reason": "Customer return"
+  }
+  ```
+- **Response (200 OK):** Includes `refundId`, proportional `refundSubtotal`, `refundTaxTotal`, `refundDiscountTotal`, `refundTotal`, `tenderAllocations`, and each line's new `refundableQuantity`.
+- **Conflicts (409):** Transmitted eTIMS invoices and credit-tender partial refunds require dedicated fiscal or debt-adjustment workflows.
+
+### 7. Receipt Detail
+
+- **Endpoint:** `GET /api/orders/:id/receipt`
+- **Refund Accounting:** Returns original totals plus `refundedSubtotal`, `refundedTaxTotal`, `refundedDiscountTotal`, `refundedTotal`, and `netTotal`.
+- **Refund History:** `refunds` contains immutable refund records, tender allocations, reasons, timestamps, and returned line quantities.
 - **Response (201 Created):**
   ```json
   {

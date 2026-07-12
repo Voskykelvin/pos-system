@@ -9,7 +9,7 @@ module.exports = defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.js'],
-    include: ['src/**/*.test.{js,jsx}'],
+    include: ['{src,middleware,utils,services}/**/*.test.{js,jsx,mjs}'],
     coverage: {
       reporter: ['text', 'html'],
       reportsDirectory: 'coverage'

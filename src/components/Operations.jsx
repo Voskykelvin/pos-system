@@ -529,7 +529,7 @@ export default function Operations({ authToken, user }) {
                   <strong>{order.orderNumber}</strong>
                   <small>{order.status} - {order.paymentStatus}</small>
                 </span>
-                <b>{formatKes(order.total)}</b>
+                <b>{formatKes(order.netTotal ?? order.total)}</b>
               </button>
             ))}
           </div>
@@ -565,6 +565,7 @@ export default function Operations({ authToken, user }) {
                     <span>
                       {item.name} x {item.quantity}
                       <small>{item.itemCode || item.barcode || item.sku || '-'} - VAT {(Number(item.taxRate || 0) * 100).toFixed(0)}%</small>
+                      {item.refundedQuantity > 0 && <small>Returned {item.refundedQuantity}; remaining {item.refundableQuantity}</small>}
                     </span>
                     <b>{formatKes(item.lineTotal)}</b>
                   </div>
@@ -576,7 +577,20 @@ export default function Operations({ authToken, user }) {
                 <div><span>VAT included</span><b>{formatKes(receipt.taxTotal)}</b></div>
                 <div><span>Discount</span><b>{formatKes(receipt.discountTotal)}</b></div>
                 <div className={styles.grand}><span>Total</span><b>{formatKes(receipt.total)}</b></div>
+                {receipt.refundedTotal > 0 && <div><span>Refunded</span><b>-{formatKes(receipt.refundedTotal)}</b></div>}
+                {receipt.refundedTotal > 0 && <div className={styles.grand}><span>Net sale</span><b>{formatKes(receipt.netTotal)}</b></div>}
               </div>
+              {receipt.refunds?.length > 0 && (
+                <div className={styles.paymentList}>
+                  <strong>Refund history</strong>
+                  {receipt.refunds.map((refund) => (
+                    <div key={refund.id}>
+                      {formatDate(refund.createdAt)} - {refund.type} - {formatKes(refund.total)}
+                      {refund.reason ? ` - ${refund.reason}` : ''}
+                    </div>
+                  ))}
+                </div>
+              )}
               <div className={styles.paymentList}>
                 {receipt.payments.map((payment) => (
                   <div key={payment.id}>
@@ -604,21 +618,24 @@ export default function Operations({ authToken, user }) {
                     onChange={(event) => setActionReason(event.target.value)}
                     placeholder="Reason for action"
                   />
-                  <div className={styles.actionButtons}>
-                    <button type="button" onClick={() => orderAction('void')}>Full Void</button>
-                    <button type="button" onClick={() => orderAction('refund')}>Full Refund</button>
-                  </div>
+                  {receipt.status === 'completed' && (
+                    <div className={styles.actionButtons}>
+                      <button type="button" onClick={() => orderAction('void')}>Full Void</button>
+                      <button type="button" onClick={() => orderAction('refund')}>Full Refund</button>
+                    </div>
+                  )}
 
                   {/* Partial Refund Section */}
                   <div className={styles.partialRefundBox}>
                     <small>Select line items to return:</small>
                     {receipt.items.map((item) => (
                       <div key={item.id} className={styles.partialRow}>
-                        <span>{item.name} (Max {item.quantity})</span>
+                        <span>{item.name} (Remaining {item.refundableQuantity ?? item.quantity})</span>
                         <input
                           type="number"
                           min="0"
-                          max={item.quantity}
+                          max={item.refundableQuantity ?? item.quantity}
+                          disabled={(item.refundableQuantity ?? item.quantity) <= 0}
                           placeholder="0"
                           id={`refund-qty-${item.id}`}
                           className={styles.partialInput}

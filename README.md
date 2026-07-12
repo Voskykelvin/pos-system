@@ -12,10 +12,13 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Barcode scanner and fast substring text search.
 - Split-Tender Multi-Payment UI (Cash + M-Pesa on the same order).
 - Hold/park a current sale locally and recall it later so cashiers can keep serving the queue when a customer needs time.
+- Device-sequenced cash-only offline sales with integrity checks, conflict review, and safe authenticated synchronization.
+- Phone-first catalog/cart switching with a persistent live sale total and sticky confirmation action.
 - Customer Phone Lookup & Quick-Add inside checkout with automated loyalty point earnings.
 - Promotions & Discount Code engine (`SAVE10`, percentage & flat KES off).
 - M-Pesa STK push prompt trigger with real-time payment status polling.
 - Idempotency key protection preventing double-charges on network retries.
+- Transactional stock, promotion, loyalty, and customer-credit updates with cumulative refund guards.
 
 ### Inventory & Purchasing Depth
 - Inventory sub-tabs: **Products**, **Suppliers**, **Purchase Orders**, **Reorder Suggestions**, **Promotions**, and **CSV Tools**.
@@ -37,6 +40,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Shift open/close with cash reconciliation.
 - Today's Multi-Till Shift Summary for Managers aggregating floats, expected cash, counted cash, and variances across all registers.
 - Line-item partial refunds and full voids with stock restoration.
+- Persisted refund ledgers with proportional VAT/discount allocation and net sales reporting.
 - Printable thermal receipt view.
 - Chart-driven analytics dashboard with sales trends, conversion, payment mix, staff performance, gross margin, stock alerts, and reorder recommendations.
 - Platform owner dashboard with MRR, signup activation, store activity, tenant health, and Starter/Growth/Enterprise plan packaging.

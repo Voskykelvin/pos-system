@@ -164,7 +164,10 @@ export default function App() {
     async function handleOnline() {
       showSyncStatus({ type: 'syncing', message: 'Syncing offline transactions...' });
       try {
-        const { synced, failed } = await syncOfflineOrders(authToken);
+        const { synced, failed } = await syncOfflineOrders(authToken, {
+          cashierId: bootstrap.cashierId,
+          tenantId: bootstrap.user?.tenantId || null
+        });
         if (synced > 0 && failed === 0) {
           showSyncStatus({ type: 'success', message: `Synchronized ${synced} sales successfully.` }, 3000);
         } else if (synced > 0 && failed > 0) {
@@ -180,18 +183,23 @@ export default function App() {
     }
 
     window.addEventListener('online', handleOnline);
+    const handleServiceWorkerMessage = (event) => {
+      if (event.data?.type === 'OFFLINE_SYNC_REQUESTED') handleOnline();
+    };
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage);
     if (navigator.onLine) {
       handleOnline();
     }
 
     return () => {
       window.removeEventListener('online', handleOnline);
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage);
       if (syncTimeoutRef.current) {
         window.clearTimeout(syncTimeoutRef.current);
         syncTimeoutRef.current = null;
       }
     };
-  }, [authToken]);
+  }, [authToken, bootstrap.cashierId, bootstrap.user?.tenantId]);
 
   const visibleNavItems = useMemo(() => {
     const role = bootstrap.user?.role;

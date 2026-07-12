@@ -55,7 +55,8 @@ module.exports = (sequelize, DataTypes) => {
       // running balance, kept in sync by InventoryTransaction entries
       type: DataTypes.DECIMAL(12, 3),
       allowNull: false,
-      defaultValue: 0
+      defaultValue: 0,
+      validate: { min: 0 }
     },
     isActive: {
       type: DataTypes.BOOLEAN,

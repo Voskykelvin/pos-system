@@ -111,6 +111,8 @@ const models = {
   Customer: require('./Customer')(sequelize, modelDataTypes),
   Order: require('./Order')(sequelize, modelDataTypes),
   OrderItem: require('./OrderItem')(sequelize, modelDataTypes),
+  OrderRefund: require('./OrderRefund')(sequelize, modelDataTypes),
+  OrderRefundItem: require('./OrderRefundItem')(sequelize, modelDataTypes),
   Payment: require('./Payment')(sequelize, modelDataTypes),
   EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes),
   AuditLog: require('./AuditLog')(sequelize, modelDataTypes),

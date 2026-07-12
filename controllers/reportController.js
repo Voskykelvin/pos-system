@@ -40,6 +40,8 @@ const {
   Order,
   OrderItem,
   Payment,
+  OrderRefund,
+  OrderRefundItem,
   EtimsInvoice,
   User
 } = require('../models');
@@ -150,23 +152,44 @@ async function today(req, res) {
           [Op.lt]: end
         }
       }),
-      include: [{ model: Payment }, { model: EtimsInvoice }],
+      include: [{ model: Payment }, { model: OrderRefund }, { model: EtimsInvoice }],
       order: [['createdAt', 'DESC']]
     });
 
-    const confirmedPayments = orders.flatMap((order) =>
+    const refunds = await OrderRefund.findAll({
+      where: { createdAt: { [Op.gte]: start, [Op.lt]: end } },
+      include: [{
+        model: Order,
+        attributes: ['id', 'tenantId'],
+        required: true,
+        ...(req.tenantId ? { where: { tenantId: req.tenantId } } : {})
+      }]
+    });
+
+    const saleOrders = orders.filter((order) =>
+      ['completed', 'partial_refund', 'refunded'].includes(order.status) &&
+      ['paid', 'partial', 'reversed'].includes(order.paymentStatus)
+    );
+    const salePayments = saleOrders.flatMap((order) =>
       order.Payments
-        .filter((payment) => payment.status === 'confirmed')
+        .filter((payment) => payment.status === 'confirmed' || order.status === 'refunded')
         .map((payment) => ({
           method: payment.method,
           amount: Number(payment.amount)
         }))
     );
 
-    const paymentBreakdown = confirmedPayments.reduce((acc, payment) => {
+    const refundAllocations = refunds.flatMap((refund) => refund.tenderAllocations || []);
+
+    const paymentBreakdown = salePayments.reduce((acc, payment) => {
       acc[payment.method] = money((acc[payment.method] || 0) + payment.amount);
       return acc;
     }, {});
+    for (const allocation of refundAllocations) {
+      paymentBreakdown[allocation.method] = money(
+        (paymentBreakdown[allocation.method] || 0) - Number(allocation.amount || 0)
+      );
+    }
 
     const lowStockProducts = await Product.findAll({
       where: tenantWhere(req, { isActive: true }),
@@ -193,18 +216,24 @@ async function today(req, res) {
       where: tenantWhere(req, { isActive: true })
     });
 
-    const completedOrders = orders.filter((order) => order.status === 'completed');
+    const completedOrders = saleOrders.filter((order) => order.status !== 'refunded');
     const voidedOrders = orders.filter((order) => order.status === 'voided');
 
     res.json({
       date: businessDate,
       timeZone,
-      revenue: money(confirmedPayments.reduce((sum, payment) => sum + payment.amount, 0)),
+      revenue: money(
+        saleOrders.reduce((sum, order) => sum + Number(order.total), 0) -
+        refunds.reduce((sum, refund) => sum + Number(refund.total || 0), 0)
+      ),
       orderCount: completedOrders.length,
       voidedCount: voidedOrders.length,
       averageOrderValue: completedOrders.length
         ? money(
-          completedOrders.reduce((sum, order) => sum + Number(order.total), 0) /
+          completedOrders.reduce(
+            (sum, order) => sum + Number(order.total) - Number(order.refundedTotal || 0),
+            0
+          ) /
             completedOrders.length
         )
         : 0,
@@ -216,6 +245,8 @@ async function today(req, res) {
         id: order.id,
         orderNumber: order.orderNumber,
         total: Number(order.total),
+        refundedTotal: Number(order.refundedTotal || 0),
+        netTotal: Math.max(Number(order.total) - Number(order.refundedTotal || 0), 0),
         status: order.status,
         paymentStatus: order.paymentStatus,
         createdAt: order.createdAt
@@ -243,7 +274,7 @@ async function analytics(req, res) {
     const { start, end, days } = parseAnalyticsRange(req.query);
     const leadTimeDays = Math.min(Math.max(Number(req.query.leadTimeDays || 7), 1), 90);
 
-    const [orders, products, customers, pendingEtimsCount, failedEtimsCount] = await Promise.all([
+    const [orders, periodRefunds, products, customers, pendingEtimsCount, failedEtimsCount] = await Promise.all([
       Order.findAll({
         where: tenantWhere(req, {
           createdAt: {
@@ -261,6 +292,21 @@ async function analytics(req, res) {
         ],
         order: [['createdAt', 'DESC']]
       }),
+      OrderRefund.findAll({
+        where: { createdAt: { [Op.gte]: start, [Op.lte]: end } },
+        include: [
+          {
+            model: Order,
+            required: true,
+            where: tenantWhere(req),
+            include: [{ model: User, as: 'cashier', attributes: ['id', 'name', 'role'] }]
+          },
+          {
+            model: OrderRefundItem,
+            include: [{ model: OrderItem, include: [{ model: Product, include: [{ model: Category }] }] }]
+          }
+        ]
+      }),
       Product.findAll({
         where: tenantWhere(req, { isActive: true }),
         include: [{ model: Category }],
@@ -275,7 +321,9 @@ async function analytics(req, res) {
     ]);
 
     const paidOrders = orders.filter(
-      (order) => order.status === 'completed' && order.paymentStatus === 'paid'
+      (order) =>
+        ['completed', 'partial_refund', 'refunded'].includes(order.status) &&
+        ['paid', 'partial', 'reversed'].includes(order.paymentStatus)
     );
     const voidedOrders = orders.filter((order) => order.status === 'voided');
 
@@ -320,19 +368,20 @@ async function analytics(req, res) {
     }
 
     for (const order of paidOrders) {
-      grossSales += number(order.total);
+      const netOrderTotal = number(order.total);
+      grossSales += netOrderTotal;
       taxTotal += number(order.taxTotal);
       discountTotal += number(order.discountTotal);
 
       const day = dailyMap.get(dateKey(order.createdAt));
       if (day) {
-        day.sales += number(order.total);
+        day.sales += netOrderTotal;
         day.orders += 1;
       }
 
       if (order.customerId) {
         capturedCustomerOrders += 1;
-        customerSales += number(order.total);
+        customerSales += netOrderTotal;
         customerOrderCounts.set(
           order.customerId,
           (customerOrderCounts.get(order.customerId) || 0) + 1
@@ -342,20 +391,21 @@ async function analytics(req, res) {
       const staff = staffPerformance.get(order.cashierId);
       if (staff) {
         staff.orders += 1;
-        staff.sales += number(order.total);
+        staff.sales += netOrderTotal;
       }
 
       for (const payment of order.Payments || []) {
-        if (payment.status !== 'confirmed') continue;
+        if (payment.status !== 'confirmed' && order.status !== 'refunded') continue;
         paymentMix[payment.method] = money((paymentMix[payment.method] || 0) + number(payment.amount));
       }
-
       for (const item of order.OrderItems || []) {
         const product = item.Product;
         const categoryName = product?.Category?.name || 'Uncategorized';
         const quantity = number(item.quantity);
-        const revenue = number(item.lineTotal);
-        const netRevenue = number(item.unitPrice) * quantity;
+        const orderGross = (order.OrderItems || []).reduce((sum, row) => sum + number(row.lineTotal), 0);
+        const priceRatio = orderGross > 0 ? number(order.total) / orderGross : 0;
+        const revenue = number(item.unitPrice) * quantity * priceRatio;
+        const netRevenue = revenue;
         const cost = number(item.costPrice ?? product?.costPrice) * quantity;
 
         unitsSold += quantity;
@@ -399,6 +449,84 @@ async function analytics(req, res) {
         category.unitsSold += quantity;
         category.revenue += revenue;
         category.estimatedGrossProfit += netRevenue - cost;
+        categorySales.set(categoryName, category);
+      }
+    }
+
+    for (const refund of periodRefunds) {
+      grossSales -= number(refund.total);
+      taxTotal -= number(refund.taxTotal);
+      discountTotal -= number(refund.discountTotal);
+
+      const day = dailyMap.get(dateKey(refund.createdAt));
+      if (day) day.sales -= number(refund.total);
+
+      const refundOrder = refund.Order;
+      if (refundOrder?.customerId) customerSales -= number(refund.total);
+      const cashierId = refundOrder?.cashierId || 'unknown';
+      const staff = staffPerformance.get(cashierId) || {
+        id: cashierId,
+        name: refundOrder?.cashier?.name || 'Unknown cashier',
+        role: refundOrder?.cashier?.role || 'cashier',
+        attemptedOrders: 0,
+        orders: 0,
+        voidedOrders: 0,
+        sales: 0,
+        unitsSold: 0,
+        averageOrderValue: 0,
+        conversionRate: 0
+      };
+      staff.sales -= number(refund.total);
+      staffPerformance.set(cashierId, staff);
+
+      for (const allocation of refund.tenderAllocations || []) {
+        paymentMix[allocation.method] = money(
+          (paymentMix[allocation.method] || 0) - number(allocation.amount)
+        );
+      }
+
+      for (const refundItem of refund.OrderRefundItems || []) {
+        const orderItem = refundItem.OrderItem;
+        const product = orderItem?.Product;
+        const categoryName = product?.Category?.name || 'Uncategorized';
+        const quantity = number(refundItem.quantity);
+        const revenue = number(refundItem.total);
+        const cost = number(orderItem?.costPrice ?? product?.costPrice) * quantity;
+        unitsSold -= quantity;
+        estimatedCost -= cost;
+        if (day) {
+          day.unitsSold -= quantity;
+          day.grossProfit -= revenue - cost;
+        }
+        staff.unitsSold -= quantity;
+
+        const productId = refundItem.productId;
+        const currentProduct = productSales.get(productId) || {
+          id: productId,
+          name: product?.name || 'Unknown product',
+          sku: product?.sku || '',
+          category: categoryName,
+          unit: product?.unit || 'each',
+          unitsSold: 0,
+          revenue: 0,
+          estimatedGrossProfit: 0,
+          stockQuantity: number(product?.stockQuantity),
+          reorderLevel: number(product?.reorderLevel)
+        };
+        currentProduct.unitsSold -= quantity;
+        currentProduct.revenue -= revenue;
+        currentProduct.estimatedGrossProfit -= revenue - cost;
+        productSales.set(productId, currentProduct);
+
+        const category = categorySales.get(categoryName) || {
+          category: categoryName,
+          unitsSold: 0,
+          revenue: 0,
+          estimatedGrossProfit: 0
+        };
+        category.unitsSold -= quantity;
+        category.revenue -= revenue;
+        category.estimatedGrossProfit -= revenue - cost;
         categorySales.set(categoryName, category);
       }
     }
@@ -662,8 +790,8 @@ async function analytics(req, res) {
 
 /**
  * GET /api/reports/export?days=7&format=csv
- * Downloads a CSV of all completed orders in the period.
- * Columns: date, receipt, cashier, items, subtotal, VAT, discount, total, payment_methods
+ * Downloads a CSV of completed and partially refunded orders in the period,
+ * including original, refunded, and net totals.
  */
 async function exportCsv(req, res) {
   try {
@@ -671,7 +799,7 @@ async function exportCsv(req, res) {
 
     const orders = await Order.findAll({
       where: tenantWhere(req, {
-        status: 'completed',
+        status: { [Op.in]: ['completed', 'partial_refund'] },
         createdAt: { [Op.gte]: start, [Op.lte]: end }
       }),
       include: [
@@ -691,7 +819,7 @@ async function exportCsv(req, res) {
 
     const rows = [
       // header
-      ['date', 'receipt_number', 'cashier', 'items', 'subtotal', 'vat', 'discount', 'total', 'payment_methods'].join(',')
+      ['date', 'receipt_number', 'cashier', 'items', 'subtotal', 'vat', 'discount', 'gross_total', 'refunded_total', 'net_total', 'payment_methods'].join(',')
     ];
 
     for (const order of orders) {
@@ -712,6 +840,8 @@ async function exportCsv(req, res) {
         csvEscape(Number(order.taxTotal).toFixed(2)),
         csvEscape(Number(order.discountTotal).toFixed(2)),
         csvEscape(Number(order.total).toFixed(2)),
+        csvEscape(Number(order.refundedTotal || 0).toFixed(2)),
+        csvEscape(Math.max(Number(order.total) - Number(order.refundedTotal || 0), 0).toFixed(2)),
         csvEscape(methods)
       ].join(','));
     }
@@ -800,12 +930,15 @@ async function reorderSuggestions(req, res) {
 
     // Aggregate total quantities sold per product in period
     const sales = await OrderItem.findAll({
-      attributes: ['productId', [sequelize.fn('SUM', sequelize.col('quantity')), 'totalSold']],
+      attributes: [
+        'productId',
+        [sequelize.fn('SUM', sequelize.literal('quantity - COALESCE("refundedQuantity", 0)')), 'totalSold']
+      ],
       include: [{
         model: Order,
         attributes: [],
         where: tenantWhere(req, {
-          status: 'completed',
+          status: { [Op.in]: ['completed', 'partial_refund'] },
           createdAt: { [Op.gte]: start }
         })
       }],

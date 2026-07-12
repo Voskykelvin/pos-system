@@ -26,12 +26,19 @@ const {
   resolveProductTaxCategory,
   taxRateForCategory
 } = require('../utils/taxCategories');
+const {
+  consolidateCheckoutItems,
+  validateOfflineCatalogSnapshot,
+  validateOfflineSale,
+  validatePromotionForTotal
+} = require('../utils/checkoutInvariants');
 
 // Loyalty: 1 point earned per KES 100 spent (configurable)
 const LOYALTY_POINTS_PER_100 = Number(process.env.LOYALTY_POINTS_PER_100 || 1);
 
 function roundMoney(value) {
-  return Number(Number(value || 0).toFixed(2));
+  const amount = Number(value || 0);
+  return Math.round((amount + Number.EPSILON) * 100) / 100;
 }
 
 function taxAmountFromGross(grossAmount, taxRate) {
@@ -73,6 +80,10 @@ function normalizeTenderedPayments(payments, total) {
   const cashPayments = normalized.filter((payment) => payment.method === 'cash');
   if (cashPayments.length > 1) {
     throw Object.assign(new Error('Use one cash payment row per sale'), { status: 400 });
+  }
+  const methods = normalized.map((payment) => payment.method);
+  if (new Set(methods).size !== methods.length) {
+    throw Object.assign(new Error('Use one payment row per payment method'), { status: 400 });
   }
 
   const nonCashTotal = roundMoney(
@@ -140,7 +151,8 @@ async function checkout(req, res) {
     payments,
     discountTotal = 0,
     promotionCode,    // optional promo code string
-    redeemPoints = 0  // optional loyalty points to redeem
+    redeemPoints = 0, // optional loyalty points to redeem
+    offlineContext
   } = req.body;
   const cashierId = req.user?.id || bodyCashierId;
 
@@ -163,6 +175,20 @@ async function checkout(req, res) {
   }
   if (payments.some((p) => p.method === 'credit') && !customerId) {
     return res.status(400).json({ error: 'Credit payments require a selected customer' });
+  }
+  try {
+    validateOfflineSale({
+      offlineContext,
+      customerId,
+      discountTotal,
+      promotionCode,
+      redeemPoints,
+      payments,
+      cashierId,
+      tenantId: req.tenantId || null
+    });
+  } catch (err) {
+    return res.status(err.status || 409).json({ error: err.message, offlineConflict: true });
   }
 
   try {
@@ -192,6 +218,37 @@ async function checkout(req, res) {
   const t = await sequelize.transaction();
 
   try {
+    const consolidatedItems = consolidateCheckoutItems(items);
+    if (offlineContext) {
+      const existingOfflineOrder = await Order.findOne({
+        where: tenantWhere(req, {
+          offlineDeviceId: offlineContext.deviceId,
+          offlineSequence: offlineContext.sequence
+        }),
+        include: [{ model: Payment }],
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+      if (existingOfflineOrder) {
+        await t.commit();
+        return res.status(200).json({
+          orderId: existingOfflineOrder.id,
+          orderNumber: existingOfflineOrder.orderNumber,
+          createdAt: existingOfflineOrder.createdAt,
+          total: existingOfflineOrder.total,
+          amountTendered: existingOfflineOrder.metadata?.amountTendered || existingOfflineOrder.total,
+          changeDue: existingOfflineOrder.metadata?.changeDue || 0,
+          paymentStatus: existingOfflineOrder.paymentStatus,
+          offlineReplayed: true,
+          payments: existingOfflineOrder.Payments.map((payment) => ({
+            id: payment.id,
+            method: payment.method,
+            amount: payment.amount,
+            status: payment.status
+          }))
+        });
+      }
+    }
     const normalizedDiscount = Number(discountTotal || 0);
     if (!Number.isFinite(normalizedDiscount) || normalizedDiscount < 0) {
       throw new Error('discountTotal must be a non-negative number');
@@ -202,13 +259,11 @@ async function checkout(req, res) {
     let promoDiscount = 0;
     if (promotionCode) {
       const promo = await Promotion.findOne({
-        where: tenantWhere(req, { code: String(promotionCode).trim().toUpperCase(), isActive: true })
+        where: tenantWhere(req, { code: String(promotionCode).trim().toUpperCase(), isActive: true }),
+        transaction: t,
+        lock: t.LOCK.UPDATE
       });
       if (!promo) throw Object.assign(new Error('Invalid or inactive promotion code'), { status: 400 });
-      const now = new Date();
-      if (promo.startsAt && now < new Date(promo.startsAt)) throw Object.assign(new Error('Promotion has not started'), { status: 400 });
-      if (promo.expiresAt && now > new Date(promo.expiresAt)) throw Object.assign(new Error('Promotion has expired'), { status: 400 });
-      if (promo.maxUses > 0 && promo.usedCount >= promo.maxUses) throw Object.assign(new Error('Promotion has reached max uses'), { status: 400 });
       appliedPromotion = promo;
     }
 
@@ -219,7 +274,7 @@ async function checkout(req, res) {
 
     // 1. Load products and lock the rows to prevent two cashiers
     //    selling the last unit of the same item at the same time
-    const productIds = items.map((i) => i.productId);
+    const productIds = consolidatedItems.map((i) => i.productId);
     const products = await Product.findAll({
       where: tenantWhere(req, { id: productIds }),
       include: [{ model: Category }],
@@ -228,6 +283,12 @@ async function checkout(req, res) {
     });
 
     const productMap = new Map(products.map((p) => [p.id, p]));
+    validateOfflineCatalogSnapshot(
+      offlineContext,
+      consolidatedItems,
+      productMap,
+      resolveProductTaxCategory
+    );
 
     // 2. Validate stock and compute totals
     let grossSubtotal = 0;
@@ -235,7 +296,7 @@ async function checkout(req, res) {
     const orderItemRows = [];
     const etimsLineItems = [];
 
-    for (const line of items) {
+    for (const line of consolidatedItems) {
       const product = productMap.get(line.productId);
       if (!product) {
         throw new Error(`Product ${line.productId} not found`);
@@ -285,19 +346,34 @@ async function checkout(req, res) {
 
     // Apply promotion on top of any manual discount
     if (appliedPromotion) {
+      validatePromotionForTotal(appliedPromotion, grossSubtotal - normalizedDiscount);
       const base = grossSubtotal - normalizedDiscount;
       promoDiscount = appliedPromotion.type === 'percent'
         ? base * (Number(appliedPromotion.value) / 100)
         : Math.min(Number(appliedPromotion.value), base);
     }
 
-    // Calculate loyalty redemption discount
+    let customer = null;
+    if (customerId) {
+      customer = await Customer.findOne({
+        where: tenantWhere(req, { id: customerId }),
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      });
+      if (!customer) {
+        throw Object.assign(new Error('Selected customer was not found'), { status: 400 });
+      }
+    }
+
+    // Calculate loyalty redemption discount while holding the customer row lock.
     let loyaltyDiscount = 0;
-    const numRedeemPoints = Math.max(Number(redeemPoints || 0), 0);
+    const numRedeemPoints = Number(redeemPoints || 0);
+    if (!Number.isInteger(numRedeemPoints) || numRedeemPoints < 0) {
+      throw Object.assign(new Error('redeemPoints must be a non-negative whole number'), { status: 400 });
+    }
     const ptsPerKes = Number(process.env.LOYALTY_POINTS_PER_KES) || 100;
-    if (numRedeemPoints > 0 && customerId) {
-      const cust = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
-      if (!cust || (cust.loyaltyPoints || 0) < numRedeemPoints) {
+    if (numRedeemPoints > 0) {
+      if (!customer || Number(customer.loyaltyPoints || 0) < numRedeemPoints) {
         throw Object.assign(new Error('Insufficient customer loyalty points'), { status: 400 });
       }
       loyaltyDiscount = Math.floor(numRedeemPoints / ptsPerKes);
@@ -312,7 +388,10 @@ async function checkout(req, res) {
 
     // 3. Create the order
     const anyPending = tender.payments.some((p) => !['cash', 'credit'].includes(p.method));
-    const orderNumber = await generateOrderNumber();
+    const orderNumber = await generateOrderNumber({
+      transaction: t,
+      tenantId: req.tenantId || null
+    });
     const order = await Order.create({
       orderNumber,
       cashierId,
@@ -325,10 +404,20 @@ async function checkout(req, res) {
       paymentStatus: anyPending ? 'pending' : 'paid',
       metadata: {
         amountTendered: tender.amountTendered,
-        changeDue: tender.changeDue
+        changeDue: tender.changeDue,
+        ...(offlineContext ? {
+          offlineSale: {
+            schemaVersion: offlineContext.schemaVersion,
+            deviceId: offlineContext.deviceId,
+            sequence: offlineContext.sequence,
+            capturedAt: offlineContext.capturedAt
+          }
+        } : {})
       },
       tenantId: req.tenantId || null,
-      branchId: req.user?.branchId || null
+      branchId: req.user?.branchId || null,
+      offlineDeviceId: offlineContext?.deviceId || null,
+      offlineSequence: offlineContext?.sequence || null
     }, { transaction: t });
 
     // 4. Create order items, deduct stock, log inventory transactions
@@ -364,10 +453,7 @@ async function checkout(req, res) {
       }, { transaction: t });
       createdPayments.push(paymentRow);
 
-      if (isCredit && customerId) {
-        const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
-        if (!customer) throw new Error('Customer not found for credit sale');
-
+      if (isCredit && customer) {
         const newBalance = Number(customer.creditBalance) + Number(p.amount);
         if (Number(customer.creditLimit) > 0 && newBalance > Number(customer.creditLimit)) {
           throw Object.assign(
@@ -389,12 +475,41 @@ async function checkout(req, res) {
       }
     }
 
-    // 6. Queue the eTIMS invoice for later transmission (offline-first)
-    let customerKraPin = null;
-    if (customerId) {
-      const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }), transaction: t });
-      customerKraPin = customer ? customer.kraPin : null;
+    if (customer) {
+      let currentPoints = Number(customer.loyaltyPoints || 0);
+      if (numRedeemPoints > 0) {
+        const balanceBefore = currentPoints;
+        currentPoints -= numRedeemPoints;
+        await LoyaltyTransaction.create({
+          customerId: customer.id,
+          orderId: order.id,
+          type: 'redeem',
+          points: -numRedeemPoints,
+          balanceBefore,
+          balanceAfter: currentPoints,
+          note: `Redeemed on order ${order.orderNumber}`
+        }, { transaction: t });
+      }
+
+      const pointsEarned = Math.floor(Number(total) / 100 * LOYALTY_POINTS_PER_100);
+      if (pointsEarned > 0) {
+        const balanceBefore = currentPoints;
+        currentPoints += pointsEarned;
+        await LoyaltyTransaction.create({
+          customerId: customer.id,
+          orderId: order.id,
+          type: 'earn',
+          points: pointsEarned,
+          balanceBefore,
+          balanceAfter: currentPoints,
+          note: `Earned on order ${order.orderNumber}`
+        }, { transaction: t });
+      }
+      await customer.update({ loyaltyPoints: currentPoints }, { transaction: t });
     }
+
+    // 6. Queue the eTIMS invoice for later transmission (offline-first)
+    const customerKraPin = customer?.kraPin || null;
 
     const payload = buildEtimsPayload({
       order: { ...order.toJSON(), customerKraPin },
@@ -407,6 +522,12 @@ async function checkout(req, res) {
       status: 'queued',
       payload
     }, { transaction: t });
+
+    if (appliedPromotion) {
+      await appliedPromotion.update({
+        usedCount: Number(appliedPromotion.usedCount) + 1
+      }, { transaction: t });
+    }
 
     await logAudit({
       req,
@@ -426,67 +547,16 @@ async function checkout(req, res) {
 
     await t.commit();
 
-    // -- Post-commit: award or redeem loyalty points (non-blocking) -----------------
-    if (customerId) {
-      try {
-        const customer = await Customer.findOne({ where: tenantWhere(req, { id: customerId }) });
-        if (customer) {
-          let currentPoints = customer.loyaltyPoints || 0;
-
-          // Process point redemption if requested
-          if (numRedeemPoints > 0 && currentPoints >= numRedeemPoints) {
-            const balanceBefore = currentPoints;
-            const balanceAfter = balanceBefore - numRedeemPoints;
-            await customer.update({ loyaltyPoints: balanceAfter });
-            await LoyaltyTransaction.create({
-              customerId: customer.id,
-              orderId: order.id,
-              type: 'redeem',
-              points: -numRedeemPoints,
-              balanceBefore,
-              balanceAfter,
-              note: `Redeemed on order ${order.orderNumber}`
-            });
-            currentPoints = balanceAfter;
-          }
-
-          // Process point earning on net total paid
-          const pointsEarned = Math.floor(Number(total) / 100 * LOYALTY_POINTS_PER_100);
-          if (pointsEarned > 0) {
-            const balanceBefore = currentPoints;
-            const balanceAfter = balanceBefore + pointsEarned;
-            await customer.update({ loyaltyPoints: balanceAfter });
-            await LoyaltyTransaction.create({
-              customerId: customer.id,
-              orderId: order.id,
-              type: 'earn',
-              points: pointsEarned,
-              balanceBefore,
-              balanceAfter,
-              note: `Earned on order ${order.orderNumber}`
-            });
-          }
-
-          // SMS receipt if customer has a phone and SMS is configured
-          if (customer.phone) {
-            sendReceipt(customer.phone, {
-              orderNumber: order.orderNumber,
-              total,
-              businessName: runtimeConfig.business.name,
-              smsConfig: runtimeConfig.sms
-            }).catch(() => {}); // fire-and-forget
-          }
-        }
-      } catch (loyaltyErr) {
-        // Never fail the checkout response over loyalty/SMS errors
-        console.warn('[checkout] loyalty/SMS error:', loyaltyErr.message);
-      }
+    // SMS is non-financial and remains best-effort after commit.
+    if (customer?.phone) {
+      sendReceipt(customer.phone, {
+        orderNumber: order.orderNumber,
+        total,
+        businessName: runtimeConfig.business.name,
+        smsConfig: runtimeConfig.sms
+      }).catch(() => {});
     }
 
-    // Increment promotion use count (post-commit, non-blocking)
-    if (appliedPromotion) {
-      Promotion.increment('usedCount', { where: { id: appliedPromotion.id } }).catch(() => {});
-    }
 
     logger.info('Audit Payload: Checkout order created successfully', {
       requestId: req.id,
@@ -520,7 +590,10 @@ async function checkout(req, res) {
       requestId: req.id,
       cashierId
     });
-    return res.status(err.status || 400).json({ error: err.message });
+    return res.status(err.status || 400).json({
+      error: err.message,
+      ...(offlineContext && err.status === 409 ? { offlineConflict: true } : {})
+    });
   }
 }
 
