@@ -35,6 +35,11 @@ DROP INDEX IF EXISTS orders_order_number;
 CREATE UNIQUE INDEX IF NOT EXISTS ux_orders_scope_order_number
   ON orders ((COALESCE("tenantId"::text, 'single-store')), "orderNumber");
 
+-- loyaltyPoints was introduced in the application model without a matching
+-- PostgreSQL migration. Backfill existing customers before enforcing balances.
+ALTER TABLE customers
+  ADD COLUMN IF NOT EXISTS "loyaltyPoints" INTEGER NOT NULL DEFAULT 0;
+
 ALTER TABLE customers
   DROP CONSTRAINT IF EXISTS customers_balances_check;
 
