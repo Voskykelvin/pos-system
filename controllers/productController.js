@@ -1,6 +1,7 @@
 const { Op } = require('sequelize');
 const { Product, Category } = require('../models');
 const { tenantWhere } = require('../utils/tenantScope');
+const { parseScaleBarcode } = require('../utils/scaleBarcode');
 
 // GET /api/products/search?q=milk  or  ?barcode=5901234123457
 async function search(req, res) {
@@ -8,11 +9,17 @@ async function search(req, res) {
 
   try {
     if (barcode) {
+      const scale = parseScaleBarcode(barcode);
       const product = await Product.findOne({
-        where: tenantWhere(req, { barcode, isActive: true }),
+        where: tenantWhere(req, scale
+          ? { scaleCode: scale.scaleCode, isWeighted: true, isActive: true }
+          : { barcode, isActive: true }),
         include: [{ model: Category }]
       });
-      return res.json(product ? [product] : []);
+      if (!product) return res.json([]);
+      const payload = product.toJSON();
+      if (scale) payload.scaleQuantity = scale.quantity;
+      return res.json([payload]);
     }
 
     if (!q || q.trim().length < 2) {

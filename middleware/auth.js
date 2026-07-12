@@ -60,7 +60,8 @@ async function authenticate(req, res, next) {
       phone: user.phone,
       role: user.role,
       tenantId: user.tenantId || null,
-      branchId: user.branchId || null
+      branchId: user.branchId || null,
+      mfaEnabled: Boolean(user.mfaEnabled)
     };
     req.authSession = session;
     req.authTokenPayload = payload;

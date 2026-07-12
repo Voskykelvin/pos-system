@@ -3,8 +3,11 @@ const {
   InventoryTransaction,
   Customer,
   CustomerLedger,
-  LoyaltyTransaction
+  LoyaltyTransaction,
+  BranchInventory,
+  StoreCreditTransaction
 } = require('../models');
+const { restoreLotsForOrderItem } = require('./lotInventory');
 
 /**
  * Restores stock, marks payments reversed, cancels the eTIMS invoice if it
@@ -47,6 +50,24 @@ async function reverseOrder(order, { reason, userId, status = 'voided' }, t) {
         }, { transaction: t });
       }
 
+      const storeCreditTotal = order.Payments
+        .filter((payment) => payment.method === 'store_credit' && payment.status === 'confirmed')
+        .reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+      if (storeCreditTotal > 0) {
+        const balanceAfter = Number(customer.storeCreditBalance || 0) + storeCreditTotal;
+        await customer.update({ storeCreditBalance: balanceAfter }, { transaction: t });
+        await StoreCreditTransaction.create({
+          customerId: customer.id,
+          tenantId: order.tenantId || null,
+          orderId: order.id,
+          type: 'issued',
+          amount: storeCreditTotal,
+          balanceAfter,
+          note: `Store credit restored by reversal: ${reason}`,
+          createdByUserId: userId || null
+        }, { transaction: t });
+      }
+
       const loyaltyRows = await LoyaltyTransaction.findAll({
         where: { orderId: order.id },
         transaction: t,
@@ -83,8 +104,18 @@ async function reverseOrder(order, { reason, userId, status = 'voided' }, t) {
     });
     if (!product) continue;
 
+    await restoreLotsForOrderItem(item.id, Number(item.quantity), t);
+
     const newBalance = Number(product.stockQuantity) + Number(item.quantity);
     await product.update({ stockQuantity: newBalance }, { transaction: t });
+    if (order.branchId) {
+      const [branchStock] = await BranchInventory.findOrCreate({
+        where: { branchId: order.branchId, productId: product.id },
+        defaults: { quantity: 0 },
+        transaction: t
+      });
+      await branchStock.increment('quantity', { by: Number(item.quantity), transaction: t });
+    }
 
     await InventoryTransaction.create({
       productId: product.id,
@@ -94,7 +125,8 @@ async function reverseOrder(order, { reason, userId, status = 'voided' }, t) {
       referenceType: status === 'refunded' ? 'order_refund' : 'order_void',
       referenceId: order.id,
       note: reason,
-      userId: userId || null
+      userId: userId || null,
+      branchId: order.branchId || null
     }, { transaction: t });
   }
 

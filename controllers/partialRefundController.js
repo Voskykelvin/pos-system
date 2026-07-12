@@ -7,13 +7,18 @@ const {
   Product,
   Payment,
   EtimsInvoice,
-  InventoryTransaction
+  InventoryTransaction,
+  BranchInventory,
+  Customer
 } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere } = require('../utils/tenantScope');
 const { invalidateTenantCache } = require('./reportController');
 const { allocateTender, calculatePartialRefund, persistRefund, roundMoney } = require('../services/refundLedger');
+const { queueCreditNote } = require('../services/etimsCreditNotes');
+const { restoreLotsForOrderItem } = require('../services/lotInventory');
+const { issueStoreCredit } = require('../services/storeCredit');
 
 /**
  * POST /api/orders/:id/refund/partial
@@ -29,7 +34,7 @@ const { allocateTender, calculatePartialRefund, persistRefund, roundMoney } = re
  */
 async function partialRefund(req, res) {
   const { id } = req.params;
-  const { items, reason } = req.body;
+  const { items, reason, refundMethod = 'original' } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ error: 'items is required and must be a non-empty array' });
@@ -60,13 +65,6 @@ async function partialRefund(req, res) {
       await t.rollback();
       return res.status(400).json({
         error: `Order is ${order.status} - cannot partially refund`
-      });
-    }
-
-    if (order.EtimsInvoice?.status === 'transmitted') {
-      await t.rollback();
-      return res.status(409).json({
-        error: 'This order has been reported to KRA eTIMS. A credit note is required before refunding.'
       });
     }
 
@@ -143,6 +141,7 @@ async function partialRefund(req, res) {
 
     // Restore stock for each returned line
     for (const { orderItem, refundQty, alreadyRefunded } of refundLines) {
+      await restoreLotsForOrderItem(orderItem.id, refundQty, t);
       const product = await Product.findByPk(orderItem.productId, {
         transaction: t,
         lock: t.LOCK.UPDATE
@@ -150,6 +149,14 @@ async function partialRefund(req, res) {
       if (product) {
         const newBalance = Number(product.stockQuantity) + refundQty;
         await product.update({ stockQuantity: newBalance }, { transaction: t });
+        if (order.branchId) {
+          const [branchStock] = await BranchInventory.findOrCreate({
+            where: { branchId: order.branchId, productId: product.id },
+            defaults: { quantity: 0 },
+            transaction: t
+          });
+          await branchStock.increment('quantity', { by: refundQty, transaction: t });
+        }
         await InventoryTransaction.create({
           productId: product.id,
           type: 'return',
@@ -158,7 +165,8 @@ async function partialRefund(req, res) {
           referenceType: 'order',
           referenceId: order.id,
           userId: req.user?.id || null,
-          note: reason || 'Partial refund'
+          note: reason || 'Partial refund',
+          branchId: order.branchId || null
         }, { transaction: t });
       }
       await orderItem.update({
@@ -185,6 +193,16 @@ async function partialRefund(req, res) {
       accounting,
       transaction: t
     });
+    const creditNote = await queueCreditNote({ order, refund, accounting, transaction: t });
+    let storeCreditIssued = 0;
+    if (refundMethod === 'store_credit') {
+      if (!order.customerId) throw Object.assign(new Error('Store-credit refunds require a customer on the sale'), { status: 409 });
+      const customer = await Customer.findByPk(order.customerId, { transaction: t, lock: t.LOCK.UPDATE });
+      accounting.tenderAllocations = [{ method: 'store_credit', amount: accounting.total }];
+      storeCreditIssued = accounting.total;
+      await issueStoreCredit({ customer, orderId: order.id, refundId: refund.id, amount: accounting.total, note: reason || 'Partial refund to store credit', userId: req.user.id, transaction: t });
+      await refund.update({ tenderAllocations: accounting.tenderAllocations }, { transaction: t });
+    }
 
     await order.update({
       status: fullyRefunded ? 'refunded' : 'partial_refund',
@@ -240,6 +258,8 @@ async function partialRefund(req, res) {
       refundTaxTotal: accounting.taxTotal,
       refundDiscountTotal: accounting.discountTotal,
       refundTotal: accounting.total,
+      fiscalCreditNoteQueued: Boolean(creditNote),
+      storeCreditIssued,
       tenderAllocations: accounting.tenderAllocations
     });
   } catch (err) {

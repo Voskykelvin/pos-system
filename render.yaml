@@ -18,6 +18,8 @@ services:
         value: Africa/Nairobi
       - key: ENABLE_ETIMS_SCHEDULER
         value: "false"
+      - key: ENABLE_MAINTENANCE_SCHEDULER
+        value: "true"
       - key: BUSINESS_NAME
         sync: false
       - key: BUSINESS_KRA_PIN

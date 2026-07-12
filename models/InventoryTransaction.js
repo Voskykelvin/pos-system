@@ -43,6 +43,10 @@ module.exports = (sequelize, DataTypes) => {
       // who made the change, for accountability
       type: DataTypes.UUID,
       allowNull: true
+    },
+    branchId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'inventory_transactions',
@@ -56,6 +60,7 @@ module.exports = (sequelize, DataTypes) => {
   InventoryTransaction.associate = (models) => {
     InventoryTransaction.belongsTo(models.Product, { foreignKey: 'productId' });
     InventoryTransaction.belongsTo(models.User, { foreignKey: 'userId' });
+    InventoryTransaction.belongsTo(models.Branch, { foreignKey: 'branchId' });
   };
 
   return InventoryTransaction;

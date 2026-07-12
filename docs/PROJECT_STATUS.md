@@ -11,7 +11,7 @@ This is the single source of truth for shipped capabilities and planned product 
 - Store analytics for sales trends, payments, categories, staff, customers, stock health, velocity, and restocking.
 - Shared-database SaaS tenancy, public signup, plan enforcement, subscription review, billing-only access, and platform analytics.
 - PWA installation, cached catalog, resilient offline queue, conflict handling, and device/sequence identity.
-- Layered CI covering lint, 22 unit/component tests, API/workflow smoke tests, production build, Playwright checkout tests, and dependency audit.
+- Layered CI covering lint, unit/component tests, API/workflow smoke tests, PostgreSQL contention checks, production build and bundle budgets, Playwright checkout tests, and dependency audit.
 
 ## Completed modernization batches
 
@@ -23,18 +23,15 @@ This is the single source of truth for shipped capabilities and planned product 
 6. Offline-sale identity, immutable envelopes, reconciliation, and authentication safety.
 7. Phone checkout catalog/cart flow, persistent total bar, safe-area handling, and browser coverage.
 
-## Remaining build batches
+## Remaining production and certification work
 
 Work in this order unless a production incident changes priority:
 
-1. Authentication and sessions: refresh rotation, device/session revocation, MFA, authorization tests, and standardized API errors.
-2. Payment and fiscal resilience: persisted eTIMS claim leases, exponential retries, durable M-Pesa callback records, and audited manager resolution are built; next add provider simulators and eTIMS credit notes.
-3. PostgreSQL scale verification: PostgreSQL-backed CI, concurrency/contention tests, migration rollback tests, load tests, and distributed idempotency.
-4. Observability and operations: centralized structured logs, error tracking, metrics, tracing, readiness checks, backup verification, and incident runbooks.
-5. Performance and PWA: image compression, chart chunk reduction, font subsetting, smaller precache, and bundle budgets.
-6. Broader mobile/accessibility work across inventory, reports, settings, and platform administration.
-7. Advanced retail: transfers, cycle counts, batch/expiry tracking, exchanges, store credit, weighted scales, and deeper purchasing.
-8. Provider certification using live Daraja, KRA eTIMS, and SMS accounts.
+1. Provider certification using live Daraja, KRA eTIMS, and SMS accounts; local M-Pesa/eTIMS simulators and durable credit-note queues are implemented.
+2. Production operations: external error tracking, metrics/tracing backend, automated backup-restore drills, alert routing, and incident exercises.
+3. Scale and resilience: load tests, migration rollback rehearsals, multi-instance idempotency/contention tests, and longer offline soak tests.
+4. Advanced retail follow-through: lot-aware inter-branch transfers/counts, supplier remittance automation, and certified scale-device trials. Generic counts/transfers deliberately reject lot-tracked products to prevent balance drift.
+5. Performance and accessibility: compress/replace the 2 MB marketing hero, subset or self-host fonts, automated accessibility scans, and broaden phone browser coverage beyond checkout.
 
 ## External dependencies
 

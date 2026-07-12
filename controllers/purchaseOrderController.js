@@ -7,9 +7,14 @@ const {
   Supplier,
   Product,
   InventoryTransaction,
-  User
+  User,
+  InventoryLot,
+  BranchInventory,
+  PurchaseReturn,
+  PurchaseReturnItem
 } = require('../models');
 const { logAudit } = require('../services/auditLogger');
+const { addBranchStock, resolveOperationalBranch } = require('../services/branchInventory');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 async function list(req, res) {
@@ -19,7 +24,7 @@ async function list(req, res) {
       include: [
         { model: Supplier, attributes: ['id', 'name', 'phone'] },
         { model: User, as: 'createdBy', attributes: ['id', 'name'] },
-        { model: PurchaseOrderItem, as: 'items', include: [{ model: Product, attributes: ['id', 'name', 'sku'] }] }
+        { model: PurchaseOrderItem, as: 'items', include: [{ model: Product, attributes: ['id', 'name', 'sku', 'tracksLots'] }] }
       ],
       order: [['createdAt', 'DESC']]
     });
@@ -107,6 +112,7 @@ async function receive(req, res) {
     }
 
     const poItemMap = new Map(po.items.map((i) => [i.id, i]));
+    const branchId = await resolveOperationalBranch(req, t);
 
     for (const line of items) {
       const poItem = poItemMap.get(line.itemId);
@@ -128,11 +134,41 @@ async function receive(req, res) {
           transaction: t
         });
         if (product) {
+          if (product.tracksLots && !line.lotNumber) {
+            throw Object.assign(new Error(`Lot number is required for ${product.name}`), { status: 400 });
+          }
+          if (line.expiryDate && Number.isNaN(Date.parse(line.expiryDate))) {
+            throw Object.assign(new Error(`Invalid expiry date for ${product.name}`), { status: 400 });
+          }
           const newStock = Number(product.stockQuantity) + recQty;
           await product.update({
             stockQuantity: newStock,
             costPrice: newCost // Update running cost price
           }, { transaction: t });
+          await addBranchStock({ branchId, productId: product.id, quantity: recQty, transaction: t });
+          if (product.tracksLots) {
+            const [lot, created] = await InventoryLot.findOrCreate({
+              where: { branchId, productId: product.id, lotNumber: String(line.lotNumber).trim().toUpperCase() },
+              defaults: {
+                tenantId: req.tenantId || null,
+                supplierId: po.supplierId,
+                purchaseOrderId: po.id,
+                expiryDate: line.expiryDate || null,
+                receivedQuantity: recQty,
+                availableQuantity: recQty,
+                unitCost: newCost
+              },
+              transaction: t
+            });
+            if (!created) {
+              await lot.update({
+                receivedQuantity: Number(lot.receivedQuantity) + recQty,
+                availableQuantity: Number(lot.availableQuantity) + recQty,
+                expiryDate: line.expiryDate || lot.expiryDate,
+                unitCost: newCost
+              }, { transaction: t });
+            }
+          }
 
           // Create audit transaction
           await InventoryTransaction.create({
@@ -143,7 +179,8 @@ async function receive(req, res) {
             referenceType: 'purchase_order',
             referenceId: po.id,
             userId: req.user?.id || null,
-            note: `Received PO ${po.poNumber}`
+            note: `Received PO ${po.poNumber}`,
+            branchId
           }, { transaction: t });
         }
       }
@@ -151,7 +188,8 @@ async function receive(req, res) {
 
     await po.update({
       status: 'received',
-      receivedAt: new Date()
+      receivedAt: new Date(),
+      receivedBranchId: branchId
     }, { transaction: t });
 
     await logAudit({
@@ -171,4 +209,121 @@ async function receive(req, res) {
   }
 }
 
-module.exports = { create, list, receive };
+async function listReturns(req, res) {
+  return res.json(await PurchaseReturn.findAll({
+    where: tenantWhere(req),
+    include: [
+      { model: Supplier, attributes: ['id', 'name'] },
+      { model: PurchaseReturnItem, include: [{ model: Product, attributes: ['id', 'sku', 'name'] }] }
+    ],
+    order: [['createdAt', 'DESC']],
+    limit: 50
+  }));
+}
+
+async function createReturn(req, res) {
+  const transaction = await sequelize.transaction();
+  try {
+    const po = await PurchaseOrder.findOne({
+      where: tenantWhere(req, { id: req.params.id, status: 'received' }),
+      include: [{ model: PurchaseOrderItem, as: 'items', include: [{ model: Product }] }],
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!po) throw Object.assign(new Error('Received purchase order not found'), { status: 404 });
+    const itemMap = new Map(po.items.map((item) => [item.id, item]));
+    const returned = await PurchaseReturn.create({
+      tenantId: req.tenantId || null,
+      purchaseOrderId: po.id,
+      supplierId: po.supplierId,
+      branchId: po.receivedBranchId,
+      reason: req.body.reason,
+      createdByUserId: req.user.id
+    }, { transaction });
+    let totalCost = 0;
+    for (const line of req.body.items) {
+      const poItem = itemMap.get(line.itemId);
+      if (!poItem) throw Object.assign(new Error(`Purchase-order item ${line.itemId} not found`), { status: 400 });
+      const quantity = Math.round(Number(line.quantity) * 1000) / 1000;
+      const remaining = Number(poItem.receivedQuantity) - Number(poItem.returnedQuantity || 0);
+      if (quantity > remaining) throw Object.assign(new Error(`Return exceeds remaining received quantity for ${poItem.Product.name}`), { status: 409 });
+      const product = await Product.findByPk(poItem.productId, { transaction, lock: transaction.LOCK.UPDATE });
+      const branch = await BranchInventory.findOne({
+        where: { branchId: po.receivedBranchId, productId: product.id },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      if (!branch || Number(branch.quantity) < quantity || Number(product.stockQuantity) < quantity) {
+        throw Object.assign(new Error(`Insufficient unsold stock to return ${product.name}`), { status: 409 });
+      }
+      let lot = null;
+      if (product.tracksLots) {
+        if (!line.inventoryLotId) throw Object.assign(new Error(`Select the supplier lot being returned for ${product.name}`), { status: 400 });
+        lot = await InventoryLot.findOne({
+          where: {
+            id: line.inventoryLotId,
+            purchaseOrderId: po.id,
+            branchId: po.receivedBranchId,
+            productId: product.id
+          },
+          transaction,
+          lock: transaction.LOCK.UPDATE
+        });
+        if (!lot || Number(lot.availableQuantity) < quantity) {
+          throw Object.assign(new Error(`Insufficient available quantity in the selected lot for ${product.name}`), { status: 409 });
+        }
+        await lot.update({ availableQuantity: Number(lot.availableQuantity) - quantity }, { transaction });
+      }
+      const branchBalance = Number(branch.quantity) - quantity;
+      await branch.update({ quantity: branchBalance }, { transaction });
+      await product.update({ stockQuantity: Number(product.stockQuantity) - quantity }, { transaction });
+      await poItem.update({ returnedQuantity: Number(poItem.returnedQuantity || 0) + quantity }, { transaction });
+      const lineTotal = Math.round(quantity * Number(poItem.unitCostPrice) * 100) / 100;
+      totalCost += lineTotal;
+      await PurchaseReturnItem.create({
+        purchaseReturnId: returned.id,
+        purchaseOrderItemId: poItem.id,
+        productId: product.id,
+        inventoryLotId: lot?.id || null,
+        quantity,
+        unitCost: poItem.unitCostPrice,
+        lineTotal
+      }, { transaction });
+      await InventoryTransaction.create({
+        productId: product.id,
+        branchId: po.receivedBranchId,
+        type: 'purchase_return',
+        quantity: -quantity,
+        balanceAfter: branchBalance,
+        referenceType: 'purchase_return',
+        referenceId: returned.id,
+        userId: req.user.id,
+        note: req.body.reason
+      }, { transaction });
+    }
+    await returned.update({ totalCost: Math.round(totalCost * 100) / 100 }, { transaction });
+    await logAudit({
+      req,
+      action: 'purchase.return_created',
+      entityType: 'purchase_return',
+      entityId: returned.id,
+      metadata: { purchaseOrderId: po.id, totalCost, awaitingSupplierCredit: true },
+      transaction
+    });
+    await transaction.commit();
+    return res.status(201).json({ id: returned.id, status: returned.status, totalCost: returned.totalCost });
+  } catch (err) {
+    await transaction.rollback();
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
+
+async function confirmSupplierCredit(req, res) {
+  const returned = await PurchaseReturn.findOne({ where: tenantWhere(req, { id: req.params.id, status: 'awaiting_supplier_credit' }) });
+  if (!returned) return res.status(404).json({ error: 'Open supplier return not found' });
+  await returned.update({ status: 'credited' });
+  await logAudit({ req, action: 'purchase.return_credited', entityType: 'purchase_return', entityId: returned.id, metadata: { reference: req.body.reference, note: req.body.note } });
+  return res.json({ id: returned.id, status: 'credited' });
+}
+
+module.exports = { create, list, receive, listReturns, createReturn, confirmSupplierCredit };

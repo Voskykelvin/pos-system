@@ -58,8 +58,20 @@ module.exports = defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
+        // The marketing hero is not required for offline till operation and
+        // must not consume the initial PWA install cache.
+        globIgnores: ['**/jijenge-pos-hero-*.png'],
         importScripts: ['/sw-sync.js'],
         runtimeCaching: [
+          {
+            urlPattern: /\/assets\/jijenge-pos-hero-.*\.png$/i,
+            handler: 'StaleWhileRevalidate',
+            options: {
+              cacheName: 'marketing-images',
+              expiration: { maxEntries: 2, maxAgeSeconds: 60 * 60 * 24 * 30 },
+              cacheableResponse: { statuses: [200] }
+            }
+          },
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,
             handler: 'CacheFirst',

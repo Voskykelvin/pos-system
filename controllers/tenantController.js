@@ -21,6 +21,7 @@ const {
   SubscriptionPayment
 } = require('../models');
 const { issueAuthSession } = require('../services/authSessions');
+const { setRefreshCookie } = require('./authController');
 const { getPlanAmount, getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
 const { publicPayment, resolveBillingStatus } = require('../services/subscriptionBilling');
 
@@ -327,11 +328,12 @@ async function signup(req, res) {
 
     await t.commit();
 
-    const token = await issueAuthSession(owner, req);
+    const session = await issueAuthSession(owner, req);
+    setRefreshCookie(res, session.refreshToken, session.refreshExpiresAt);
 
     return res.status(201).json({
       message: 'Store provisioned successfully!',
-      token,
+      token: session.accessToken,
       tenant: {
         id: tenant.id,
         name: tenant.name,

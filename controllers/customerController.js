@@ -102,17 +102,23 @@ async function ledger(req, res) {
     const customer = await Customer.findOne({ where: tenantWhere(req, { id: req.params.id }) });
     if (!customer) return res.status(404).json({ error: 'Customer not found' });
 
-    const { CustomerLedger } = require('../models');
-    const transactions = await CustomerLedger.findAll({
+    const { CustomerLedger, StoreCreditTransaction } = require('../models');
+    const [transactions, storeCreditTransactions] = await Promise.all([CustomerLedger.findAll({
       where: { customerId: customer.id },
       order: [['createdAt', 'DESC']],
       limit: 50
-    });
+    }), StoreCreditTransaction.findAll({
+      where: { customerId: customer.id },
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    })]);
 
     return res.json({
       creditLimit: customer.creditLimit,
       creditBalance: customer.creditBalance,
-      transactions
+      storeCreditBalance: customer.storeCreditBalance,
+      transactions,
+      storeCreditTransactions
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -216,6 +222,7 @@ function mapCustomer(c) {
     loyaltyPoints: c.loyaltyPoints,
     creditLimit: c.creditLimit,
     creditBalance: c.creditBalance,
+    storeCreditBalance: c.storeCreditBalance,
     createdAt: c.createdAt
   };
 }

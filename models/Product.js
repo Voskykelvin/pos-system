@@ -13,6 +13,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.STRING,
       allowNull: true
     },
+    scaleCode: {
+      type: DataTypes.STRING(5),
+      allowNull: true
+    },
     name: {
       type: DataTypes.STRING,
       allowNull: false
@@ -26,6 +30,11 @@ module.exports = (sequelize, DataTypes) => {
     isWeighted: {
       // true for loose produce sold by weight
       type: DataTypes.BOOLEAN,
+      defaultValue: false
+    },
+    tracksLots: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
       defaultValue: false
     },
     costPrice: {
@@ -86,6 +95,7 @@ module.exports = (sequelize, DataTypes) => {
     indexes: [
       { unique: true, fields: ['tenantId', 'sku'] },
       { unique: true, fields: ['tenantId', 'barcode'] },
+      { unique: true, fields: ['tenantId', 'scaleCode'] },
       { fields: ['categoryId'] },
       { fields: ['taxCategory'] },
       { fields: ['isActive'] }
@@ -97,6 +107,8 @@ module.exports = (sequelize, DataTypes) => {
     Product.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     Product.hasMany(models.OrderItem, { foreignKey: 'productId' });
     Product.hasMany(models.InventoryTransaction, { foreignKey: 'productId' });
+    Product.hasMany(models.BranchInventory, { foreignKey: 'productId' });
+    Product.hasMany(models.InventoryLot, { foreignKey: 'productId' });
   };
 
   return Product;

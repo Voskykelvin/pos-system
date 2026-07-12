@@ -47,6 +47,10 @@ module.exports = (sequelize, DataTypes) => {
     tenantId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    receivedBranchId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'purchase_orders',
@@ -64,6 +68,7 @@ module.exports = (sequelize, DataTypes) => {
     PurchaseOrder.belongsTo(models.User, { foreignKey: 'createdById', as: 'createdBy' });
     PurchaseOrder.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     PurchaseOrder.hasMany(models.PurchaseOrderItem, { foreignKey: 'purchaseOrderId', as: 'items' });
+    PurchaseOrder.hasMany(models.PurchaseReturn, { foreignKey: 'purchaseOrderId' });
   };
 
   return PurchaseOrder;

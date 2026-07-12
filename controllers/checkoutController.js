@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const {
   sequelize,
   Product,
@@ -10,7 +11,11 @@ const {
   Customer,
   LoyaltyTransaction,
   Promotion,
-  CustomerLedger
+  CustomerLedger,
+  StoreCreditTransaction,
+  BranchInventory,
+  InventoryLot,
+  OrderItemLotAllocation
 } = require('../models');
 const { generateOrderNumber } = require('../utils/orderNumber');
 const { buildEtimsPayload } = require('../utils/etimsPayload');
@@ -173,8 +178,8 @@ async function checkout(req, res) {
   if (!Array.isArray(payments) || payments.length === 0) {
     return res.status(400).json({ error: 'At least one payment is required' });
   }
-  if (payments.some((p) => p.method === 'credit') && !customerId) {
-    return res.status(400).json({ error: 'Credit payments require a selected customer' });
+  if (payments.some((p) => ['credit', 'store_credit'].includes(p.method)) && !customerId) {
+    return res.status(400).json({ error: 'Customer credit payments require a selected customer' });
   }
   try {
     validateOfflineSale({
@@ -283,6 +288,14 @@ async function checkout(req, res) {
     });
 
     const productMap = new Map(products.map((p) => [p.id, p]));
+    const branchInventoryRows = req.user?.branchId
+      ? await BranchInventory.findAll({
+        where: { branchId: req.user.branchId, productId: productIds },
+        transaction: t,
+        lock: t.LOCK.UPDATE
+      })
+      : [];
+    const branchInventoryMap = new Map(branchInventoryRows.map((row) => [row.productId, row]));
     validateOfflineCatalogSnapshot(
       offlineContext,
       consolidatedItems,
@@ -304,7 +317,10 @@ async function checkout(req, res) {
       if (!product.isActive) {
         throw new Error(`Product "${product.name}" is not active`);
       }
-      if (Number(product.stockQuantity) < Number(line.quantity)) {
+      const availableStock = req.user?.branchId
+        ? Number(branchInventoryMap.get(product.id)?.quantity || 0)
+        : Number(product.stockQuantity);
+      if (availableStock < Number(line.quantity)) {
         throw new Error(`Insufficient stock for "${product.name}"`);
       }
 
@@ -387,7 +403,7 @@ async function checkout(req, res) {
     const tender = normalizeTenderedPayments(payments, total);
 
     // 3. Create the order
-    const anyPending = tender.payments.some((p) => !['cash', 'credit'].includes(p.method));
+    const anyPending = tender.payments.some((p) => !['cash', 'credit', 'store_credit'].includes(p.method));
     const orderNumber = await generateOrderNumber({
       transaction: t,
       tenantId: req.tenantId || null
@@ -422,12 +438,45 @@ async function checkout(req, res) {
 
     // 4. Create order items, deduct stock, log inventory transactions
     for (const row of orderItemRows) {
-      await OrderItem.create({ ...row, orderId: order.id }, { transaction: t });
+      const orderItem = await OrderItem.create({ ...row, orderId: order.id }, { transaction: t });
 
       const product = productMap.get(row.productId);
+      if (product.tracksLots) {
+        if (!order.branchId) throw Object.assign(new Error(`A branch is required to sell lot-tracked product "${product.name}"`), { status: 409 });
+        const lots = await InventoryLot.findAll({
+          where: {
+            branchId: order.branchId,
+            productId: product.id,
+            availableQuantity: { [Op.gt]: 0 },
+            [Op.or]: [{ expiryDate: null }, { expiryDate: { [Op.gte]: new Date().toISOString().slice(0, 10) } }]
+          },
+          order: [['expiryDate', 'ASC'], ['receivedAt', 'ASC'], ['id', 'ASC']],
+          transaction: t,
+          lock: t.LOCK.UPDATE
+        });
+        let remaining = Number(row.quantity);
+        for (const lot of lots) {
+          if (remaining <= 0) break;
+          const allocated = Math.min(remaining, Number(lot.availableQuantity));
+          await lot.update({ availableQuantity: Number(lot.availableQuantity) - allocated }, { transaction: t });
+          await OrderItemLotAllocation.create({
+            orderItemId: orderItem.id,
+            inventoryLotId: lot.id,
+            quantity: allocated
+          }, { transaction: t });
+          remaining = Math.round((remaining - allocated) * 1000) / 1000;
+        }
+        if (remaining > 0) {
+          throw Object.assign(new Error(`Insufficient non-expired lot stock for "${product.name}"`), { status: 409 });
+        }
+      }
       const newBalance = Number(product.stockQuantity) - Number(row.quantity);
 
       await product.update({ stockQuantity: newBalance }, { transaction: t });
+      if (req.user?.branchId) {
+        const branchStock = branchInventoryMap.get(product.id);
+        await branchStock.update({ quantity: Number(branchStock.quantity) - Number(row.quantity) }, { transaction: t });
+      }
 
       await InventoryTransaction.create({
         productId: product.id,
@@ -436,7 +485,8 @@ async function checkout(req, res) {
         balanceAfter: newBalance,
         referenceType: 'order',
         referenceId: order.id,
-        userId: cashierId
+        userId: cashierId,
+        branchId: req.user?.branchId || null
       }, { transaction: t });
     }
 
@@ -444,11 +494,12 @@ async function checkout(req, res) {
     const createdPayments = [];
     for (const p of tender.payments) {
       const isCredit = p.method === 'credit';
+      const isStoreCredit = p.method === 'store_credit';
       const paymentRow = await Payment.create({
         orderId: order.id,
         method: p.method,
         amount: p.amount,
-        status: (p.method === 'cash' || isCredit) ? 'confirmed' : 'pending',
+        status: (p.method === 'cash' || isCredit || isStoreCredit) ? 'confirmed' : 'pending',
         mpesaPhone: p.mpesaPhone || null
       }, { transaction: t });
       createdPayments.push(paymentRow);
@@ -471,6 +522,24 @@ async function checkout(req, res) {
           amount: p.amount,
           balanceAfter: newBalance,
           notes: `Credit sale for order ${order.orderNumber}`
+        }, { transaction: t });
+      }
+      if (isStoreCredit && customer) {
+        const balanceBefore = Number(customer.storeCreditBalance || 0);
+        if (balanceBefore + 0.001 < Number(p.amount)) {
+          throw Object.assign(new Error(`Store credit balance is only ${balanceBefore.toFixed(2)}`), { status: 400 });
+        }
+        const balanceAfter = Math.round((balanceBefore - Number(p.amount)) * 100) / 100;
+        await customer.update({ storeCreditBalance: balanceAfter }, { transaction: t });
+        await StoreCreditTransaction.create({
+          customerId: customer.id,
+          tenantId: req.tenantId || null,
+          orderId: order.id,
+          type: 'redeemed',
+          amount: -Number(p.amount),
+          balanceAfter,
+          note: `Redeemed on order ${order.orderNumber}`,
+          createdByUserId: cashierId
         }, { transaction: t });
       }
     }

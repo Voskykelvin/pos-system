@@ -18,6 +18,7 @@ Current protected behavior includes:
 - proportional refund tax/discount calculations and split-tender cent allocation.
 - offline device sequencing, immutable envelopes, authentication holds, conflict isolation, and server replay identity.
 - phone catalog/cart switching, persistent sale totals, cash tender, confirmation, and receipt visibility.
+- RFC-compatible authenticator codes, encrypted MFA-secret round trips, and weighted EAN-13 checksum/quantity parsing.
 
 Run once with `npm run test:unit`, or use `npm run test:unit:watch` while developing.
 
@@ -36,6 +37,10 @@ Playwright builds and serves the production application against a fresh in-memor
 Install Chromium once with `npx playwright install chromium`, then run `npm run test:e2e`. Use `npm run test:e2e:run` only when `dist/` is already current. Failure screenshots, traces, and reports are generated in ignored test-output directories.
 
 ## Continuous Integration
+
+CI also provisions PostgreSQL 16, applies all migrations, verifies migration idempotency, checks required production tables, and runs competing stock updates under `SELECT ... FOR UPDATE` locking.
+
+The production build is checked against route-level JavaScript budgets, and the large marketing hero is excluded from the offline till precache because it is not operationally required.
 
 GitHub Actions executes these gates for pushes and pull requests targeting `main`:
 

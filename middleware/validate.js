@@ -28,7 +28,7 @@ function typeOf(value) {
  */
 function validateField(key, value, descriptor) {
   const errors = [];
-  const { type, required = true, minLength, maxLength, min, max, enumValues, items, nonEmpty } = descriptor;
+  const { type, required = true, minLength, maxLength, min, max, pattern, enumValues, items, nonEmpty } = descriptor;
   const missing = value === undefined || value === null || value === '';
 
   if (missing) {
@@ -64,6 +64,7 @@ function validateField(key, value, descriptor) {
     if (maxLength !== undefined && str.length > maxLength) {
       errors.push(`${key} must be at most ${maxLength} characters`);
     }
+    if (pattern && !pattern.test(str)) errors.push(`${key} has an invalid format`);
   }
 
   if (type === 'number') {
@@ -131,7 +132,8 @@ function validate(schema) {
 const schemas = {
   login: {
     identifier: { type: 'string', minLength: 1, maxLength: 255 },
-    password:   { type: 'string', minLength: 1, maxLength: 1024 }
+    password:   { type: 'string', minLength: 1, maxLength: 1024 },
+    mfaCode:    { type: 'string', required: false, minLength: 6, maxLength: 6 }
   },
 
   checkout: {
@@ -147,7 +149,7 @@ const schemas = {
       type: 'array',
       nonEmpty: true,
       items: {
-        method: { type: 'string', enumValues: ['cash', 'mpesa', 'credit', 'card'] },
+        method: { type: 'string', enumValues: ['cash', 'mpesa', 'credit', 'card', 'store_credit'] },
         amount: { type: 'number', min: 0.01 }
       }
     }
@@ -163,7 +165,8 @@ const schemas = {
   },
 
   refundOrder: {
-    reason: { type: 'string', required: false, maxLength: 500 }
+    reason: { type: 'string', required: false, maxLength: 500 },
+    refundMethod: { type: 'string', required: false, enumValues: ['original', 'store_credit'] }
   },
 
   createProduct: {
@@ -176,7 +179,9 @@ const schemas = {
     reorderLevel: { type: 'number', required: false, min: 0 },
     stockQuantity:{ type: 'number', required: false, min: 0 },
     barcode:      { type: 'string', required: false, maxLength: 100 },
-    unit:         { type: 'string', required: false, maxLength: 50 }
+    unit:         { type: 'string', required: false, maxLength: 50 },
+    tracksLots:   { type: 'boolean', required: false },
+    scaleCode:    { type: 'string', required: false, minLength: 5, maxLength: 5, pattern: /^\d{5}$/ }
   },
 
   updateProduct: {
@@ -188,7 +193,9 @@ const schemas = {
     taxCategory:  { type: 'string', required: false, enumValues: ['standard', 'zero_rated', 'exempt'] },
     reorderLevel: { type: 'number', required: false, min: 0 },
     barcode:      { type: 'string', required: false, maxLength: 100 },
-    unit:         { type: 'string', required: false, maxLength: 50 }
+    unit:         { type: 'string', required: false, maxLength: 50 },
+    tracksLots:   { type: 'boolean', required: false },
+    scaleCode:    { type: 'string', required: false, minLength: 5, maxLength: 5, pattern: /^\d{5}$/ }
   },
 
   adjustStock: {
@@ -238,7 +245,8 @@ const schemas = {
         quantity:    { type: 'number', min: 0.001 }
       }
     },
-    reason: { type: 'string', required: false, maxLength: 500 }
+    reason: { type: 'string', required: false, maxLength: 500 },
+    refundMethod: { type: 'string', required: false, enumValues: ['original', 'store_credit'] }
   },
 
   createPromotion: {
@@ -373,7 +381,9 @@ const schemas = {
       items: {
         itemId:           { type: 'string', minLength: 1 },
         receivedQuantity: { type: 'number', min: 0 },
-        unitCostPrice:    { type: 'number', required: false, min: 0 }
+        unitCostPrice:    { type: 'number', required: false, min: 0 },
+        lotNumber:        { type: 'string', required: false, maxLength: 100 },
+        expiryDate:       { type: 'string', required: false, maxLength: 10 }
       }
     }
   }

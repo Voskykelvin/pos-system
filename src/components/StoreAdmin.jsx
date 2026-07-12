@@ -61,7 +61,8 @@ const TABS = [
   { id: 'staff', label: 'Staff' },
   { id: 'branches', label: 'Branches' },
   { id: 'billing', label: 'Subscription' },
-  { id: 'payments', label: 'Payments & VAT' }
+  { id: 'payments', label: 'Payments & VAT' },
+  { id: 'security', label: 'Security' }
 ];
 
 const BILLING_METHODS = [
@@ -113,6 +114,10 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [sessions, setSessions] = useState([]);
+  const [mfaEnabled, setMfaEnabled] = useState(Boolean(user?.mfaEnabled));
+  const [mfaSetup, setMfaSetup] = useState(null);
+  const [mfaCode, setMfaCode] = useState('');
 
   const canEdit = user?.role === 'admin';
   const limits = setup?.limits || {};
@@ -164,6 +169,66 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
   useEffect(() => {
     loadSetup();
   }, [authToken]);
+
+  async function loadSessions() {
+    try {
+      setSessions(await api('/api/auth/sessions'));
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function revokeDeviceSession(session) {
+    if (!window.confirm(`Sign out ${session.current ? 'this device' : 'that device'}?`)) return;
+    try {
+      await api(`/api/auth/sessions/${session.id}`, { method: 'DELETE' });
+      if (session.current) window.location.reload();
+      else await loadSessions();
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
+  async function beginMfaSetup() {
+    const password = window.prompt('Confirm your current password:');
+    if (!password) return;
+    try {
+      setMfaSetup(await api('/api/auth/mfa/setup', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password })
+      }));
+      setMfaCode('');
+      setError(null);
+    } catch (err) { setError(err.message); }
+  }
+
+  async function enableMfa() {
+    try {
+      await api('/api/auth/mfa/enable', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code: mfaCode })
+      });
+      setMfaEnabled(true);
+      setMfaSetup(null);
+      setMessage('Authenticator MFA enabled.');
+    } catch (err) { setError(err.message); }
+  }
+
+  async function disableMfa() {
+    const password = window.prompt('Confirm your current password:');
+    if (!password) return;
+    const code = window.prompt('Enter your current authenticator code:');
+    if (!code) return;
+    try {
+      await api('/api/auth/mfa/disable', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password, code })
+      });
+      setMfaEnabled(false);
+      setMessage('Authenticator MFA disabled.');
+    } catch (err) { setError(err.message); }
+  }
+
+  useEffect(() => {
+    if (activeTab === 'security') loadSessions();
+  }, [activeTab, authToken]);
 
   const setupItems = useMemo(() => [
     { key: 'hasBranch', label: 'Branch profile', done: checklist.hasBranch },
@@ -332,14 +397,16 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             className={`${styles.tabBtn} ${activeTab === tab.id ? styles.active : ''}`}
             onClick={() => setActiveTab(tab.id)}
             type="button"
+            role="tab"
+            aria-selected={activeTab === tab.id}
           >
             {tab.label}
           </button>
         ))}
       </div>
 
-      {message && <div className={styles.successBanner}>{message}</div>}
-      {error && <div className={styles.errorBanner}>{error}</div>}
+      {message && <div className={styles.successBanner} role="status">{message}</div>}
+      {error && <div className={styles.errorBanner} role="alert">{error}</div>}
 
       {!canEdit && (
         <div className={styles.infoBanner}>
@@ -650,6 +717,49 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             </button>
           </div>
         </form>
+      )}
+
+      {activeTab === 'security' && (
+        <div className={styles.stackedPanels}>
+          <div className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <div><h2>Authenticator MFA</h2><p>Protect privileged sign-in with a six-digit rotating code.</p></div>
+              <span className={mfaEnabled ? styles.okBadge : styles.offBadge}>{mfaEnabled ? 'Enabled' : 'Disabled'}</span>
+            </div>
+            {!mfaEnabled && !mfaSetup && <button className={styles.primaryBtn} type="button" onClick={beginMfaSetup}>Set up authenticator</button>}
+            {mfaSetup && (
+              <div className={styles.formGrid}>
+                <label>Manual setup key<input readOnly value={mfaSetup.secret} onFocus={(event) => event.target.select()} /></label>
+                <label>Six-digit code<input value={mfaCode} inputMode="numeric" onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
+                <button className={styles.primaryBtn} type="button" disabled={mfaCode.length !== 6} onClick={enableMfa}>Verify and enable</button>
+              </div>
+            )}
+            {mfaEnabled && <button className={styles.secondaryBtn} type="button" onClick={disableMfa}>Disable MFA</button>}
+          </div>
+          <div className={styles.panel}>
+          <div className={styles.panelHeader}>
+            <div>
+              <h2>Signed-in devices</h2>
+              <p>Review and remotely sign out active browser sessions.</p>
+            </div>
+            <button className={styles.secondaryBtn} type="button" onClick={loadSessions}>Refresh</button>
+          </div>
+          <div className={styles.branchList}>
+            {sessions.map((session) => (
+              <article className={styles.branchRow} key={session.id}>
+                <div>
+                  <strong>{session.current ? 'This device' : 'Other device'}</strong>
+                  <small>{session.userAgent || 'Unknown browser'}</small>
+                  <small>{session.ipAddress || 'Unknown IP'} · expires {new Date(session.expiresAt).toLocaleString()}</small>
+                </div>
+                <span className={styles.okBadge}>Active</span>
+                <button className={styles.secondaryBtn} type="button" onClick={() => revokeDeviceSession(session)}>Sign out</button>
+              </article>
+            ))}
+            {sessions.length === 0 && <p>No active sessions found.</p>}
+          </div>
+          </div>
+        </div>
       )}
     </section>
   );

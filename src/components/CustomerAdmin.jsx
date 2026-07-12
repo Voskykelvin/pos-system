@@ -114,7 +114,7 @@ export default function CustomerAdmin({ authToken }) {
           <button className={styles.searchBtn} type="submit">Search</button>
         </form>
 
-        {error && <p style={{ color: '#ef4444' }}>{error}</p>}
+        {error && <p role="alert" style={{ color: '#ef4444' }}>{error}</p>}
         {successMessage && <p style={{ color: '#16a34a' }}>{successMessage}</p>}
 
         <table className={styles.table}>
@@ -124,6 +124,7 @@ export default function CustomerAdmin({ authToken }) {
               <th>Phone</th>
               <th>Loyalty Pts</th>
               <th>Credit Balance</th>
+              <th>Store Credit</th>
               <th>Credit Limit</th>
               <th>Actions</th>
             </tr>
@@ -139,6 +140,7 @@ export default function CustomerAdmin({ authToken }) {
                     {formatKes(c.creditBalance)}
                   </strong>
                 </td>
+                <td><strong>{formatKes(c.storeCreditBalance)}</strong></td>
                 <td>{formatKes(c.creditLimit)}</td>
                 <td>
                   <button className={styles.actionBtn} onClick={() => openLedger(c)}>
@@ -149,7 +151,7 @@ export default function CustomerAdmin({ authToken }) {
             ))}
             {customers.length === 0 && (
               <tr>
-                <td colSpan="6" style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-soft)' }}>
+                <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-soft)' }}>
                   No customers found
                 </td>
               </tr>

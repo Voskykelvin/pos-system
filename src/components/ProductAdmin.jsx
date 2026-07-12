@@ -8,9 +8,11 @@ import { TAX_CATEGORY_OPTIONS, normalizeTaxCategory, taxLabel } from '../utils/t
 const EMPTY_FORM = {
   sku: '',
   barcode: '',
+  scaleCode: '',
   name: '',
   unit: 'each',
   isWeighted: false,
+  tracksLots: false,
   costPrice: '',
   sellingPrice: '',
   taxCategory: 'standard',
@@ -255,9 +257,11 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     setForm({
       sku: p.sku,
       barcode: p.barcode || '',
+      scaleCode: p.scaleCode || '',
       name: p.name,
       unit: p.unit || 'each',
       isWeighted: p.isWeighted || false,
+      tracksLots: p.tracksLots || false,
       costPrice: p.costPrice || '',
       sellingPrice: p.sellingPrice || '',
       taxCategory: normalizeTaxCategory(p.taxCategory || p.Category?.taxCategory),
@@ -282,6 +286,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         ...form,
         sku: form.sku.trim(),
         barcode: form.barcode.trim() || null,
+        scaleCode: form.scaleCode.trim() || null,
         name: form.name.trim(),
         unit: form.unit.trim() || 'each',
         imageUrl: form.imageUrl.trim() || null,
@@ -289,7 +294,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         sellingPrice: Number(form.sellingPrice),
         taxCategory: normalizeTaxCategory(form.taxCategory),
         reorderLevel: Number(form.reorderLevel),
-        stockQuantity: Number(form.stockQuantity)
+        stockQuantity: Number(form.stockQuantity),
+        tracksLots: Boolean(form.tracksLots)
       };
 
       if (editingId) {
@@ -410,11 +416,21 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   async function handleReceivePo(po) {
     setError(null);
     setMessage(null);
-    const itemsToReceive = po.items.map((i) => ({
-      itemId: i.id,
-      receivedQuantity: i.orderedQuantity,
-      unitCostPrice: i.unitCostPrice
-    }));
+    const itemsToReceive = [];
+    for (const item of po.items) {
+      const line = {
+        itemId: item.id,
+        receivedQuantity: item.orderedQuantity,
+        unitCostPrice: item.unitCostPrice
+      };
+      if (item.Product?.tracksLots) {
+        const lotNumber = window.prompt(`Lot / batch number for ${item.Product.name}:`);
+        if (!lotNumber) return;
+        const expiryDate = window.prompt(`Expiry date for ${item.Product.name} (YYYY-MM-DD, blank if none):`) || '';
+        Object.assign(line, { lotNumber, expiryDate: expiryDate || undefined });
+      }
+      itemsToReceive.push(line);
+    }
     try {
       await api(`/api/purchase-orders/${po.id}/receive`, {
         method: 'POST',
@@ -606,13 +622,15 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     <div className={styles.page}>
       {/* Sub-nav tabs */}
       <div className={styles.topBar}>
-        <div className={styles.tabGroup}>
+        <div className={styles.tabGroup} role="tablist" aria-label="Inventory sections">
           {visibleTabs.map((tab) => (
             <button
               key={tab.id}
               className={`${styles.tabBtn} ${activeTab === tab.id ? styles.active : ''}`}
               onClick={() => setActiveTab(tab.id)}
               type="button"
+              role="tab"
+              aria-selected={activeTab === tab.id}
             >
               {tab.label}
             </button>
@@ -620,8 +638,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         </div>
       </div>
 
-      {message && <div className={styles.successBanner}>{message}</div>}
-      {error && <div className={styles.errorBanner}>{error}</div>}
+      {message && <div className={styles.successBanner} role="status">{message}</div>}
+      {error && <div className={styles.errorBanner} role="alert">{error}</div>}
 
       {/* PRODUCTS TAB */}
       {activeTab === 'products' && (
@@ -991,6 +1009,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 </div>
               </label>
               <label>Unit <input value={form.unit} onChange={(e) => setForm({...form, unit: e.target.value})} /></label>
+              {form.isWeighted && <label>Scale PLU code <input inputMode="numeric" maxLength="5" value={form.scaleCode} onChange={(e) => setForm({...form, scaleCode: e.target.value.replace(/\D/g, '').slice(0, 5)})} placeholder="00001" /></label>}
               <label className={styles.checkboxLabel}>
                 <input
                   type="checkbox"
@@ -998,6 +1017,14 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   onChange={(e) => setForm({...form, isWeighted: e.target.checked})}
                 />
                 Sold by weight
+              </label>
+              <label className={styles.checkboxLabel}>
+                <input
+                  type="checkbox"
+                  checked={form.tracksLots}
+                  onChange={(e) => setForm({...form, tracksLots: e.target.checked})}
+                />
+                Track batch / lot expiry
               </label>
               <label className={styles.fullWidth}>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>

@@ -117,6 +117,7 @@ const models = {
   Payment: require('./Payment')(sequelize, modelDataTypes),
   MpesaCallbackEvent: require('./MpesaCallbackEvent')(sequelize, modelDataTypes),
   EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes),
+  EtimsCreditNote: require('./EtimsCreditNote')(sequelize, modelDataTypes),
   AuditLog: require('./AuditLog')(sequelize, modelDataTypes),
   Branch: require('./Branch')(sequelize, modelDataTypes),
   Shift: require('./Shift')(sequelize, modelDataTypes),
@@ -128,7 +129,17 @@ const models = {
   Tenant: require('./Tenant')(sequelize, modelDataTypes),
   CustomerLedger: require('./CustomerLedger')(sequelize, modelDataTypes),
   Expense: require('./Expense')(sequelize, modelDataTypes),
-  SubscriptionPayment: require('./SubscriptionPayment')(sequelize, modelDataTypes)
+  SubscriptionPayment: require('./SubscriptionPayment')(sequelize, modelDataTypes),
+  StockCount: require('./StockCount')(sequelize, modelDataTypes),
+  StockCountItem: require('./StockCountItem')(sequelize, modelDataTypes),
+  BranchInventory: require('./BranchInventory')(sequelize, modelDataTypes),
+  StockTransfer: require('./StockTransfer')(sequelize, modelDataTypes),
+  StockTransferItem: require('./StockTransferItem')(sequelize, modelDataTypes),
+  InventoryLot: require('./InventoryLot')(sequelize, modelDataTypes),
+  OrderItemLotAllocation: require('./OrderItemLotAllocation')(sequelize, modelDataTypes),
+  PurchaseReturn: require('./PurchaseReturn')(sequelize, modelDataTypes),
+  PurchaseReturnItem: require('./PurchaseReturnItem')(sequelize, modelDataTypes),
+  StoreCreditTransaction: require('./StoreCreditTransaction')(sequelize, modelDataTypes)
 };
 
 Object.values(models).forEach((model) => {

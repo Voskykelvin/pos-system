@@ -33,6 +33,11 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       defaultValue: 0.00
     },
+    storeCreditBalance: {
+      type: DataTypes.DECIMAL(12, 2),
+      allowNull: false,
+      defaultValue: 0.00
+    },
     tenantId: {
       type: DataTypes.UUID,
       allowNull: true
@@ -49,6 +54,7 @@ module.exports = (sequelize, DataTypes) => {
   Customer.associate = (models) => {
     Customer.hasMany(models.Order, { foreignKey: 'customerId' });
     Customer.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
+    Customer.hasMany(models.StoreCreditTransaction, { foreignKey: 'customerId' });
   };
 
   return Customer;

@@ -1,31 +1,77 @@
 const crypto = require('crypto');
 const { Op } = require('sequelize');
-const { AuthSession } = require('../models');
+const { AuthSession, User } = require('../models');
 const { createAuthToken } = require('../utils/authToken');
 
 function tokenHash(sessionSecret) {
   return crypto.createHash('sha256').update(sessionSecret).digest('hex');
 }
 
-function ttlMilliseconds() {
-  const hours = Number(process.env.AUTH_TOKEN_TTL_HOURS || 12);
-  if (!Number.isFinite(hours) || hours <= 0) {
-    throw new Error('AUTH_TOKEN_TTL_HOURS must be a positive number');
-  }
-  return hours * 60 * 60 * 1000;
+function accessTtlMilliseconds() {
+  const minutes = Number(process.env.AUTH_ACCESS_TTL_MINUTES || 15);
+  if (!Number.isFinite(minutes) || minutes <= 0) throw new Error('AUTH_ACCESS_TTL_MINUTES must be positive');
+  return minutes * 60 * 1000;
+}
+
+function refreshTtlMilliseconds() {
+  const days = Number(process.env.AUTH_REFRESH_TTL_DAYS || 30);
+  if (!Number.isFinite(days) || days <= 0) throw new Error('AUTH_REFRESH_TTL_DAYS must be positive');
+  return days * 86400000;
 }
 
 async function issueAuthSession(user, req = null) {
   const sessionSecret = crypto.randomBytes(32).toString('base64url');
-  const expiresAt = new Date(Date.now() + ttlMilliseconds());
+  const refreshToken = crypto.randomBytes(48).toString('base64url');
+  const expiresAt = new Date(Date.now() + refreshTtlMilliseconds());
   await AuthSession.create({
     userId: user.id,
     tokenHash: tokenHash(sessionSecret),
     userAgent: req?.get?.('user-agent')?.slice(0, 500) || null,
     ipAddress: req?.ip?.slice(0, 64) || null,
-    expiresAt
+    expiresAt,
+    refreshTokenHash: tokenHash(refreshToken),
+    refreshExpiresAt: expiresAt
   });
-  return createAuthToken(user, { sessionId: sessionSecret, expiresAt });
+  return {
+    accessToken: createAuthToken(user, {
+      sessionId: sessionSecret,
+      expiresAt: new Date(Date.now() + accessTtlMilliseconds())
+    }),
+    refreshToken,
+    refreshExpiresAt: expiresAt
+  };
+}
+
+async function rotateRefreshToken(refreshToken) {
+  if (!refreshToken) return null;
+  const session = await AuthSession.findOne({
+    where: {
+      refreshTokenHash: tokenHash(refreshToken),
+      revokedAt: null,
+      refreshExpiresAt: { [Op.gt]: new Date() }
+    }
+  });
+  if (!session) return null;
+  const user = await User.findByPk(session.userId);
+  if (!user?.isActive) return null;
+  const sessionSecret = crypto.randomBytes(32).toString('base64url');
+  const nextRefreshToken = crypto.randomBytes(48).toString('base64url');
+  const refreshExpiresAt = new Date(Date.now() + refreshTtlMilliseconds());
+  await session.update({
+    tokenHash: tokenHash(sessionSecret),
+    refreshTokenHash: tokenHash(nextRefreshToken),
+    refreshExpiresAt,
+    expiresAt: refreshExpiresAt,
+    lastSeenAt: new Date()
+  });
+  return {
+    accessToken: createAuthToken(user, {
+      sessionId: sessionSecret,
+      expiresAt: new Date(Date.now() + accessTtlMilliseconds())
+    }),
+    refreshToken: nextRefreshToken,
+    refreshExpiresAt
+  };
 }
 
 async function findActiveSession(payload) {
@@ -60,6 +106,7 @@ async function revokeAllUserSessions(userId) {
 module.exports = {
   findActiveSession,
   issueAuthSession,
+  rotateRefreshToken,
   revokeAllUserSessions,
   revokeSession,
   tokenHash

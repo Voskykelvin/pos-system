@@ -7,6 +7,7 @@ const helmet = require('helmet');
 const { rateLimit } = require('express-rate-limit');
 const { sequelize, isUsingMemoryDatabase } = require('./models');
 const { startEtimsScheduler } = require('./services/etimsScheduler');
+const { startMaintenanceScheduler } = require('./services/maintenanceScheduler');
 const { seedDemoData } = require('./services/demoSeed');
 const { bootstrapSuperAdmin } = require('./services/superAdminBootstrap');
 const siteMap = require('./utils/siteMap');
@@ -35,6 +36,9 @@ const storeAdminRoutes = require('./routes/storeAdmin');
 const { tenantApiLimiter } = require('./middleware/tenantRateLimit');
 const tenantRoutes = require('./routes/tenants');
 const billingRoutes = require('./routes/billing');
+const stockCountRoutes = require('./routes/stockCounts');
+const stockTransferRoutes = require('./routes/stockTransfers');
+const inventoryLotRoutes = require('./routes/inventoryLots');
 
 const compression = require('compression');
 const { requestIdMiddleware } = require('./middleware/requestId');
@@ -119,6 +123,34 @@ app.get('/api/health', async (req, res) => {
   });
 });
 
+app.get('/api/live', (req, res) => {
+  res.json({ ok: true, uptimeSeconds: Math.floor(process.uptime()), timestamp: new Date().toISOString() });
+});
+
+app.get('/api/ready', async (req, res) => {
+  try {
+    await sequelize.authenticate();
+    let migrationsCurrent = true;
+    let pendingMigrations = 0;
+    if (!isUsingMemoryDatabase()) {
+      const migrationFiles = fs.readdirSync(path.join(__dirname, 'migrations')).filter((file) => file.endsWith('.sql'));
+      const [rows] = await sequelize.query('SELECT version FROM schema_migrations');
+      const applied = new Set(rows.map((row) => row.version));
+      pendingMigrations = migrationFiles.filter((file) => !applied.has(file)).length;
+      migrationsCurrent = pendingMigrations === 0;
+    }
+    return res.status(migrationsCurrent ? 200 : 503).json({
+      ready: migrationsCurrent,
+      database: 'reachable',
+      migrationsCurrent,
+      pendingMigrations
+    });
+  } catch (err) {
+    logger.error('Readiness check failed', err);
+    return res.status(503).json({ ready: false, database: 'unavailable' });
+  }
+});
+
 app.get('/api/site-map', (req, res) => {
   res.json(siteMap);
 });
@@ -148,7 +180,8 @@ app.get('/api/bootstrap', authenticate, async (req, res) => {
   });
 });
 
-app.use('/api/auth', authLimiter, authRoutes);
+app.use('/api/auth/login', authLimiter);
+app.use('/api/auth', authRoutes);
 app.use('/api', apiLimiter);
 app.use('/api', tenantApiLimiter);
 app.use('/api/billing', billingRoutes);
@@ -166,6 +199,9 @@ app.use('/api/customers', customerRoutes);
 app.use('/api/promotions', promotionRoutes);
 app.use('/api/suppliers', supplierRoutes);
 app.use('/api/purchase-orders', purchaseOrderRoutes);
+app.use('/api/stock-counts', stockCountRoutes);
+app.use('/api/stock-transfers', stockTransferRoutes);
+app.use('/api/inventory-lots', inventoryLotRoutes);
 app.use('/api/admin/store', storeAdminRoutes);
 app.use('/api', tenantRoutes);
 
@@ -244,6 +280,9 @@ async function start({ port = PORT, host = HOST } = {}) {
 
   if (process.env.ENABLE_ETIMS_SCHEDULER === 'true') {
     startEtimsScheduler();
+  }
+  if (process.env.ENABLE_MAINTENANCE_SCHEDULER === 'true') {
+    startMaintenanceScheduler();
   }
 
   return new Promise((resolve, reject) => {

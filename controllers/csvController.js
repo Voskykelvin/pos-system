@@ -1,9 +1,10 @@
 'use strict';
 
 const { Op } = require('sequelize');
-const { Product, Category } = require('../models');
+const { sequelize, Product, Category } = require('../models');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 const { normalizeTaxCategory } = require('../utils/taxCategories');
+const { addBranchStock, resolveOperationalBranch } = require('../services/branchInventory');
 
 function normalizeCsvTaxCategory(value, fallback) {
   const raw = String(value || '').trim().toLowerCase().replace(/[\s-]+/g, '_');
@@ -73,9 +74,10 @@ async function importCatalogCsv(req, res) {
     return res.status(400).json({ error: 'csvData is required as a plain string' });
   }
 
+  const transaction = await sequelize.transaction();
   try {
     const lines = csvData.split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length < 2) return res.status(400).json({ error: 'CSV file contains no data rows' });
+    if (lines.length < 2) throw new Error('CSV file contains no data rows');
 
     const header = lines[0].toLowerCase().split(',').map((h) => h.replace(/"/g, '').trim());
     let imported = 0;
@@ -95,28 +97,27 @@ async function importCatalogCsv(req, res) {
       let categoryId = row.categoryid;
       let category = null;
       if (!categoryId && row.category) {
-        category = await Category.findOne({ where: tenantWhere(req, { name: row.category }) });
+        category = await Category.findOne({ where: tenantWhere(req, { name: row.category }), transaction });
         if (category) categoryId = category.id;
       }
       if (!categoryId) {
-        category = await Category.findOne({ where: tenantWhere(req) });
+        category = await Category.findOne({ where: tenantWhere(req), transaction });
         categoryId = category?.id;
       } else if (!category) {
-        category = await Category.findOne({ where: tenantWhere(req, { id: categoryId }) });
+        category = await Category.findOne({ where: tenantWhere(req, { id: categoryId }), transaction });
       }
 
-      const existing = await Product.findOne({ where: tenantWhere(req, { sku: row.sku }) });
+      const existing = await Product.findOne({ where: tenantWhere(req, { sku: row.sku }), transaction, lock: transaction.LOCK.UPDATE });
       if (row.barcode) {
         const barcodeOwner = await Product.findOne({
           where: tenantWhere(req, {
             barcode: row.barcode,
             ...(existing ? { id: { [Op.ne]: existing.id } } : {})
-          })
+          }),
+          transaction
         });
         if (barcodeOwner) {
-          return res.status(409).json({
-            error: `CSV row ${i + 1}: barcode ${row.barcode} already belongs to SKU ${barcodeOwner.sku}`
-          });
+          throw Object.assign(new Error(`CSV row ${i + 1}: barcode ${row.barcode} already belongs to SKU ${barcodeOwner.sku}`), { status: 409 });
         }
       }
 
@@ -139,17 +140,28 @@ async function importCatalogCsv(req, res) {
       };
 
       if (existing) {
-        await existing.update(payload);
+        const stockDelta = payload.stockQuantity - Number(existing.stockQuantity);
+        await existing.update(payload, { transaction });
+        if (stockDelta) {
+          const branchId = await resolveOperationalBranch(req, transaction);
+          await addBranchStock({ branchId, productId: existing.id, quantity: stockDelta, transaction });
+        }
         updated++;
       } else {
-        await Product.create(payload);
+        const product = await Product.create(payload, { transaction });
+        if (payload.stockQuantity > 0) {
+          const branchId = await resolveOperationalBranch(req, transaction);
+          await addBranchStock({ branchId, productId: product.id, quantity: payload.stockQuantity, transaction });
+        }
         imported++;
       }
     }
 
+    await transaction.commit();
     return res.json({ message: `CSV Import Complete. Added ${imported} new products, updated ${updated} existing products.` });
   } catch (err) {
-    return res.status(400).json({ error: err.message });
+    await transaction.rollback();
+    return res.status(err.status || 400).json({ error: err.message });
   }
 }
 

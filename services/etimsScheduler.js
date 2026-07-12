@@ -1,5 +1,6 @@
 const cron = require('node-cron');
 const { processQueue } = require('./etimsSyncWorker');
+const { processCreditNoteQueue } = require('./etimsCreditNotes');
 const logger = require('../utils/logger');
 
 let isRunning = false;
@@ -13,11 +14,15 @@ function startEtimsScheduler() {
 
     try {
       const results = await processQueue();
+      const creditNotes = await processCreditNoteQueue();
       if (results.transmitted || results.failed) {
         logger.info(
           `eTIMS sync: ${results.transmitted} transmitted, ${results.failed} failed, ${results.skipped} still queued`,
           results
         );
+      }
+      if (creditNotes.transmitted || creditNotes.failed || creditNotes.retrying) {
+        logger.info('eTIMS credit-note sync', creditNotes);
       }
     } catch (err) {
       logger.error('eTIMS scheduler error', err);

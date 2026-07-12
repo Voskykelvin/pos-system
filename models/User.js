@@ -39,6 +39,15 @@ module.exports = (sequelize, DataTypes) => {
     isActive: {
       type: DataTypes.BOOLEAN,
       defaultValue: true
+    },
+    mfaEnabled: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false
+    },
+    mfaSecretEncrypted: {
+      type: DataTypes.TEXT,
+      allowNull: true
     }
   }, {
     tableName: 'users',

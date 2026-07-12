@@ -114,9 +114,20 @@ export default function App() {
       }
 
       try {
-        const res = await fetch('/api/bootstrap', {
+        let token = authToken;
+        let res = await fetch('/api/bootstrap', {
           headers: { Authorization: `Bearer ${authToken}` }
         });
+        if (res.status === 401) {
+          const refreshed = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+          if (refreshed.ok) {
+            const payload = await refreshed.json();
+            token = payload.token;
+            localStorage.setItem('pos_auth_token', token);
+            setAuthToken(token);
+            res = await fetch('/api/bootstrap', { headers: { Authorization: `Bearer ${token}` } });
+          }
+        }
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || 'Session expired');
         setBootstrap(data);
@@ -403,6 +414,7 @@ export default function App() {
 
   return (
     <div className={styles.shell}>
+      <a className="skipLink" href="#main-content">Skip to main content</a>
       <aside className={styles.sidebar}>
         <button className={styles.brand} type="button" onClick={goToMasterHomepage} aria-label="Open master homepage">
           <span className={styles.brandMark}>J</span>
@@ -457,7 +469,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className={styles.main}>
+      <main id="main-content" className={styles.main}>
         <ErrorBoundary>
           <Suspense fallback={<div className={styles.loading}>Loading...</div>}>
             {view === 'store_admin' && allowedIds.includes('store_admin') && (

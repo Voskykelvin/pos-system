@@ -14,6 +14,15 @@ module.exports = (sequelize, DataTypes) => {
       allowNull: false,
       unique: true
     },
+    refreshTokenHash: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      unique: true
+    },
+    refreshExpiresAt: {
+      type: DataTypes.DATE,
+      allowNull: true
+    },
     userAgent: {
       type: DataTypes.STRING(500),
       allowNull: true

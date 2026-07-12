@@ -4,6 +4,7 @@ const { logAudit } = require('../services/auditLogger');
 const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 const { normalizeTaxCategory } = require('../utils/taxCategories');
+const { addBranchStock, resolveOperationalBranch } = require('../services/branchInventory');
 
 async function assertUniqueProductIdentity(req, { sku, barcode, excludeId = null }) {
   const identityChecks = [];
@@ -69,7 +70,7 @@ async function list(req, res) {
 // POST /api/admin/products
 async function create(req, res) {
   const {
-    sku, barcode, name, unit, isWeighted,
+    sku, barcode, scaleCode, name, unit, isWeighted, tracksLots,
     costPrice, sellingPrice, taxCategory, reorderLevel,
     stockQuantity, categoryId, imageUrl
   } = req.body;
@@ -78,6 +79,9 @@ async function create(req, res) {
     return res.status(400).json({
       error: 'sku, name, sellingPrice, and categoryId are required'
     });
+  }
+  if (tracksLots && Number(stockQuantity || 0) > 0) {
+    return res.status(400).json({ error: 'Create lot-tracked products with zero opening stock, then receive their opening lots.' });
   }
 
   const t = await sequelize.transaction();
@@ -94,9 +98,11 @@ async function create(req, res) {
     const product = await Product.create({
       sku,
       barcode: barcode || null,
+      scaleCode: scaleCode || null,
       name,
       unit: unit || 'each',
       isWeighted: !!isWeighted,
+      tracksLots: !!tracksLots,
       costPrice: costPrice || 0,
       sellingPrice,
       taxCategory: normalizeTaxCategory(taxCategory, category.taxCategory),
@@ -106,6 +112,10 @@ async function create(req, res) {
       imageUrl: imageUrl || null,
       ...withTenant(req)
     }, { transaction: t });
+    const branchId = await resolveOperationalBranch(req, t);
+    if (Number(stockQuantity) > 0) {
+      await addBranchStock({ branchId, productId: product.id, quantity: stockQuantity, transaction: t });
+    }
 
     // Log the opening stock as a purchase transaction so the ledger is complete
     if (Number(stockQuantity) > 0) {
@@ -115,7 +125,8 @@ async function create(req, res) {
         quantity: stockQuantity,
         balanceAfter: stockQuantity,
         referenceType: 'opening_stock',
-        note: 'Initial stock on product creation'
+        note: 'Initial stock on product creation',
+        branchId
       }, { transaction: t });
     }
 
@@ -140,7 +151,7 @@ async function create(req, res) {
 async function update(req, res) {
   const { id } = req.params;
   const {
-    sku, barcode, name, unit, isWeighted,
+    sku, barcode, scaleCode, name, unit, isWeighted, tracksLots,
     costPrice, sellingPrice, taxCategory, reorderLevel, categoryId, imageUrl, isActive
   } = req.body;
 
@@ -148,6 +159,9 @@ async function update(req, res) {
     const product = await Product.findOne({ where: tenantWhere(req, { id }) });
     if (!product) {
       return res.status(404).json({ error: 'Product not found' });
+    }
+    if (tracksLots === true && !product.tracksLots && Number(product.stockQuantity) > 0) {
+      return res.status(409).json({ error: 'Reduce existing untracked stock to zero before enabling lot tracking.' });
     }
 
     await assertUniqueProductIdentity(req, {
@@ -170,9 +184,11 @@ async function update(req, res) {
     await product.update({
       sku,
       barcode: barcode || null,
+      scaleCode: scaleCode || null,
       name,
       unit,
       isWeighted,
+      tracksLots,
       costPrice,
       sellingPrice,
       taxCategory: taxCategory === undefined
@@ -246,6 +262,11 @@ async function adjustStock(req, res) {
       return res.status(404).json({ error: 'Product not found' });
     }
 
+    if (product.tracksLots) {
+      await t.rollback();
+      return res.status(409).json({ error: 'Adjust lot-tracked stock through the lot receiving or write-off workflow.' });
+    }
+
     const balanceBefore = Number(product.stockQuantity);
     const newBalance = balanceBefore + Number(quantity);
     if (newBalance < 0) {
@@ -256,6 +277,8 @@ async function adjustStock(req, res) {
     }
 
     await product.update({ stockQuantity: newBalance }, { transaction: t });
+    const branchId = await resolveOperationalBranch(req, t);
+    await addBranchStock({ branchId, productId: product.id, quantity, transaction: t });
 
     await InventoryTransaction.create({
       productId: product.id,
@@ -264,7 +287,8 @@ async function adjustStock(req, res) {
       balanceAfter: newBalance,
       referenceType: 'manual',
       note,
-      userId: req.user?.id || null
+      userId: req.user?.id || null,
+      branchId
     }, { transaction: t });
 
     await logAudit({

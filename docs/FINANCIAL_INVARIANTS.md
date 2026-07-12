@@ -72,4 +72,6 @@ Migration `018_refund_ledger.sql` adds:
 
 ## Known Next Work
 
-Provider-side disbursement is deliberately separate from the accounting ledger. Cash refund allocations describe the expected drawer payout, while M-Pesa/card allocations still require provider refund or reversal confirmation before automated external settlement can be claimed. Transmitted eTIMS invoices continue to require a certified credit-note workflow.
+Provider-side disbursement is deliberately separate from the accounting ledger. Cash refund allocations describe the expected drawer payout, while M-Pesa/card allocations still require provider refund or reversal confirmation before automated external settlement can be claimed. Refunds against transmitted eTIMS invoices create durable credit-note jobs; production tax compliance still depends on KRA certification and credentials.
+- Refunds against transmitted fiscal invoices atomically create a persisted eTIMS credit note linked to the refund ledger and original invoice. Direct voids remain blocked after transmission.
+- Store credit is a separate customer asset ledger, never the customer-debt balance. Refund-to-credit plus a new checkout forms the auditable exchange workflow.

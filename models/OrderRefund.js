@@ -30,6 +30,7 @@ module.exports = (sequelize, DataTypes) => {
     OrderRefund.belongsTo(models.Tenant, { foreignKey: 'tenantId' });
     OrderRefund.belongsTo(models.User, { foreignKey: 'userId' });
     OrderRefund.hasMany(models.OrderRefundItem, { foreignKey: 'refundId' });
+    OrderRefund.hasOne(models.EtimsCreditNote, { foreignKey: 'refundId' });
   };
 
   return OrderRefund;

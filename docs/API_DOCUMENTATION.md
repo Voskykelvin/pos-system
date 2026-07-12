@@ -143,6 +143,15 @@ Managers and administrators can inspect tenant-scoped callback exceptions with `
 
 Resolve an exception with `POST /api/mpesa/callback-events/:id/resolve`. Send `action: "confirm"`, an audit `note`, and the externally verified `receiptNumber` to confirm from an M-Pesa statement. Send `action: "dismiss"` with a note to close the exception without changing payment state.
 
+Checkout accepts `store_credit` as a customer-bound payment method. Refund endpoints accept `refundMethod: "store_credit"`; the resulting customer asset is separate from customer debt and can fund a replacement sale for an exchange.
+
+## Advanced Inventory
+
+- `GET/POST /api/stock-counts` and its item/completion actions manage audited cycle counts. Lot-tracked products must be counted through their lot records.
+- `GET/POST /api/stock-transfers` moves branch balances without changing tenant aggregate stock. Generic transfers reject lot-tracked products until a lot-specific allocation is supplied.
+- `GET/POST /api/inventory-lots` manages lot receipts, expiry visibility, and write-offs.
+- `POST /api/purchase-orders/:id/returns` removes unsold supplier stock; `POST /api/purchase-orders/returns/:id/confirm-credit` records the later supplier credit reference.
+
 ### 6. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
 - **Required Header:** `Idempotency-Key: <unique-sale-key>` to make network retries safe

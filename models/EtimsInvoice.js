@@ -69,6 +69,7 @@ module.exports = (sequelize, DataTypes) => {
 
   EtimsInvoice.associate = (models) => {
     EtimsInvoice.belongsTo(models.Order, { foreignKey: 'orderId' });
+    EtimsInvoice.hasMany(models.EtimsCreditNote, { foreignKey: 'originalInvoiceId', as: 'creditNotes' });
   };
 
   return EtimsInvoice;

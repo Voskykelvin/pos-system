@@ -10,6 +10,8 @@ import {
 export default function Login({ onLogin, onNavigateHome }) {
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaRequired, setMfaRequired] = useState(false);
   const [error, setError] = useState(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -22,10 +24,13 @@ export default function Login({ onLogin, onNavigateHome }) {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ identifier, password })
+        body: JSON.stringify({ identifier, password, ...(mfaRequired ? { mfaCode } : {}) })
       });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error || 'Login failed');
+      if (!response.ok) {
+        if (payload.mfaRequired) setMfaRequired(true);
+        throw new Error(payload.error || 'Login failed');
+      }
       onLogin?.(payload);
     } catch (err) {
       setError(err.message);
@@ -56,6 +61,20 @@ export default function Login({ onLogin, onNavigateHome }) {
               required
             />
           </label>
+          {mfaRequired && (
+            <label>
+              Authenticator code
+              <input
+                value={mfaCode}
+                onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                pattern="[0-9]{6}"
+                required
+                autoFocus
+              />
+            </label>
+          )}
           <label>
             Password
             <input

@@ -3,6 +3,7 @@ const router = express.Router();
 const { processQueue, requeueFailed } = require('../services/etimsSyncWorker');
 const { authenticate, requireRoles } = require('../middleware/auth');
 const { getEtimsStatus } = require('../services/etimsStatusService');
+const { processCreditNoteQueue } = require('../services/etimsCreditNotes');
 
 router.use(authenticate);
 
@@ -42,7 +43,8 @@ router.get('/dashboard', async (req, res) => {
 router.post('/sync', async (req, res) => {
   try {
     const results = await processQueue({ tenantId: req.tenantId || null });
-    res.json(results);
+    const creditNotes = await processCreditNoteQueue({ tenantId: req.tenantId || null });
+    res.json({ ...results, creditNotes });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

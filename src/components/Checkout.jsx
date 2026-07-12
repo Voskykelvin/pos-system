@@ -354,6 +354,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
   const canAddCash = !payments.find((p) => p.method === 'cash');
   const canAddMpesa = !payments.find((p) => p.method === 'mpesa');
   const canAddCredit = customer && !payments.find((p) => p.method === 'credit');
+  const canAddStoreCredit = customer && Number(customer.storeCreditBalance || 0) > 0 && !payments.find((p) => p.method === 'store_credit');
   const quickCashValues = Array.from(new Set([
     roundMoney(total),
     Math.ceil(total / 10) * 10,
@@ -423,6 +424,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
         <div className={styles.addPaymentOptions}>
           {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
           {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
+          {canAddStoreCredit && <button onClick={() => addRow('store_credit')} type="button">+ Store credit ({formatKes(customer.storeCreditBalance)})</button>}
         </div>
       </div>
     );
@@ -440,7 +442,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
       {payments.map((p, idx) => (
         <div key={idx} className={styles.paymentRow}>
           <span className={`${styles.paymentMethodBadge} ${styles[p.method]}`}>
-            {p.method === 'cash' ? 'Cash' : p.method === 'mpesa' ? 'M-Pesa' : 'Credit'}
+            {p.method === 'cash' ? 'Cash' : p.method === 'mpesa' ? 'M-Pesa' : p.method === 'store_credit' ? 'Store credit' : 'Credit'}
           </span>
           <input
             className={styles.paymentAmountInput}
@@ -471,6 +473,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
           {canAddCash && <button onClick={() => addRow('cash')} type="button">+ Cash</button>}
           {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
           {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
+          {canAddStoreCredit && <button onClick={() => addRow('store_credit')} type="button">+ Store credit</button>}
         </div>
       )}
 
@@ -636,14 +639,15 @@ export default function Checkout({ authToken, cashierId, user }) {
   }, [authToken]);
 
   const addToCart = useCallback((product) => {
+    const quantityToAdd = Number(product.scaleQuantity || 1);
     setCart((prev) => {
       const existing = prev.find((i) => i.productId === product.id);
-      if (existing) return prev.map((i) => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i);
+      if (existing) return prev.map((i) => i.productId === product.id ? { ...i, quantity: Math.round((i.quantity + quantityToAdd) * 1000) / 1000 } : i);
       return [...prev, {
         productId: product.id,
         name: product.name,
         unitPrice: isWholesale ? Number(product.wholesalePrice || product.sellingPrice) : Number(product.sellingPrice),
-        quantity: 1,
+        quantity: quantityToAdd,
         taxCategory: productTaxCategory(product)
       }];
     });

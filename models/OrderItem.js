@@ -58,6 +58,7 @@ module.exports = (sequelize, DataTypes) => {
     OrderItem.belongsTo(models.Order, { foreignKey: 'orderId' });
     OrderItem.belongsTo(models.Product, { foreignKey: 'productId' });
     OrderItem.hasMany(models.OrderRefundItem, { foreignKey: 'orderItemId' });
+    OrderItem.hasMany(models.OrderItemLotAllocation, { foreignKey: 'orderItemId' });
   };
 
   return OrderItem;

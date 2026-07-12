@@ -33,6 +33,8 @@ The repository blueprint is [`render.yaml`](../render.yaml).
 - Start: `npm start`
 - Health check: `GET /api/health`
 
+Use `GET /api/live` for process liveness and `GET /api/ready` for database/migration readiness. Retention cleanup runs daily by default; configure `SESSION_RETENTION_DAYS`, `CALLBACK_RETENTION_DAYS`, or disable it with `ENABLE_MAINTENANCE_SCHEDULER=false`.
+
 Required variables include `NODE_ENV=production`, `DATABASE_URL`, `AUTH_TOKEN_SECRET`, `BUSINESS_TIME_ZONE=Africa/Nairobi`, `BUSINESS_NAME`, and `BUSINESS_KRA_PIN`. Bootstrap the platform owner with `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
 
 Never enable demo seeding in production. Run migrations before starting a new release and confirm the health endpoint reports PostgreSQL connectivity.
@@ -45,9 +47,13 @@ Install with `npm ci`, build with `npm run build`, migrate with `npm run db:migr
 
 Configure `MPESA_ENV`, `MPESA_CONSUMER_KEY`, `MPESA_CONSUMER_SECRET`, `MPESA_SHORTCODE`, `MPESA_PASSKEY`, and the public `MPESA_CALLBACK_URL=https://your-domain/api/mpesa/callback`. Obtain sandbox and production credentials through Safaricom Daraja, and test callback reconciliation before enabling live tender.
 
+In non-production environments, managers can drive pending payments through `POST /api/mpesa/simulate-callback` with `success`, `cancelled`, `timeout`, or `amount_mismatch`. The endpoint returns 404 whenever `NODE_ENV` or `MPESA_ENV` is production.
+
 ## KRA eTIMS
 
 Configure `ETIMS_ENV`, `ETIMS_BASE_URL`, `ETIMS_API_KEY`, `ETIMS_DEVICE_SERIAL`, and `ENABLE_ETIMS_SCHEDULER`. A live rollout requires KRA registration or an authorized intermediary, a registered device serial, verified invoice payloads, and verified credit-note behavior.
+
+Set `ETIMS_ENV=simulator` outside production to exercise the persisted queue, retry, and fiscal-response paths without external credentials.
 
 ## VAT product classification
 

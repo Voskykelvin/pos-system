@@ -38,6 +38,7 @@ export default function Operations({ authToken, user }) {
   const [receipt, setReceipt] = useState(null);
   const [orderError, setOrderError] = useState(null);
   const [actionReason, setActionReason] = useState('');
+  const [refundMethod, setRefundMethod] = useState('original');
 
   // Expenses state
   const [expenseAmount, setExpenseAmount] = useState('');
@@ -285,7 +286,7 @@ export default function Operations({ authToken, user }) {
       await api(`/api/orders/${receipt.id}/${type}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reason: actionReason })
+        body: JSON.stringify({ reason: actionReason, ...(type === 'refund' ? { refundMethod } : {}) })
       });
       await loadReceipt(receipt.id);
       await searchOrders();
@@ -685,6 +686,10 @@ export default function Operations({ authToken, user }) {
                     onChange={(event) => setActionReason(event.target.value)}
                     placeholder="Reason for action"
                   />
+                  <select value={refundMethod} onChange={(event) => setRefundMethod(event.target.value)} aria-label="Refund destination">
+                    <option value="original">Original tender / manual payout</option>
+                    <option value="store_credit">Customer store credit</option>
+                  </select>
                   {receipt.status === 'completed' && (
                     <div className={styles.actionButtons}>
                       <button type="button" onClick={() => orderAction('void')}>Full Void</button>
@@ -727,7 +732,7 @@ export default function Operations({ authToken, user }) {
                           await api(`/api/orders/${receipt.id}/refund/partial`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ items: itemsToRefund, reason: actionReason })
+                            body: JSON.stringify({ items: itemsToRefund, reason: actionReason, refundMethod })
                           });
                           await loadReceipt(receipt.id);
                           setActionReason('');

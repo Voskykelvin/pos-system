@@ -248,6 +248,44 @@ async function callbackExceptions(req, res) {
   }
 }
 
+async function simulateCallback(req, res) {
+  if (process.env.NODE_ENV === 'production' || String(process.env.MPESA_ENV).toLowerCase() === 'production') {
+    return res.status(404).json({ error: 'Not found' });
+  }
+  const { paymentId, scenario = 'success', receiptNumber } = req.body;
+  const payment = await Payment.findOne({
+    where: { id: paymentId, method: 'mpesa' },
+    include: [{ model: Order, required: true, where: tenantWhere(req) }]
+  });
+  if (!payment) return res.status(404).json({ error: 'Pending M-Pesa payment not found' });
+  if (payment.status !== 'pending') return res.status(409).json({ error: `Payment is already ${payment.status}` });
+
+  const checkoutRequestId = payment.mpesaCheckoutRequestId || `SIM-${payment.id}`;
+  if (!payment.mpesaCheckoutRequestId) await payment.update({ mpesaCheckoutRequestId: checkoutRequestId });
+  const resultCode = scenario === 'success' || scenario === 'amount_mismatch' ? 0 : scenario === 'timeout' ? 1037 : 1032;
+  const amount = scenario === 'amount_mismatch' ? Number(payment.amount) + 1 : Number(payment.amount);
+  req.body = {
+    Body: {
+      stkCallback: {
+        MerchantRequestID: `SIM-MERCHANT-${payment.id}`,
+        CheckoutRequestID: checkoutRequestId,
+        ResultCode: resultCode,
+        ResultDesc: scenario,
+        ...(resultCode === 0 ? {
+          CallbackMetadata: {
+            Item: [
+              { Name: 'Amount', Value: amount },
+              { Name: 'MpesaReceiptNumber', Value: String(receiptNumber || `SIM${payment.id.replace(/-/g, '').slice(0, 8)}`).toUpperCase() },
+              { Name: 'PhoneNumber', Value: payment.mpesaPhone || '254700000000' }
+            ]
+          }
+        } : {})
+      }
+    }
+  };
+  return callback(req, res);
+}
+
 async function resolveCallbackException(req, res) {
   const { action, note, receiptNumber } = req.body;
   const normalizedReceiptNumber = receiptNumber ? String(receiptNumber).trim().toUpperCase() : null;
@@ -332,4 +370,4 @@ async function resolveCallbackException(req, res) {
   }
 }
 
-module.exports = { initiate, callback, callbackExceptions, resolveCallbackException };
+module.exports = { initiate, callback, callbackExceptions, resolveCallbackException, simulateCallback };

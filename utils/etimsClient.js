@@ -24,6 +24,21 @@ function buildConfig(config = {}) {
 async function transmitInvoice(payload, inputConfig = {}) {
   const config = buildConfig(inputConfig);
 
+  if (String(config.env).toLowerCase() === 'simulator') {
+    if (payload?.simulationScenario === 'failure') {
+      throw new Error('Simulated eTIMS provider failure');
+    }
+    const reference = String(payload.traderSystemInvoiceNumber || payload.creditNoteNumber || 'SIM')
+      .replace(/[^A-Za-z0-9]/g, '')
+      .slice(-20);
+    return {
+      success: true,
+      cuInvoiceNumber: `SIM-CU-${reference}`,
+      qrCodeUrl: `https://simulator.invalid/etims/${reference}`,
+      raw: { simulated: true, acceptedAt: new Date().toISOString(), reference }
+    };
+  }
+
   if (!config.baseUrl) {
     throw new Error(
       'ETIMS_BASE_URL is not configured. Complete SI registration on iTax first.'
@@ -66,4 +81,32 @@ async function transmitInvoice(payload, inputConfig = {}) {
   };
 }
 
-module.exports = { transmitInvoice };
+async function transmitCreditNote(payload, inputConfig = {}) {
+  const config = buildConfig(inputConfig);
+  if (String(config.env).toLowerCase() === 'simulator') {
+    if (payload?.simulationScenario === 'failure') throw new Error('Simulated eTIMS credit-note failure');
+    const reference = String(payload.creditNoteNumber || 'SIM').replace(/[^A-Za-z0-9]/g, '').slice(-20);
+    return {
+      success: true,
+      cuCreditNoteNumber: `SIM-CN-${reference}`,
+      raw: { simulated: true, acceptedAt: new Date().toISOString(), reference }
+    };
+  }
+  if (!config.baseUrl) throw new Error('ETIMS_BASE_URL is not configured.');
+  if (!config.apiKey || !config.deviceSerial) {
+    throw new Error('ETIMS_API_KEY and ETIMS_DEVICE_SERIAL must be configured before syncing credit notes.');
+  }
+  const { data } = await axios.post(`${config.baseUrl}/credit-notes`, payload, {
+    headers: {
+      Authorization: `Bearer ${config.apiKey}`,
+      'X-Device-Serial': config.deviceSerial,
+      'Content-Type': 'application/json'
+    },
+    timeout: 15000
+  });
+  const cuCreditNoteNumber = data.cuCreditNoteNumber || data.cuInvoiceNumber;
+  if (!cuCreditNoteNumber) throw new Error('eTIMS response missing cuCreditNoteNumber');
+  return { success: true, cuCreditNoteNumber, raw: data };
+}
+
+module.exports = { transmitInvoice, transmitCreditNote };

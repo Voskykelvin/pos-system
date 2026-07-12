@@ -7,6 +7,9 @@ Last reviewed: 2026-07-12.
 - Passwords are hashed in `utils/passwords.js`.
 - Auth tokens are signed in `utils/authToken.js` and bound to hashed, persistent records in `auth_sessions`.
 - Logout revokes the current session server-side; `/api/auth/logout-all` revokes all sessions for the user.
+- Store Security lists active browser sessions and supports remote per-device revocation.
+- Access tokens are short-lived by default; an HTTP-only SameSite refresh cookie rotates both access and refresh credentials.
+- Administrators and platform owners can enable TOTP authenticator MFA; secrets are AES-256-GCM encrypted using `MFA_ENCRYPTION_KEY`.
 - `POST /api/auth/login` is rate-limited.
 - General API requests are rate-limited.
 - Tenant-aware API rate limiting uses tenant ID from the auth token when available.

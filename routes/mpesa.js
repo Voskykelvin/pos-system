@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { initiate, callback, callbackExceptions, resolveCallbackException } = require('../controllers/mpesaController');
+const { initiate, callback, callbackExceptions, resolveCallbackException, simulateCallback } = require('../controllers/mpesaController');
 const { authenticate, requireRoles } = require('../middleware/auth');
 const { idempotency } = require('../middleware/idempotency');
 const { validate, schemas } = require('../middleware/validate');
@@ -18,6 +18,17 @@ router.post(
 // POST /api/mpesa/callback  - Safaricom calls this with the result, must be public HTTPS
 router.post('/callback', callback);
 router.get('/callback-events', authenticate, requireRoles('admin', 'manager'), callbackExceptions);
+router.post(
+  '/simulate-callback',
+  authenticate,
+  requireRoles('admin', 'manager'),
+  validate({
+    paymentId: { type: 'string', minLength: 1, maxLength: 100 },
+    scenario: { type: 'string', required: false, enumValues: ['success', 'cancelled', 'timeout', 'amount_mismatch'] },
+    receiptNumber: { type: 'string', required: false, minLength: 8, maxLength: 30 }
+  }),
+  simulateCallback
+);
 router.post(
   '/callback-events/:id/resolve',
   authenticate,
