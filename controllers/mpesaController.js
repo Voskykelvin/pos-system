@@ -5,6 +5,7 @@ const { reverseOrder } = require('../services/orderReversal');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
 const { callbackPayloadHash, validateCallbackAmount } = require('../services/mpesaCallback');
+const { logAudit } = require('../services/auditLogger');
 
 /**
  * POST /api/mpesa/stk-push
@@ -247,4 +248,88 @@ async function callbackExceptions(req, res) {
   }
 }
 
-module.exports = { initiate, callback, callbackExceptions };
+async function resolveCallbackException(req, res) {
+  const { action, note, receiptNumber } = req.body;
+  const normalizedReceiptNumber = receiptNumber ? String(receiptNumber).trim().toUpperCase() : null;
+  const transaction = await sequelize.transaction();
+  try {
+    const event = await MpesaCallbackEvent.findOne({
+      where: { id: req.params.id, status: { [Op.in]: ['exception', 'error'] } },
+      include: [{
+        model: Payment,
+        required: true,
+        include: [{ model: Order, required: true, where: tenantWhere(req) }]
+      }],
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!event) {
+      await transaction.rollback();
+      return res.status(404).json({ error: 'Unresolved M-Pesa exception not found' });
+    }
+
+    const payment = await Payment.findByPk(event.paymentId, {
+      transaction,
+      lock: transaction.LOCK.UPDATE
+    });
+    if (!payment) throw new Error('Exception payment no longer exists');
+
+    let resolution;
+    if (action === 'confirm') {
+      if (payment.status !== 'pending') {
+        await transaction.rollback();
+        return res.status(409).json({ error: `Payment is already ${payment.status}` });
+      }
+      const duplicateReceipt = await Payment.findOne({
+        where: { mpesaReceiptNumber: normalizedReceiptNumber, id: { [Op.ne]: payment.id } },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      if (duplicateReceipt) {
+        await transaction.rollback();
+        return res.status(409).json({ error: 'That M-Pesa receipt is already assigned to another payment' });
+      }
+      await payment.update({ status: 'confirmed', mpesaReceiptNumber: normalizedReceiptNumber }, { transaction });
+      const orderPayments = await Payment.findAll({
+        where: { orderId: payment.orderId },
+        transaction,
+        lock: transaction.LOCK.UPDATE
+      });
+      if (orderPayments.every((item) => item.status === 'confirmed')) {
+        await Order.update({ paymentStatus: 'paid' }, { where: { id: payment.orderId }, transaction });
+      }
+      resolution = 'confirmed_from_statement';
+    } else {
+      resolution = 'dismissed';
+    }
+
+    await event.update({
+      status: 'resolved',
+      resolution,
+      resolutionNote: note,
+      resolvedByUserId: req.user.id,
+      resolvedAt: new Date()
+    }, { transaction });
+    await logAudit({
+      req,
+      action: 'mpesa.callback_exception_resolved',
+      entityType: 'mpesa_callback_event',
+      entityId: event.id,
+      metadata: {
+        resolution,
+        note,
+        paymentId: payment.id,
+        orderId: payment.orderId,
+        receiptNumber: action === 'confirm' ? normalizedReceiptNumber : null
+      },
+      transaction
+    });
+    await transaction.commit();
+    return res.json({ id: event.id, status: 'resolved', resolution });
+  } catch (err) {
+    if (!transaction.finished) await transaction.rollback();
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { initiate, callback, callbackExceptions, resolveCallbackException };

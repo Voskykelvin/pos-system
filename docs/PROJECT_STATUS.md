@@ -28,7 +28,7 @@ This is the single source of truth for shipped capabilities and planned product 
 Work in this order unless a production incident changes priority:
 
 1. Authentication and sessions: refresh rotation, device/session revocation, MFA, authorization tests, and standardized API errors.
-2. Payment and fiscal resilience: persisted eTIMS claim leases, exponential retries, durable M-Pesa callback records, and manager-visible payment exceptions are built; next add resolution actions, provider simulators, and eTIMS credit notes.
+2. Payment and fiscal resilience: persisted eTIMS claim leases, exponential retries, durable M-Pesa callback records, and audited manager resolution are built; next add provider simulators and eTIMS credit notes.
 3. PostgreSQL scale verification: PostgreSQL-backed CI, concurrency/contention tests, migration rollback tests, load tests, and distributed idempotency.
 4. Observability and operations: centralized structured logs, error tracking, metrics, tracing, readiness checks, backup verification, and incident runbooks.
 5. Performance and PWA: image compression, chart chunk reduction, font subsetting, smaller precache, and bundle budgets.

@@ -141,6 +141,8 @@ Use `POST /api/auth/logout-all` to revoke every active session belonging to the 
 
 Managers and administrators can inspect tenant-scoped callback exceptions with `GET /api/mpesa/callback-events`. Exact callback retries are fingerprinted and counted. Missing or mismatched callback amounts remain pending and appear in Operations instead of confirming the payment.
 
+Resolve an exception with `POST /api/mpesa/callback-events/:id/resolve`. Send `action: "confirm"`, an audit `note`, and the externally verified `receiptNumber` to confirm from an M-Pesa statement. Send `action: "dismiss"` with a note to close the exception without changing payment state.
+
 ### 6. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
 - **Required Header:** `Idempotency-Key: <unique-sale-key>` to make network retries safe

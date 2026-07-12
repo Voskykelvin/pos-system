@@ -111,6 +111,32 @@ export default function Operations({ authToken, user }) {
     }
   }
 
+  async function resolveMpesaException(event, action) {
+    const note = window.prompt(
+      action === 'confirm'
+        ? 'Enter a reconciliation note (for example, statement date and reviewer):'
+        : 'Why is this exception being dismissed?'
+    );
+    if (!note || note.trim().length < 5) return;
+    let receiptNumber;
+    if (action === 'confirm') {
+      receiptNumber = window.prompt('Enter the confirmed M-Pesa receipt number:');
+      if (!receiptNumber || receiptNumber.trim().length < 8) return;
+    }
+    try {
+      await api(`/api/mpesa/callback-events/${event.id}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, note: note.trim(), receiptNumber: receiptNumber?.trim() })
+      });
+      setShiftMessage(action === 'confirm' ? 'M-Pesa payment confirmed from statement.' : 'M-Pesa exception dismissed.');
+      await loadMpesaExceptions();
+      if (event.payment?.orderId && receipt?.id === event.payment.orderId) await loadReceipt(receipt.id);
+    } catch (err) {
+      setMpesaError(err.message);
+    }
+  }
+
   async function runEtimsAction(action) {
     if (!canManageOrders) return;
     setEtimsBusy(true);
@@ -537,6 +563,10 @@ export default function Operations({ authToken, user }) {
                     <strong>{event.payment?.orderNumber || event.checkoutRequestId}</strong>
                     <small>{event.status.toUpperCase()} · delivered {event.deliveryCount} time{event.deliveryCount === 1 ? '' : 's'}</small>
                     <small className={styles.etimsErrorText}>{event.error}</small>
+                    <div className={styles.etimsActions}>
+                      <button type="button" onClick={() => resolveMpesaException(event, 'confirm')}>Confirm from statement</button>
+                      <button type="button" onClick={() => resolveMpesaException(event, 'dismiss')}>Dismiss</button>
+                    </div>
                   </div>
                   <b>{formatKes(event.payment?.amount)}</b>
                 </div>

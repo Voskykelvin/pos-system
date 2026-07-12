@@ -9,7 +9,11 @@ module.exports = (sequelize, DataTypes) => {
     payload: { type: DataTypes.JSONB, allowNull: false, defaultValue: {} },
     error: { type: DataTypes.TEXT, allowNull: true },
     deliveryCount: { type: DataTypes.INTEGER, allowNull: false, defaultValue: 1 },
-    processedAt: { type: DataTypes.DATE, allowNull: true }
+    processedAt: { type: DataTypes.DATE, allowNull: true },
+    resolution: { type: DataTypes.STRING(30), allowNull: true },
+    resolutionNote: { type: DataTypes.STRING(500), allowNull: true },
+    resolvedByUserId: { type: DataTypes.UUID, allowNull: true },
+    resolvedAt: { type: DataTypes.DATE, allowNull: true }
   }, {
     tableName: 'mpesa_callback_events',
     timestamps: true,
@@ -22,6 +26,7 @@ module.exports = (sequelize, DataTypes) => {
 
   MpesaCallbackEvent.associate = (models) => {
     MpesaCallbackEvent.belongsTo(models.Payment, { foreignKey: 'paymentId' });
+    MpesaCallbackEvent.belongsTo(models.User, { foreignKey: 'resolvedByUserId', as: 'resolvedBy' });
   };
 
   return MpesaCallbackEvent;
