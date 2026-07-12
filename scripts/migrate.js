@@ -78,7 +78,14 @@ async function applyMigration(client, file) {
     console.log(`  OK ${file} applied`);
   } catch (err) {
     await client.query('ROLLBACK');
-    throw new Error(`Migration ${file} failed: ${err.message}`);
+    const diagnostics = [
+      err.message,
+      err.code && `code=${err.code}`,
+      err.detail && `detail=${err.detail}`,
+      err.hint && `hint=${err.hint}`,
+      err.constraint && `constraint=${err.constraint}`
+    ].filter(Boolean).join('; ');
+    throw new Error(`Migration ${file} failed: ${diagnostics}`);
   }
 }
 
