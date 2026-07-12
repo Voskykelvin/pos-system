@@ -1,11 +1,11 @@
 const { Op } = require('sequelize');
 const { User, Tenant } = require('../models');
-const { createAuthToken } = require('../utils/authToken');
 const { verifyPassword } = require('../utils/passwords');
 const { getPlan } = require('../utils/planCatalog');
 const { isExpired, resolveBillingStatus } = require('../services/subscriptionBilling');
 const { logAudit } = require('../services/auditLogger');
 const logger = require('../utils/logger');
+const { issueAuthSession, revokeAllUserSessions, revokeSession } = require('../services/authSessions');
 
 function publicUser(user) {
   return {
@@ -81,7 +81,7 @@ async function login(req, res) {
     });
 
     return res.json({
-      token: createAuthToken(user),
+      token: await issueAuthSession(user, req),
       user: publicUser(user),
       tenant: user.Tenant ? {
         id: user.Tenant.id,
@@ -104,4 +104,14 @@ async function me(req, res) {
   return res.json({ user: req.user });
 }
 
-module.exports = { login, me };
+async function logout(req, res) {
+  await revokeSession(req.authTokenPayload);
+  return res.status(204).end();
+}
+
+async function logoutAll(req, res) {
+  const revokedSessions = await revokeAllUserSessions(req.user.id);
+  return res.json({ revokedSessions });
+}
+
+module.exports = { login, logout, logoutAll, me };

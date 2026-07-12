@@ -5,7 +5,8 @@ Last reviewed: 2026-07-12.
 ## Current Controls
 
 - Passwords are hashed in `utils/passwords.js`.
-- Auth tokens are signed in `utils/authToken.js`.
+- Auth tokens are signed in `utils/authToken.js` and bound to hashed, persistent records in `auth_sessions`.
+- Logout revokes the current session server-side; `/api/auth/logout-all` revokes all sessions for the user.
 - `POST /api/auth/login` is rate-limited.
 - General API requests are rate-limited.
 - Tenant-aware API rate limiting uses tenant ID from the auth token when available.
@@ -33,6 +34,7 @@ The current full and production-only dependency audits report zero known vulnera
 ## Production Hardening Checklist
 
 - Set `AUTH_TOKEN_SECRET` or `JWT_SECRET` in Render.
+- Review and remove expired/revoked `auth_sessions` through a scheduled retention job before session volume becomes material.
 - Keep `DATABASE_URL` in Render secrets only.
 - Do not expose the Vite dev server in production.
 - Configure CORS only if a separate domain, mobile app, or third-party API consumer is introduced.

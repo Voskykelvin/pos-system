@@ -422,6 +422,15 @@ async function main() {
       throw new Error('Discounted cashier checkout was not paid');
     }
 
+    const logoutResponse = await fetch(`${baseUrl}/api/auth/logout`, {
+      method: 'POST',
+      headers: cashierHeaders
+    });
+    if (logoutResponse.status !== 204) {
+      throw new Error(`Logout returned ${logoutResponse.status}, expected 204`);
+    }
+    await expectFailure(baseUrl, '/api/bootstrap', { headers: cashierHeaders }, 401);
+
     console.log('Smoke test passed');
     console.log(`Order: ${checkout.orderNumber}`);
     console.log(`Revenue: KES ${Number(report.revenue).toFixed(2)}`);

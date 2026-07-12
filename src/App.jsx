@@ -255,7 +255,17 @@ export default function App() {
     navigate(landing);
   }
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (authToken) {
+      try {
+        await fetch('/api/auth/logout', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${authToken}` }
+        });
+      } catch {
+        // Local logout must still complete if the network is unavailable.
+      }
+    }
     localStorage.removeItem('pos_auth_token');
     setAuthToken(null);
     setBootstrap({ userId: null, cashierId: null, user: null, tenant: null, demoMode: false });

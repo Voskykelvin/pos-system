@@ -20,7 +20,7 @@ const {
   AuditLog,
   SubscriptionPayment
 } = require('../models');
-const { createAuthToken } = require('../utils/authToken');
+const { issueAuthSession } = require('../services/authSessions');
 const { getPlanAmount, getPlanCatalog, getPlanPrice, isKnownPlan } = require('../utils/planCatalog');
 const { publicPayment, resolveBillingStatus } = require('../services/subscriptionBilling');
 
@@ -327,7 +327,7 @@ async function signup(req, res) {
 
     await t.commit();
 
-    const token = createAuthToken(owner);
+    const token = await issueAuthSession(owner, req);
 
     return res.status(201).json({
       message: 'Store provisioned successfully!',

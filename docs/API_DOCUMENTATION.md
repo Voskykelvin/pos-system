@@ -1,6 +1,6 @@
 # API Documentation
 
-This document describes the request and response structures for the main API endpoints of Jijenge POS. Unless marked public, requests require `Authorization: Bearer <token>`. Tokens are application-signed bearer tokens, not JSON Web Tokens, and expire after 12 hours by default (`AUTH_TOKEN_TTL_HOURS`). Monetary values are JSON numbers expressed in the tenant currency.
+This document describes the request and response structures for the main API endpoints of Jijenge POS. Unless marked public, requests require `Authorization: Bearer <token>`. Tokens are application-signed bearer tokens, not JSON Web Tokens, and expire after 12 hours by default (`AUTH_TOKEN_TTL_HOURS`). Each token is bound to a hashed, server-side session that can be revoked. Monetary values are JSON numbers expressed in the tenant currency.
 
 ## Authentication & Onboarding
 
@@ -75,11 +75,19 @@ This document describes the request and response structures for the main API end
   }
   ```
 
+### 3. End Session
+
+- **Endpoint:** `POST /api/auth/logout`
+- **Purpose:** Revoke the bearer token's current server-side session.
+- **Response:** `204 No Content`
+
+Use `POST /api/auth/logout-all` to revoke every active session belonging to the authenticated user. It returns `{ "revokedSessions": 2 }`.
+
 ---
 
 ## Catalog & Products
 
-### 3. Product Search
+### 4. Product Search
 - **Endpoint:** `GET /api/products/search`
 - **Query Parameters:**
   - `q`: Search query string (minimum 2 chars)
@@ -102,7 +110,7 @@ This document describes the request and response structures for the main API end
   ]
   ```
 
-### 4. Admin Products Listing (Paginated)
+### 5. Admin Products Listing (Paginated)
 - **Endpoint:** `GET /api/admin/products`
 - **Query Parameters:**
   - `includeInactive`: Include soft-deleted products (`true`/`false`)
@@ -131,7 +139,7 @@ This document describes the request and response structures for the main API end
 
 ## Checkout & Sales
 
-### 5. Create Checkout Order
+### 6. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
 - **Required Header:** `Idempotency-Key: <unique-sale-key>` to make network retries safe
 - **Idempotency Rules:** Maximum 200 characters. Reusing a key with a different route/body returns `409`; replayed responses include `Idempotency-Replayed: true`.
@@ -157,7 +165,7 @@ Checkout consolidates duplicate product lines, accepts quantities to three decim
 
 For a queued offline cash sale, the body also includes `offlineContext` with `schemaVersion`, `deviceId`, positive integer `sequence`, `capturedAt`, and immutable item snapshots containing `productId`, `quantity`, `unitPrice`, and `taxCategory`. The server returns `409` with `offlineConflict: true` when catalog state changed. Replaying an accepted `(tenant, deviceId, sequence)` returns the existing order with `offlineReplayed: true`.
 
-### 6. Partial Refund
+### 7. Partial Refund
 
 - **Endpoint:** `POST /api/orders/:id/refund/partial`
 - **Purpose:** Restore selected quantities while preventing cumulative returns above the quantity sold.
@@ -173,7 +181,7 @@ For a queued offline cash sale, the body also includes `offlineContext` with `sc
 - **Response (200 OK):** Includes `refundId`, proportional `refundSubtotal`, `refundTaxTotal`, `refundDiscountTotal`, `refundTotal`, `tenderAllocations`, and each line's new `refundableQuantity`.
 - **Conflicts (409):** Transmitted eTIMS invoices and credit-tender partial refunds require dedicated fiscal or debt-adjustment workflows.
 
-### 7. Receipt Detail
+### 8. Receipt Detail
 
 - **Endpoint:** `GET /api/orders/:id/receipt`
 - **Refund Accounting:** Returns original totals plus `refundedSubtotal`, `refundedTaxTotal`, `refundedDiscountTotal`, `refundedTotal`, and `netTotal`.

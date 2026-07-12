@@ -108,6 +108,7 @@ const models = {
   Product: require('./Product')(sequelize, modelDataTypes),
   InventoryTransaction: require('./InventoryTransaction')(sequelize, modelDataTypes),
   User: require('./User')(sequelize, modelDataTypes),
+  AuthSession: require('./AuthSession')(sequelize, modelDataTypes),
   Customer: require('./Customer')(sequelize, modelDataTypes),
   Order: require('./Order')(sequelize, modelDataTypes),
   OrderItem: require('./OrderItem')(sequelize, modelDataTypes),

@@ -1,6 +1,7 @@
 const { User, Tenant } = require('../models');
 const { verifyAuthToken } = require('../utils/authToken');
 const { isExpired, resolveBillingStatus } = require('../services/subscriptionBilling');
+const { findActiveSession } = require('../services/authSessions');
 
 function isBillingRecoveryPath(req) {
   const path = String(req.originalUrl || req.url || '').split('?')[0];
@@ -21,6 +22,10 @@ async function authenticate(req, res, next) {
     }
 
     const payload = verifyAuthToken(token);
+    const session = await findActiveSession(payload);
+    if (!session) {
+      return res.status(401).json({ error: 'Session expired or revoked' });
+    }
     const user = await User.findByPk(payload.sub, {
       include: [{
         model: Tenant,
@@ -57,6 +62,8 @@ async function authenticate(req, res, next) {
       tenantId: user.tenantId || null,
       branchId: user.branchId || null
     };
+    req.authSession = session;
+    req.authTokenPayload = payload;
     req.tenantId = user.role === 'super_admin' && req.get('x-tenant-id')
       ? req.get('x-tenant-id')
       : user.tenantId || null;

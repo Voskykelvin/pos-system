@@ -53,6 +53,7 @@ module.exports = (sequelize, DataTypes) => {
     User.hasMany(models.AuditLog, { foreignKey: 'userId', as: 'auditActions' });
     User.hasMany(models.AuditLog, { foreignKey: 'approvedByUserId', as: 'approvedActions' });
     User.hasMany(models.Shift, { foreignKey: 'cashierId', as: 'shifts' });
+    User.hasMany(models.AuthSession, { foreignKey: 'userId', as: 'authSessions' });
   };
 
   return User;

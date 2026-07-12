@@ -27,7 +27,7 @@ function sign(data) {
   return crypto.createHmac('sha256', getSecret()).update(data).digest('base64url');
 }
 
-function createAuthToken(user) {
+function createAuthToken(user, { sessionId = null, expiresAt = null } = {}) {
   const ttlHours = Number(process.env.AUTH_TOKEN_TTL_HOURS || DEFAULT_TTL_HOURS);
   if (!Number.isFinite(ttlHours) || ttlHours <= 0) {
     throw new Error('AUTH_TOKEN_TTL_HOURS must be a positive number');
@@ -37,8 +37,11 @@ function createAuthToken(user) {
     role: user.role,
     name: user.name,
     tenantId: user.tenantId || null,
-    exp: Math.floor(Date.now() / 1000) + ttlHours * 60 * 60
+    exp: expiresAt
+      ? Math.floor(new Date(expiresAt).getTime() / 1000)
+      : Math.floor(Date.now() / 1000) + ttlHours * 60 * 60
   };
+  if (sessionId) payload.sid = sessionId;
 
   const encoded = base64url(JSON.stringify(payload));
   return `${encoded}.${sign(encoded)}`;
