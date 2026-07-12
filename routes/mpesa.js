@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { initiate, callback } = require('../controllers/mpesaController');
+const { initiate, callback, callbackExceptions } = require('../controllers/mpesaController');
 const { authenticate, requireRoles } = require('../middleware/auth');
 const { idempotency } = require('../middleware/idempotency');
 const { validate, schemas } = require('../middleware/validate');
@@ -17,5 +17,6 @@ router.post(
 
 // POST /api/mpesa/callback  - Safaricom calls this with the result, must be public HTTPS
 router.post('/callback', callback);
+router.get('/callback-events', authenticate, requireRoles('admin', 'manager'), callbackExceptions);
 
 module.exports = router;

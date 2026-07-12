@@ -50,6 +50,8 @@ export default function Operations({ authToken, user }) {
   const [etimsDashboard, setEtimsDashboard] = useState(null);
   const [etimsError, setEtimsError] = useState(null);
   const [etimsBusy, setEtimsBusy] = useState(false);
+  const [mpesaExceptions, setMpesaExceptions] = useState([]);
+  const [mpesaError, setMpesaError] = useState(null);
 
   // Multi-till shift summary state for managers
   const [shiftSummary, setShiftSummary] = useState(null);
@@ -96,6 +98,16 @@ export default function Operations({ authToken, user }) {
       setEtimsError(null);
     } catch (err) {
       setEtimsError(err.message);
+    }
+  }
+
+  async function loadMpesaExceptions() {
+    if (!canManageOrders) return;
+    try {
+      setMpesaExceptions(await api('/api/mpesa/callback-events'));
+      setMpesaError(null);
+    } catch (err) {
+      setMpesaError(err.message);
     }
   }
 
@@ -264,6 +276,7 @@ export default function Operations({ authToken, user }) {
     loadAuditLogs();
     loadShiftSummary();
     loadEtimsDashboard();
+    loadMpesaExceptions();
   }, [authToken, canViewAudit, canManageOrders]);
 
   useEffect(() => {
@@ -504,6 +517,30 @@ export default function Operations({ authToken, user }) {
                   ))
                 )}
               </div>
+            </div>
+          </section>
+        )}
+
+        {canManageOrders && (
+          <section className={styles.panel}>
+            <div className={styles.panelHeader}>
+              <h2>M-Pesa exceptions</h2>
+              <button type="button" onClick={loadMpesaExceptions}>Refresh</button>
+            </div>
+            {mpesaError && <div className={styles.error}>{mpesaError}</div>}
+            <div className={styles.etimsList}>
+              {mpesaExceptions.length === 0 ? (
+                <p className={styles.empty}>No M-Pesa callback exceptions need review.</p>
+              ) : mpesaExceptions.map((event) => (
+                <div className={styles.etimsRow} key={event.id}>
+                  <div>
+                    <strong>{event.payment?.orderNumber || event.checkoutRequestId}</strong>
+                    <small>{event.status.toUpperCase()} · delivered {event.deliveryCount} time{event.deliveryCount === 1 ? '' : 's'}</small>
+                    <small className={styles.etimsErrorText}>{event.error}</small>
+                  </div>
+                  <b>{formatKes(event.payment?.amount)}</b>
+                </div>
+              ))}
             </div>
           </section>
         )}

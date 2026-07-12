@@ -115,6 +115,7 @@ const models = {
   OrderRefund: require('./OrderRefund')(sequelize, modelDataTypes),
   OrderRefundItem: require('./OrderRefundItem')(sequelize, modelDataTypes),
   Payment: require('./Payment')(sequelize, modelDataTypes),
+  MpesaCallbackEvent: require('./MpesaCallbackEvent')(sequelize, modelDataTypes),
   EtimsInvoice: require('./EtimsInvoice')(sequelize, modelDataTypes),
   AuditLog: require('./AuditLog')(sequelize, modelDataTypes),
   Branch: require('./Branch')(sequelize, modelDataTypes),

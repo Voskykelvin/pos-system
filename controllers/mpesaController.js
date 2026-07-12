@@ -1,8 +1,10 @@
-const { sequelize, Payment, Order, OrderItem, EtimsInvoice, Tenant } = require('../models');
+const { Op } = require('sequelize');
+const { sequelize, Payment, Order, OrderItem, EtimsInvoice, Tenant, MpesaCallbackEvent } = require('../models');
 const { initiateStkPush } = require('../utils/mpesa');
 const { reverseOrder } = require('../services/orderReversal');
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveTenantConfig } = require('../utils/tenantConfig');
+const { callbackPayloadHash, validateCallbackAmount } = require('../services/mpesaCallback');
 
 /**
  * POST /api/mpesa/stk-push
@@ -79,8 +81,25 @@ async function callback(req, res) {
   // Always acknowledge, even on internal errors, so Safaricom doesn't retry indefinitely
   const ack = () => res.status(200).json({ ResultCode: 0, ResultDesc: 'Accepted' });
 
+  let callbackEvent = null;
   try {
     const stkCallback = req.body?.Body?.stkCallback;
+    const payloadHash = callbackPayloadHash(req.body);
+    const [event, created] = await MpesaCallbackEvent.findOrCreate({
+      where: { payloadHash },
+      defaults: {
+        checkoutRequestId: stkCallback?.CheckoutRequestID || null,
+        resultCode: Number.isFinite(Number(stkCallback?.ResultCode)) ? Number(stkCallback.ResultCode) : null,
+        payload: req.body || {},
+        status: stkCallback ? 'received' : 'exception',
+        error: stkCallback ? null : 'Missing Body.stkCallback'
+      }
+    });
+    callbackEvent = event;
+    if (!created) {
+      await event.increment('deliveryCount');
+      return ack();
+    }
     if (!stkCallback) {
       return ack();
     }
@@ -93,12 +112,14 @@ async function callback(req, res) {
     });
 
     if (!payment) {
-      // Nothing matches this CheckoutRequestID, acknowledge and move on
+      await callbackEvent.update({ status: 'unmatched', processedAt: new Date() });
       return ack();
     }
+    await callbackEvent.update({ paymentId: payment.id });
 
     // Idempotency: Safaricom can retry callbacks, don't reprocess a settled payment
     if (payment.status === 'confirmed' || payment.status === 'failed') {
+      await callbackEvent.update({ status: 'duplicate', processedAt: new Date() });
       return ack();
     }
 
@@ -139,6 +160,7 @@ async function callback(req, res) {
         }
       }
 
+      await callbackEvent.update({ status: 'payment_failed', processedAt: new Date() });
       return ack();
     }
 
@@ -148,13 +170,15 @@ async function callback(req, res) {
     const mpesaReceiptNumber = getValue('MpesaReceiptNumber');
     const amountPaid = getValue('Amount');
     const phoneNumber = getValue('PhoneNumber');
-    const paidAmount = Number(amountPaid);
-    const expectedAmount = Number(payment.amount);
+    const { valid: amountMatches, expectedAmount } = validateCallbackAmount(amountPaid, payment.amount);
 
-    if (!Number.isFinite(paidAmount) || Math.abs(paidAmount - expectedAmount) > 0.01) {
-      console.error(
-        `M-Pesa amount mismatch for payment ${payment.id}: expected ${expectedAmount}, got ${amountPaid}`
-      );
+    if (!amountMatches) {
+      await callbackEvent.update({
+        status: 'exception',
+        error: `Amount mismatch: expected ${expectedAmount.toFixed(2)}, received ${amountPaid ?? 'missing'}`,
+        processedAt: new Date()
+      });
+      return ack();
     }
 
     await payment.update({
@@ -176,11 +200,51 @@ async function callback(req, res) {
       );
     }
 
+    await callbackEvent.update({ status: 'processed', processedAt: new Date() });
+
     return ack();
   } catch (err) {
+    if (callbackEvent) {
+      await callbackEvent.update({ status: 'error', error: err.message, processedAt: new Date() }).catch(() => {});
+    }
     console.error('M-Pesa callback processing error:', err.message);
     return ack();
   }
 }
 
-module.exports = { initiate, callback };
+async function callbackExceptions(req, res) {
+  try {
+    const events = await MpesaCallbackEvent.findAll({
+      where: { status: { [Op.in]: ['exception', 'error'] } },
+      include: [{
+        model: Payment,
+        required: true,
+        attributes: ['id', 'amount', 'status', 'mpesaPhone'],
+        include: [{ model: Order, required: true, where: tenantWhere(req), attributes: ['id', 'orderNumber', 'total'] }]
+      }],
+      order: [['createdAt', 'DESC']],
+      limit: 50
+    });
+    return res.json(events.map((event) => ({
+      id: event.id,
+      status: event.status,
+      checkoutRequestId: event.checkoutRequestId,
+      resultCode: event.resultCode,
+      error: event.error,
+      deliveryCount: event.deliveryCount,
+      createdAt: event.createdAt,
+      payment: event.Payment ? {
+        id: event.Payment.id,
+        amount: Number(event.Payment.amount),
+        status: event.Payment.status,
+        phone: event.Payment.mpesaPhone,
+        orderId: event.Payment.Order?.id,
+        orderNumber: event.Payment.Order?.orderNumber
+      } : null
+    })));
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { initiate, callback, callbackExceptions };

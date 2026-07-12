@@ -13,6 +13,7 @@ Last reviewed: 2026-07-12.
 - `helmet` sets security headers and CSP.
 - Write routes use `middleware/validate.js`.
 - Checkout and M-Pesa STK push use idempotency middleware.
+- M-Pesa callbacks are durably fingerprinted; duplicate deliveries are counted and amount mismatches are quarantined for manager review.
 - Held checkout sales are stored in browser local storage per tenant/user; shared tills should use staff sign-out and clear abandoned held sales before handover.
 - Offline checkout envelopes are integrity-checked in IndexedDB; reusable authentication tokens are not persisted for service-worker synchronization.
 - SQL access is through Sequelize or migration scripts with parameterized replacements.

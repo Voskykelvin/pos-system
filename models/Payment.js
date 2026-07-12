@@ -48,6 +48,7 @@ module.exports = (sequelize, DataTypes) => {
 
   Payment.associate = (models) => {
     Payment.belongsTo(models.Order, { foreignKey: 'orderId' });
+    Payment.hasMany(models.MpesaCallbackEvent, { foreignKey: 'paymentId' });
   };
 
   return Payment;
