@@ -15,6 +15,19 @@ function fail(message) {
   process.exitCode = 1;
 }
 
+function connectionEnvironment(databaseUrl) {
+  const parsed = new URL(databaseUrl);
+  const sslMode = parsed.searchParams.get('sslmode') || (process.env.DB_SSL === 'true' ? 'require' : null);
+  return {
+    PGHOST: parsed.hostname,
+    PGPORT: parsed.port || '5432',
+    PGUSER: decodeURIComponent(parsed.username),
+    PGPASSWORD: decodeURIComponent(parsed.password),
+    PGDATABASE: decodeURIComponent(parsed.pathname.replace(/^\//, '')),
+    ...(sslMode ? { PGSSLMODE: sslMode } : {})
+  };
+}
+
 if (process.argv.includes('--help')) {
   console.log('Usage: npm run db:backup -- --output backups/jijenge.dump');
 } else if (!process.env.DATABASE_URL) {
@@ -31,7 +44,7 @@ if (process.argv.includes('--help')) {
     '--file', output
   ], {
     stdio: 'inherit',
-    env: { ...process.env, PGDATABASE: process.env.DATABASE_URL }
+    env: { ...process.env, ...connectionEnvironment(process.env.DATABASE_URL) }
   });
 
   if (result.error || result.status !== 0) {

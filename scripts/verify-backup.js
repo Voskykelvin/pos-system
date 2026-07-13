@@ -14,12 +14,14 @@ function option(name) {
 function connectionEnvironment(databaseUrl) {
   if (!databaseUrl) return {};
   const parsed = new URL(databaseUrl);
+  const sslMode = parsed.searchParams.get('sslmode') || (process.env.DB_SSL === 'true' ? 'require' : null);
   return {
     PGHOST: parsed.hostname,
     PGPORT: parsed.port || '5432',
     PGUSER: decodeURIComponent(parsed.username),
     PGPASSWORD: decodeURIComponent(parsed.password),
-    PGDATABASE: decodeURIComponent(parsed.pathname.replace(/^\//, ''))
+    PGDATABASE: decodeURIComponent(parsed.pathname.replace(/^\//, '')),
+    ...(sslMode ? { PGSSLMODE: sslMode } : {})
   };
 }
 
