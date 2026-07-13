@@ -47,6 +47,10 @@ module.exports = (sequelize, DataTypes) => {
     branchId: {
       type: DataTypes.UUID,
       allowNull: true
+    },
+    inventoryLotId: {
+      type: DataTypes.UUID,
+      allowNull: true
     }
   }, {
     tableName: 'inventory_transactions',
@@ -61,6 +65,7 @@ module.exports = (sequelize, DataTypes) => {
     InventoryTransaction.belongsTo(models.Product, { foreignKey: 'productId' });
     InventoryTransaction.belongsTo(models.User, { foreignKey: 'userId' });
     InventoryTransaction.belongsTo(models.Branch, { foreignKey: 'branchId' });
+    InventoryTransaction.belongsTo(models.InventoryLot, { foreignKey: 'inventoryLotId' });
   };
 
   return InventoryTransaction;

@@ -1,12 +1,21 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { webcrypto } from 'node:crypto';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  _getRawOfflineRecordsForTests,
   _resetOfflineDatabaseForTests,
   addOrderToQueue,
   getDeadLetterOrders,
   getDeviceIdentity,
+  getEncryptedHeldSales,
   getQueuedOrders,
+  resolveDeadLetterOrder,
+  saveEncryptedHeldSales,
   syncOfflineOrders
 } from './offlineQueue';
+
+beforeEach(() => {
+  vi.stubGlobal('crypto', webcrypto);
+});
 
 afterEach(async () => {
   vi.unstubAllGlobals();
@@ -39,6 +48,9 @@ describe('offline sale queue', () => {
     expect(identity.lastSequence).toBe(2);
     expect((await getQueuedOrders())[0].payload.items[0].quantity).toBe(1);
     expect(first.idempotencyKey).toContain(`${first.deviceId}-1`);
+    const raw = await _getRawOfflineRecordsForTests();
+    expect(raw.queued[0].payload).toBeUndefined();
+    expect(raw.queued[0].encryptedPayload).toMatchObject({ algorithm: 'AES-GCM', version: 1 });
   });
 
   it('removes a sale only after the server accepts it', async () => {
@@ -102,5 +114,48 @@ describe('offline sale queue', () => {
       cashierId: 'cashier-1'
     });
     expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it('retains a manager reconciliation record without keeping plaintext sale data', async () => {
+    await addOrderToQueue(payload, context);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 409,
+      json: async () => ({ error: 'Insufficient stock while offline' })
+    }));
+    await syncOfflineOrders('active-token', {
+      force: true,
+      cashierId: 'cashier-1',
+      tenantId: 'tenant-1'
+    });
+    const conflict = (await getDeadLetterOrders())[0];
+
+    await resolveDeadLetterOrder(conflict.id, {
+      note: 'Matched to the signed paper receipt and drawer total.',
+      userId: 'manager-1',
+      userName: 'Manager One'
+    });
+
+    expect(await getDeadLetterOrders()).toHaveLength(0);
+    const history = await getDeadLetterOrders({ includeResolved: true });
+    expect(history[0]).toMatchObject({
+      state: 'resolved',
+      resolvedByUserId: 'manager-1',
+      resolutionNote: 'Matched to the signed paper receipt and drawer total.'
+    });
+    const raw = await _getRawOfflineRecordsForTests();
+    expect(raw.rejected[0].payload).toBeUndefined();
+    expect(raw.rejected[0].encryptedPayload.algorithm).toBe('AES-GCM');
+  });
+
+  it('encrypts held sales with the device key', async () => {
+    const held = [{ id: 'held-1', customer: { phone: '0712345678' }, total: 65 }];
+    await saveEncryptedHeldSales('tenant-1:cashier-1', held);
+
+    expect(await getEncryptedHeldSales('tenant-1:cashier-1')).toEqual(held);
+    const raw = await _getRawOfflineRecordsForTests();
+    expect(raw.heldSales[0].customer).toBeUndefined();
+    expect(raw.heldSales[0].encryptedPayload.algorithm).toBe('AES-GCM');
+    expect(JSON.stringify(raw.heldSales[0])).not.toContain('0712345678');
   });
 });

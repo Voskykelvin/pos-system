@@ -42,16 +42,18 @@ The application uses shared code and a shared database. Tenant-aware tables are 
 - Customers: `/api/customers/*`.
 - Operations: `/api/shifts/*`, `/api/audit-logs`.
 - Catalog and purchasing: `/api/admin/*`, `/api/suppliers`, `/api/purchase-orders`.
-- Stocktakes: `/api/stock-counts` snapshots expected stock, records counts, and posts audited variance adjustments transactionally.
-- Branch inventory: `/api/stock-transfers` exposes per-branch balances and transactional transfers while `products.stockQuantity` remains the tenant-wide aggregate.
-- Lot tracking: opted-in products receive batch/expiry records through purchase receiving, sell by FEFO, retain order-line lot allocations, and restore the original lots on refunds.
+- Stocktakes: `/api/stock-counts` snapshots branch stock, expands tracked products into lot-level lines, and posts audited lot/branch/tenant variance adjustments transactionally.
+- Branch inventory: `/api/stock-transfers` exposes per-branch balances and transactional transfers while `products.stockQuantity` remains the tenant-wide aggregate. Lot transfers preserve source and destination lot identities without changing the tenant aggregate.
+- Lot tracking: opted-in products receive batch/expiry records through purchase receiving, move between branches by selected lot, sell by FEFO, retain order-line lot allocations, and restore the original lots on refunds.
 - Purchase returns reverse only unsold received stock (and the selected lot when applicable), then remain open until the supplier credit reference is confirmed.
 - Reporting: `/api/reports/*`.
 - Fiscal operations: `/api/etims/*`.
-- Runtime: `/api/health`, `/api/site-map`.
+- Runtime: `/api/live` for process liveness, `/api/ready` for database/migration readiness, `/api/health` for diagnostics, token-protected `/api/metrics` for Prometheus scraping, and `/api/site-map`.
 
 Detailed request and response contracts live in [API_DOCUMENTATION.md](API_DOCUMENTATION.md).
 
 ## Architectural priorities
 
 Keep tenant scoping explicit, perform financial writes transactionally, preserve immutable audit/receipt history, treat provider calls as retryable workflows, and move slow or unreliable external work to durable background jobs as the system scales.
+
+The production process emits structured JSON logs, attaches request IDs, records bounded-cardinality request and operational metrics, deduplicates webhook alerts, and drains HTTP/database resources on termination. See [INCIDENT_RESPONSE.md](INCIDENT_RESPONSE.md) for triage and recovery.

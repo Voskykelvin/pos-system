@@ -83,7 +83,11 @@ function landingForUser(user, tenant) {
 export default function App() {
   const [view, setView] = useState(getInitialView);
   const [authMode, setAuthMode] = useState(getInitialAuthMode);
-  const [authToken, setAuthToken] = useState(() => localStorage.getItem('pos_auth_token'));
+  const [authToken, setAuthToken] = useState(() => {
+    const legacyToken = localStorage.getItem('pos_auth_token');
+    localStorage.removeItem('pos_auth_token');
+    return legacyToken;
+  });
   const [authReady, setAuthReady] = useState(false);
   const [bootstrapRefresh, setBootstrapRefresh] = useState(0);
   const [bootstrap, setBootstrap] = useState({
@@ -96,6 +100,7 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ type: 'idle', message: '' });
   const syncTimeoutRef = useRef(null);
+  const refreshAttemptedRef = useRef(false);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e) => {
@@ -109,6 +114,21 @@ export default function App() {
   useEffect(() => {
     async function loadBootstrap() {
       if (!authToken) {
+        if (localStorage.getItem('pos_signed_out') === 'true' || refreshAttemptedRef.current) {
+          setAuthReady(true);
+          return;
+        }
+        refreshAttemptedRef.current = true;
+        try {
+          const refreshed = await fetch('/api/auth/refresh', { method: 'POST', credentials: 'same-origin' });
+          if (refreshed.ok) {
+            const payload = await refreshed.json();
+            setAuthToken(payload.token);
+            return;
+          }
+        } catch {
+          // A visitor or offline device without a refresh session remains signed out.
+        }
         setAuthReady(true);
         return;
       }
@@ -123,7 +143,6 @@ export default function App() {
           if (refreshed.ok) {
             const payload = await refreshed.json();
             token = payload.token;
-            localStorage.setItem('pos_auth_token', token);
             setAuthToken(token);
             res = await fetch('/api/bootstrap', { headers: { Authorization: `Bearer ${token}` } });
           }
@@ -278,6 +297,7 @@ export default function App() {
       }
     }
     localStorage.removeItem('pos_auth_token');
+    localStorage.setItem('pos_signed_out', 'true');
     setAuthToken(null);
     setBootstrap({ userId: null, cashierId: null, user: null, tenant: null, demoMode: false });
     setAuthMode(null);
@@ -317,7 +337,7 @@ export default function App() {
         <Signup
           initialPlan={signupPlan}
           onSignupSuccess={(token, user, tenant) => {
-            localStorage.setItem('pos_auth_token', token);
+            localStorage.removeItem('pos_signed_out');
             setAuthReady(false);
             setAuthToken(token);
             setAuthMode(null);
@@ -348,7 +368,7 @@ export default function App() {
         <Login
           onLogin={(payload) => {
             const token = typeof payload === 'string' ? payload : payload.token;
-            localStorage.setItem('pos_auth_token', token);
+            localStorage.removeItem('pos_signed_out');
             setAuthToken(token);
             setAuthMode(null);
             if (payload.user) {

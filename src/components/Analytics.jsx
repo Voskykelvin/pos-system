@@ -234,7 +234,7 @@ export default function Analytics({ authToken }) {
                 <h2>Sales trend</h2>
                 <span>{data.range.days} days</span>
               </div>
-              <div className={styles.chartFrame}>
+              <div className={styles.chartFrame} role="img" aria-label="Sales and gross profit trend chart">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.salesTrend}>
                     <defs>
@@ -263,7 +263,7 @@ export default function Analytics({ authToken }) {
                 <h2>Conversion trend</h2>
                 <span>Paid attempts</span>
               </div>
-              <div className={styles.chartFrame}>
+              <div className={styles.chartFrame} role="img" aria-label="Order conversion trend chart">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.salesTrend}>
                     <CartesianGrid stroke="#e2e8f0" vertical={false} />
@@ -281,7 +281,7 @@ export default function Analytics({ authToken }) {
                 <h2>Payment mix</h2>
                 <span>{data.paymentMixChart.length} methods</span>
               </div>
-              <div className={styles.chartFrame}>
+              <div className={styles.chartFrame} role="img" aria-label="Payment method mix chart">
                 {data.paymentMixChart.length === 0 ? (
                   <p className={styles.empty}>No confirmed payments in this range.</p>
                 ) : (
@@ -322,7 +322,7 @@ export default function Analytics({ authToken }) {
                 <h2>Category performance</h2>
                 <span>{data.categorySales.length} categories</span>
               </div>
-              <div className={styles.chartFrame}>
+              <div className={styles.chartFrame} role="img" aria-label="Sales by product category chart">
                 {data.categorySales.length === 0 ? (
                   <p className={styles.empty}>No category sales yet.</p>
                 ) : (

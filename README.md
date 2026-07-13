@@ -12,7 +12,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Barcode scanner and fast substring text search.
 - Split-Tender Multi-Payment UI (Cash + M-Pesa on the same order).
 - Hold/park a current sale locally and recall it later so cashiers can keep serving the queue when a customer needs time.
-- Device-sequenced cash-only offline sales with integrity checks, conflict review, and safe authenticated synchronization.
+- Device-sequenced cash-only offline sales with encrypted device storage, integrity checks, detailed conflict review, and safe authenticated synchronization.
 - Phone-first catalog/cart switching with a persistent live sale total and sticky confirmation action.
 - Customer Phone Lookup & Quick-Add inside checkout with automated loyalty point earnings.
 - Promotions & Discount Code engine (`SAVE10`, percentage & flat KES off).
@@ -43,6 +43,7 @@ Built by **Kelvin O.** For a custom POS build or rollout support, call/WhatsApp 
 - Persisted refund ledgers with proportional VAT/discount allocation and net sales reporting.
 - Printable thermal receipt view.
 - Chart-driven analytics dashboard with sales trends, conversion, payment mix, staff performance, gross margin, stock alerts, and reorder recommendations.
+- Phone-responsive named charts, automated accessibility gates, and a performance-budgeted marketing experience.
 - Platform owner dashboard with MRR, signup activation, store activity, tenant health, and Starter/Growth/Enterprise plan packaging.
 
 ### SaaS Subscription Billing
@@ -96,6 +97,16 @@ npm run test:e2e
 ```
 
 See [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) for the complete test model and current coverage boundaries.
+
+### Operations and recovery
+
+Production exposes liveness, readiness, diagnostics, and token-protected Prometheus metrics under `/api/live`, `/api/ready`, `/api/health`, and `/api/metrics`. Configure `METRICS_TOKEN` and an optional `ALERT_WEBHOOK_URL`; then follow [`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md) for snapshots, backup verification, restores, and incident handling.
+
+```bash
+npm run ops:snapshot -- --base-url http://localhost:4000
+DATABASE_URL=postgresql://... npm run db:backup -- --output backups/jijenge.dump
+npm run db:verify-backup -- --file backups/jijenge.dump
+```
 
 ---
 

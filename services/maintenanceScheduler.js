@@ -2,6 +2,7 @@ const cron = require('node-cron');
 const { Op } = require('sequelize');
 const { AuthSession, MpesaCallbackEvent } = require('../models');
 const logger = require('../utils/logger');
+const { sendOperationalAlert } = require('./alertService');
 
 async function runRetentionCleanup(now = new Date()) {
   const sessionCutoff = new Date(now.getTime() - Number(process.env.SESSION_RETENTION_DAYS || 30) * 86400000);
@@ -29,6 +30,12 @@ function startMaintenanceScheduler() {
       logger.info('Retention cleanup completed', await runRetentionCleanup());
     } catch (err) {
       logger.error('Retention cleanup failed', err);
+      await sendOperationalAlert({
+        severity: 'error',
+        title: 'Retention cleanup failed',
+        message: err.message,
+        dedupeKey: 'maintenance:retention-cleanup'
+      });
     }
   });
   logger.info('Maintenance scheduler started');

@@ -14,7 +14,9 @@ const limits = [
   { pattern: /^index-.*\.js$/, max: 80 * 1024, label: 'application shell' },
   { pattern: /^Checkout-.*\.js$/, max: 90 * 1024, label: 'checkout route' },
   { pattern: /^vendor-react-.*\.js$/, max: 180 * 1024, label: 'React vendor chunk' },
-  { pattern: /^vendor-recharts-.*\.js$/, max: 450 * 1024, label: 'analytics chart chunk' }
+  { pattern: /^vendor-recharts-.*\.js$/, max: 450 * 1024, label: 'analytics chart chunk' },
+  { pattern: /^barcode-scanner-.*\.js$/, max: 550 * 1024, label: 'lazy camera barcode decoder' },
+  { pattern: /^jijenge-pos-hero-.*\.jpg$/, max: 250 * 1024, label: 'marketing hero image' }
 ];
 
 const failures = [];

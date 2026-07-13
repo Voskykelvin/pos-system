@@ -156,14 +156,22 @@ Resolve an exception with `POST /api/mpesa/callback-events/:id/resolve`. Send `a
 
 Checkout accepts `store_credit` as a customer-bound payment method. Refund endpoints accept `refundMethod: "store_credit"`; the resulting customer asset is separate from customer debt and can fund a replacement sale for an exchange.
 
+## Runtime Operations
+
+- `GET /api/live` is a lightweight process liveness check and does not query PostgreSQL.
+- `GET /api/ready` returns `200` only when PostgreSQL is reachable and all SQL migration files are recorded in `schema_migrations`; otherwise it returns `503`.
+- `GET /api/health` reports database latency, database type, uptime, and aggregate process memory for diagnostics.
+- `GET /api/metrics` returns Prometheus text with bounded HTTP route/status/duration series, process gauges, queued/failed eTIMS counts, unresolved M-Pesa callback counts, and active authentication sessions. Production requires `Authorization: Bearer <METRICS_TOKEN>` or `X-Metrics-Token`; unauthorized calls intentionally return `404`.
+
 ## Advanced Inventory
 
-- `GET/POST /api/stock-counts` and its item/completion actions manage audited cycle counts. Lot-tracked products must be counted through their lot records.
-- `GET/POST /api/stock-transfers` moves branch balances without changing tenant aggregate stock. Generic transfers reject lot-tracked products until a lot-specific allocation is supplied.
-- `GET/POST /api/inventory-lots` manages lot receipts, expiry visibility, and write-offs.
+- `GET/POST /api/stock-counts` and its item/completion actions manage audited cycle counts. `POST /api/stock-counts` accepts an optional `branchId`; each selected lot-tracked product expands into one count line per available lot. Send `inventoryLotId` with each lot line when recording counted quantities. Completion updates the lot, branch balance, tenant product balance, and adjustment ledger atomically.
+- `GET/POST /api/stock-transfers` moves branch balances without changing tenant aggregate stock. For a lot-tracked product, each request line must include the source `inventoryLotId`. The destination receives the same lot number, expiry, and cost identity, and transfer history retains both source and destination lot IDs.
+- `GET/POST /api/inventory-lots` manages lot receipts, expiry visibility, and write-offs. List queries support `productId`, `branchId`, `availableOnly=true`, and `expiringBefore` filters.
 - `POST /api/purchase-orders/:id/returns` removes unsold supplier stock; `POST /api/purchase-orders/returns/:id/confirm-credit` records the later supplier credit reference.
 - `POST /api/admin/products/scan-lookup` accepts a barcode, rejects tenant duplicates, optionally enriches it from Open Food Facts, selects the closest existing category, and returns a unique SKU draft. The user confirms commercial fields before creation.
 - Hardware scanners may append Enter. In the scan-first panel Enter runs lookup; inside the product drawer it advances focus to the product name and never submits an incomplete product.
+- The inventory scan panel can also open the device camera. Camera decoding is performed locally in the browser through a lazy-loaded ZXing decoder; the resulting code then follows the same duplicate-check and product-draft endpoint. Camera access requires HTTPS or localhost and stops when the dialog closes.
 
 ### 6. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`
@@ -189,7 +197,7 @@ Checkout accepts `store_credit` as a customer-bound payment method. Refund endpo
 
 Checkout consolidates duplicate product lines, accepts quantities to three decimal places, and performs stock, promotion usage, customer credit, loyalty, payments, and inventory changes in one transaction.
 
-For a queued offline cash sale, the body also includes `offlineContext` with `schemaVersion`, `deviceId`, positive integer `sequence`, `capturedAt`, and immutable item snapshots containing `productId`, `quantity`, `unitPrice`, and `taxCategory`. The server returns `409` with `offlineConflict: true` when catalog state changed. Replaying an accepted `(tenant, deviceId, sequence)` returns the existing order with `offlineReplayed: true`.
+For a queued offline cash sale, the body also includes `offlineContext` with `schemaVersion`, `deviceId`, positive integer `sequence`, `capturedAt`, and immutable item snapshots containing `productId`, `quantity`, `unitPrice`, and `taxCategory`. The browser encrypts this body at rest and decrypts it only for authenticated foreground synchronization. The server returns `409` with `offlineConflict: true` when catalog state changed. Replaying an accepted `(tenant, deviceId, sequence)` returns the existing order with `offlineReplayed: true`.
 
 ### 7. Partial Refund
 

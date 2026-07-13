@@ -1,15 +1,21 @@
 'use strict';
 
 const logger = require('../utils/logger');
+const { beginRequest, recordRequest } = require('../services/metricsService');
 
 const SLOW_REQUEST_THRESHOLD_MS = Number(process.env.SLOW_REQUEST_THRESHOLD_MS || 1000);
 
 function responseTimeMiddleware(req, res, next) {
   const start = process.hrtime();
+  beginRequest();
+  let recorded = false;
 
-  res.on('finish', () => {
+  const complete = () => {
+    if (recorded) return;
+    recorded = true;
     const diff = process.hrtime(start);
     const duration = Number((diff[0] * 1e3 + diff[1] * 1e-6).toFixed(2));
+    recordRequest(req, res.statusCode, duration);
 
     const logData = {
       requestId: req.id,
@@ -27,7 +33,10 @@ function responseTimeMiddleware(req, res, next) {
     } else if (process.env.NODE_ENV === 'production' || process.env.ENABLE_REQUEST_LOGGING === 'true') {
       logger.info(`${req.method} ${logData.url} - ${res.statusCode} in ${duration}ms`, logData);
     }
-  });
+  };
+
+  res.once('finish', complete);
+  res.once('close', complete);
 
   next();
 }

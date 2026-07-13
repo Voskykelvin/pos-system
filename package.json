@@ -23,13 +23,18 @@
     "test:e2e": "npm run build && npm run test:e2e:run",
     "test:e2e:run": "playwright test",
     "test:postgres": "node scripts/postgres-invariants-test.js",
+    "test:load": "node scripts/load-smoke.js",
     "db:migrate": "node scripts/migrate.js",
     "db:migrate:dry": "node scripts/migrate.js --dry-run",
+    "db:backup": "node scripts/backup-postgres.js",
+    "db:verify-backup": "node scripts/verify-backup.js",
+    "ops:snapshot": "node scripts/incident-snapshot.js",
     "db:reset-demo-catalog": "node scripts/reset-demo-catalog.js",
     "start": "node server.js",
     "smoke": "node scripts/auth-token-test.js && node scripts/held-sales-smoke.mjs && node scripts/receipt-snapshot-test.js && node scripts/fiscal-guard-test.js && node scripts/financial-invariants-test.js && node scripts/smoke-test.js"
   },
   "dependencies": {
+    "@zxing/browser": "^0.2.1",
     "axios": "^1.7.0",
     "compression": "^1.8.1",
     "dotenv": "^16.4.0",
@@ -47,6 +52,7 @@
     "sequelize": "^6.37.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@playwright/test": "^1.55.1",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.3.0",

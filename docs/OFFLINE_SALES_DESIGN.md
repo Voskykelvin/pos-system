@@ -11,7 +11,7 @@ Offline checkout supports:
 - cash tender only;
 - immutable product, quantity, price, and tax snapshots;
 - automatic foreground synchronization when connectivity returns;
-- manual cashier retry and conflict visibility.
+- detailed cashier/manager conflict review and unchanged-payload retry.
 
 Offline checkout deliberately blocks M-Pesa, card, customer credit, loyalty redemption, promotions, manual discounts, and customer-linked sales. Those workflows require current server/provider state.
 
@@ -25,7 +25,7 @@ Sequence gaps are allowed if the browser closes between reserving a sequence and
 
 ## Immutable Envelope
 
-IndexedDB stores a versioned envelope containing:
+IndexedDB stores a versioned envelope containing unencrypted routing metadata plus an AES-256-GCM encrypted sale payload. A non-extractable device key is generated through Web Crypto and stored as a structured `CryptoKey` in IndexedDB. The protected payload contains:
 
 - schema version;
 - device ID and sequence;
@@ -36,7 +36,9 @@ IndexedDB stores a versioned envelope containing:
 - SHA-256 payload checksum where Web Crypto is available;
 - queue state, attempts, error, and next retry time.
 
-The payload is deep-cloned before storage. A checksum mismatch moves the envelope to conflict review rather than uploading modified data.
+The payload is deep-cloned before encryption. A SHA-256 checksum is verified after decryption and before every upload or manual retry. A mismatch moves the envelope to conflict review rather than uploading modified data. Version 4 lazily encrypts readable version 3 envelopes when they are first loaded.
+
+Held sales use the same encrypted device store. Existing held sales are migrated from local storage and the readable copy is removed only after encrypted persistence succeeds.
 
 ## Queue States
 
@@ -69,12 +71,16 @@ Before accepting an offline sale, the server verifies:
 
 Price, tax, or stock changes never silently rewrite the queued transaction. They create a conflict that requires review.
 
+## Conflict Review
+
+The checkout review dialog shows the device sequence, capture time, retry count, immutable product/quantity/price snapshot, tender total, and exact rejection reason. A cashier may retry the unchanged envelope after stock or catalog data is corrected. Administrators and managers may mark a sale reconciled only with a note referencing the paper receipt, replacement order, or drawer action. Resolved records remain encrypted in local history instead of being silently deleted.
+
 ## Operational Limitations
 
 - Queue storage is device-local; clearing browser data removes unsynchronized sales.
-- Device storage is integrity-checked but not yet encrypted at rest.
 - A lost or damaged device can lose sales that were never synchronized.
-- Conflict review currently permits retry after the underlying catalog/stock issue is resolved; editing and manager-approved replacement transactions are future work.
+- Browser encryption protects data at rest from casual storage inspection; it does not protect a running, compromised origin that can execute application code.
+- Conflict payloads are immutable. Corrections require a new online transaction and a manager reconciliation note rather than editing captured evidence.
 - Cross-device stock reservation is impossible while offline, so the server remains the final authority at synchronization.
 
 Managers should reconcile the offline panel before shift close and should not clear browser data on tills with queued or rejected transactions.

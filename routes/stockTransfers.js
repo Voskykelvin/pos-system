@@ -15,6 +15,7 @@ router.post('/', validate({
     type: 'array', nonEmpty: true,
     items: {
       productId: { type: 'string', minLength: 1 },
+      inventoryLotId: { type: 'string', required: false, minLength: 1 },
       quantity: { type: 'number', min: 0.001 }
     }
   }

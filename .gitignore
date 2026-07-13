@@ -10,6 +10,8 @@ dev-server.*.log
 coverage/
 playwright-report/
 test-results/
+backups/
+incident-snapshots/
 
 # Generated scratch output copied from an earlier export is not part of the app.
 mnt/

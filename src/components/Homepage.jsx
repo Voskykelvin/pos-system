@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import heroImage from '../assets/jijenge-pos-hero.png';
+import heroImage from '../assets/jijenge-pos-hero.jpg';
 import styles from './Homepage.module.css';
 import {
   BUILDER_NAME,
@@ -223,9 +223,18 @@ export default function Homepage({
   }
 
   return (
-    <main className={styles.page}>
+    <main className={styles.page} id="marketing-main">
+      <a className="skipLink" href="#marketing-content">Skip to main content</a>
       <section className={styles.hero} id="top">
-        <img className={styles.heroImage} src={heroImage} alt="" />
+        <img
+          className={styles.heroImage}
+          src={heroImage}
+          alt=""
+          width="1774"
+          height="887"
+          decoding="async"
+          fetchPriority="high"
+        />
         <div className={styles.heroShade} />
 
         <nav className={styles.topbar} aria-label="Homepage">
@@ -327,7 +336,7 @@ export default function Homepage({
           </div>
         </nav>
 
-        <div className={styles.heroContent}>
+        <div className={styles.heroContent} id="marketing-content" tabIndex="-1">
           <p className={styles.kicker}>POS, inventory, payments, and reports</p>
           <h1>Run your shop without guessing.</h1>
           <p className={styles.heroCopy}>

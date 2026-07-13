@@ -22,7 +22,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-
       - name: Lint source
         run: npm run lint
 
@@ -82,9 +81,17 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Install PostgreSQL client tools
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
       - name: Apply migrations
         run: npm run db:migrate
       - name: PostgreSQL migration and contention checks
         run: npm run test:postgres
       - name: Verify migration idempotency
         run: npm run db:migrate
+      - name: Backup and restore drill
+        run: |
+          mkdir -p tmp
+          npm run db:backup -- --output tmp/ci.dump
+          PGPASSWORD=pos createdb -h localhost -U pos pos_restore_ci
+          BACKUP_VERIFY_DATABASE_URL=postgresql://pos:pos@localhost:5432/pos_restore_ci npm run db:verify-backup -- --file tmp/ci.dump

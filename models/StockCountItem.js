@@ -3,6 +3,7 @@ module.exports = (sequelize, DataTypes) => {
     id: { type: DataTypes.UUID, defaultValue: DataTypes.UUIDV4, primaryKey: true },
     stockCountId: { type: DataTypes.UUID, allowNull: false },
     productId: { type: DataTypes.UUID, allowNull: false },
+    inventoryLotId: { type: DataTypes.UUID, allowNull: true },
     expectedQuantity: { type: DataTypes.DECIMAL(12, 3), allowNull: false },
     countedQuantity: { type: DataTypes.DECIMAL(12, 3), allowNull: true },
     variance: { type: DataTypes.DECIMAL(12, 3), allowNull: true }
@@ -10,6 +11,7 @@ module.exports = (sequelize, DataTypes) => {
   StockCountItem.associate = (models) => {
     StockCountItem.belongsTo(models.StockCount, { foreignKey: 'stockCountId' });
     StockCountItem.belongsTo(models.Product, { foreignKey: 'productId' });
+    StockCountItem.belongsTo(models.InventoryLot, { foreignKey: 'inventoryLotId' });
   };
   return StockCountItem;
 };

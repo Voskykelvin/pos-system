@@ -37,6 +37,17 @@ test('phone layout keeps sign out and checkout navigation accessible', async ({ 
   await expect(page.getByPlaceholder('Scan barcode or search a product...')).toBeInViewport();
 });
 
+test('session reload uses the secure refresh cookie without persisting the bearer token', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-chromium', 'The secure session persistence check runs once on desktop.');
+  await loginAsCashier(page);
+
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('pos_auth_token'))).toBeNull();
+  await page.reload();
+
+  await expect(page.getByPlaceholder('Scan barcode or search a product...')).toBeVisible();
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('pos_auth_token'))).toBeNull();
+});
+
 test('cashier queues a cash sale while offline and sees reconciliation status', async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-chromium', 'The offline checkout journey runs once on desktop.');
   await loginAsCashier(page);

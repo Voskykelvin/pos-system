@@ -7,10 +7,13 @@ import {
   OFFLINE_QUEUE_EVENT,
   addOrderToQueue,
   cacheCatalog,
+  getEncryptedHeldSales,
   getCachedCatalog,
   getOfflineQueueSummary,
   registerBackgroundSync,
+  resolveDeadLetterOrder,
   retryDeadLetterOrder,
+  saveEncryptedHeldSales,
   syncOfflineOrders
 } from '../utils/offlineQueue';
 import {
@@ -164,21 +167,13 @@ function createClientIdempotencyKey(prefix) {
   return `${prefix}-${randomPart}`;
 }
 
-function loadHeldSales(user) {
+function loadLegacyHeldSales(user) {
   try {
     const raw = localStorage.getItem(heldSalesStorageKey(user));
     const parsed = raw ? JSON.parse(raw) : [];
     return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
-  }
-}
-
-function saveHeldSales(user, heldSales) {
-  try {
-    localStorage.setItem(heldSalesStorageKey(user), JSON.stringify(heldSales));
-  } catch {
-    // If local storage is full or blocked, the in-memory state still works for this tab.
   }
 }
 
@@ -512,6 +507,83 @@ function HeldSalesPanel({ heldSales, onResume, onRemove }) {
   );
 }
 
+function conflictReason(reason) {
+  return String(reason || 'Unknown synchronization conflict')
+    .replace(/^\d{3}:\s*/, '')
+    .replaceAll('_', ' ');
+}
+
+function OfflineConflictReview({ open, orders, canResolve, onClose, onRetry, onResolve }) {
+  useEffect(() => {
+    if (!open) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose, open]);
+
+  if (!open) return null;
+
+  return (
+    <div className={styles.conflictOverlay} role="presentation" onClick={onClose}>
+      <section
+        className={styles.conflictDialog}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="offline-conflict-title"
+        onClick={(event) => event.stopPropagation()}
+      >
+        <div className={styles.conflictHeader}>
+          <div>
+            <h2 id="offline-conflict-title">Offline sale review</h2>
+            <p>Review the original captured sale. Retrying never changes its prices, tax, or quantities.</p>
+          </div>
+          <button type="button" autoFocus aria-label="Close offline sale review" onClick={onClose}>&times;</button>
+        </div>
+        <div className={styles.conflictList}>
+          {orders.length === 0 && <p className={styles.conflictEmpty}>No offline conflicts require review.</p>}
+          {orders.map((order) => {
+            const snapshotItems = order.payload?.offlineContext?.items || [];
+            const total = (order.payload?.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
+            return (
+              <article className={styles.conflictCard} key={order.id}>
+                <div className={styles.conflictMeta}>
+                  <strong>OFFLINE-{order.sequence}</strong>
+                  <span>{order.queuedAt ? new Date(order.queuedAt).toLocaleString() : 'Capture time unavailable'}</span>
+                  <span>Device sequence {order.sequence} · {order.attempts || 0} retries</span>
+                </div>
+                <div className={styles.conflictReason} role="alert">
+                  {conflictReason(order.rejectionReason || order.decryptionError)}
+                </div>
+                {order.decryptionError ? (
+                  <p className={styles.conflictUnavailable}>Sale details cannot be decrypted on this device. Do not retry it; reconcile against the printed receipt.</p>
+                ) : (
+                  <>
+                    <div className={styles.conflictItems}>
+                      {snapshotItems.map((item) => (
+                        <div key={`${item.productId}-${item.name}`}>
+                          <span>{item.name || item.productId}</span>
+                          <strong>{formatQuantity(item.quantity)} × {formatKes(item.unitPrice)}</strong>
+                        </div>
+                      ))}
+                    </div>
+                    <div className={styles.conflictTotal}><span>Captured tender</span><strong>{formatKes(total)}</strong></div>
+                  </>
+                )}
+                <div className={styles.conflictActions}>
+                  <button type="button" disabled={Boolean(order.decryptionError)} onClick={() => onRetry(order)}>Retry unchanged</button>
+                  {canResolve && <button type="button" className={styles.resolveBtn} onClick={() => onResolve(order)}>Mark reconciled</button>}
+                </div>
+              </article>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
+
 // --- Main Checkout component --------------------------------------------------
 export default function Checkout({ authToken, cashierId, user }) {
   const [query, setQuery] = useState('');
@@ -552,7 +624,8 @@ export default function Checkout({ authToken, cashierId, user }) {
   const [lastReceipt, setLastReceipt] = useState(null);
   const [statusMessage, setStatusMessage] = useState(null);
   const [toast, setToast] = useState(null);
-  const [heldSales, setHeldSales] = useState(() => loadHeldSales(user));
+  const [heldSales, setHeldSales] = useState([]);
+  const [heldSalesReady, setHeldSalesReady] = useState(false);
   const [showHeldSales, setShowHeldSales] = useState(false);
   const [holdNote, setHoldNote] = useState('');
   const [etimsStatus, setEtimsStatus] = useState(null);
@@ -565,6 +638,7 @@ export default function Checkout({ authToken, cashierId, user }) {
     rejectedOrders: []
   });
   const [offlineSyncing, setOfflineSyncing] = useState(false);
+  const [showOfflineReview, setShowOfflineReview] = useState(false);
 
   const refreshOfflineSummary = useCallback(async () => {
     try {
@@ -579,6 +653,10 @@ export default function Checkout({ authToken, cashierId, user }) {
     window.addEventListener(OFFLINE_QUEUE_EVENT, refreshOfflineSummary);
     return () => window.removeEventListener(OFFLINE_QUEUE_EVENT, refreshOfflineSummary);
   }, [refreshOfflineSummary]);
+
+  useEffect(() => {
+    if (showOfflineReview && offlineSummary.rejected === 0) setShowOfflineReview(false);
+  }, [offlineSummary.rejected, showOfflineReview]);
   const pollRef = useRef(null);
   const searchInputRef = useRef(null);
 
@@ -615,8 +693,35 @@ export default function Checkout({ authToken, cashierId, user }) {
   }, [loadEtimsStatus]);
 
   useEffect(() => {
-    saveHeldSales(user, heldSales);
-  }, [heldSales, user?.id, user?.tenantId]);
+    let cancelled = false;
+    const scope = heldSalesStorageKey(user);
+    async function hydrateHeldSales() {
+      setHeldSalesReady(false);
+      const legacy = loadLegacyHeldSales(user);
+      try {
+        const encrypted = await getEncryptedHeldSales(scope);
+        const restored = encrypted.length > 0 ? encrypted : legacy;
+        if (encrypted.length === 0 && legacy.length > 0) {
+          await saveEncryptedHeldSales(scope, legacy);
+        }
+        localStorage.removeItem(scope);
+        if (!cancelled) setHeldSales(restored);
+      } catch {
+        if (!cancelled) setHeldSales(legacy);
+      } finally {
+        if (!cancelled) setHeldSalesReady(true);
+      }
+    }
+    hydrateHeldSales();
+    return () => { cancelled = true; };
+  }, [user?.id, user?.tenantId]);
+
+  useEffect(() => {
+    if (!heldSalesReady) return;
+    saveEncryptedHeldSales(heldSalesStorageKey(user), heldSales).catch(() => {
+      if (heldSales.length > 0) setError('Held sales could not be encrypted on this device. Keep this page open and reconnect before closing it.');
+    });
+  }, [heldSales, heldSalesReady, user?.id, user?.tenantId]);
 
   useEffect(() => {
     async function hydrateCatalog() {
@@ -855,6 +960,43 @@ export default function Checkout({ authToken, cashierId, user }) {
     setHeldSales((current) => current.filter((sale) => sale.id !== heldSaleId));
     if (heldSales.length <= 1) setShowHeldSales(false);
     showToast('Held sale removed.');
+  }
+
+  async function retryOfflineConflict(order) {
+    setOfflineSyncing(true);
+    try {
+      const restored = await retryDeadLetterOrder(order.id);
+      if (!restored) throw new Error('This sale could not be restored because its integrity check failed.');
+      if (isOnline) {
+        await syncOfflineOrders(authToken, {
+          force: true,
+          cashierId,
+          tenantId: user?.tenantId || null
+        });
+      }
+      await refreshOfflineSummary();
+      showToast('Offline sale retry completed.');
+    } catch (err) {
+      showToast(err.message, 'error');
+    } finally {
+      setOfflineSyncing(false);
+    }
+  }
+
+  async function resolveOfflineConflict(order) {
+    const note = window.prompt('How was this sale reconciled? Record the receipt, replacement order, or drawer reference:');
+    if (!note?.trim()) return;
+    try {
+      await resolveDeadLetterOrder(order.id, {
+        note,
+        userId: user?.id || null,
+        userName: user?.name || null
+      });
+      await refreshOfflineSummary();
+      showToast(`OFFLINE-${order.sequence} marked reconciled.`);
+    } catch (err) {
+      showToast(err.message, 'error');
+    }
   }
 
   async function checkPromo() {
@@ -1397,8 +1539,8 @@ export default function Checkout({ authToken, cashierId, user }) {
             <strong>Offline reconciliation</strong>
             <span>
               {offlineSummary.queued} waiting
-              {offlineSummary.states.auth_required ? ` · ${offlineSummary.states.auth_required} need sign-in` : ''}
-              {offlineSummary.rejected ? ` · ${offlineSummary.rejected} need review` : ''}
+              {offlineSummary.states.auth_required ? ` \u00b7 ${offlineSummary.states.auth_required} need sign-in` : ''}
+              {offlineSummary.rejected ? ` \u00b7 ${offlineSummary.rejected} need review` : ''}
             </span>
           </div>
           <div className={styles.offlineQueueActions}>
@@ -1420,25 +1562,28 @@ export default function Checkout({ authToken, cashierId, user }) {
                   }
                 }}
               >
-                {offlineSyncing ? 'Syncing…' : 'Sync now'}
+                {offlineSyncing ? 'Syncing...' : 'Sync now'}
               </button>
             )}
-            {offlineSummary.rejectedOrders.slice(0, 2).map((order) => (
+            {offlineSummary.rejected > 0 && (
               <button
                 type="button"
-                key={order.id}
-                title={order.rejectionReason}
-                onClick={async () => {
-                  await retryDeadLetterOrder(order.id);
-                  await refreshOfflineSummary();
-                }}
+                onClick={() => setShowOfflineReview(true)}
               >
-                Retry offline #{order.sequence}
+                Review {offlineSummary.rejected} conflict{offlineSummary.rejected === 1 ? '' : 's'}
               </button>
-            ))}
+            )}
           </div>
         </div>
       )}
+      <OfflineConflictReview
+        open={showOfflineReview}
+        orders={offlineSummary.rejectedOrders}
+        canResolve={user?.role === 'admin' || user?.role === 'manager'}
+        onClose={() => setShowOfflineReview(false)}
+        onRetry={retryOfflineConflict}
+        onResolve={resolveOfflineConflict}
+      />
       {/* Product search + grid */}
       <div className={`${styles.catalog} ${mobilePane === 'cart' ? styles.mobilePaneHidden : ''}`}>
         <div className={styles.searchBar}>

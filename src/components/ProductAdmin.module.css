@@ -119,7 +119,7 @@
 
 .scanPanel {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) minmax(220px, 360px) auto;
+  grid-template-columns: minmax(220px, 1fr) minmax(220px, 360px) auto auto;
   gap: 12px;
   align-items: center;
   margin-bottom: 14px;
@@ -127,6 +127,127 @@
   border: 1px solid color-mix(in srgb, var(--accent) 38%, var(--line));
   border-radius: 12px;
   background: linear-gradient(135deg, var(--pos-success-bg), var(--surface) 70%);
+}
+
+.cameraBtn {
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  color: var(--accent);
+  background: var(--surface);
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cameraBtn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.cameraOverlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  overflow-y: auto;
+  background: rgba(2, 6, 23, 0.82);
+}
+
+.cameraModal {
+  width: 100%;
+  max-width: 620px;
+  min-width: 0;
+  max-height: calc(100dvh - 32px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+}
+
+.cameraHeader,
+.cameraFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.cameraHeader h2,
+.cameraHeader p {
+  margin: 0;
+}
+
+.cameraHeader > div {
+  min-width: 0;
+}
+
+.cameraHeader h2 {
+  font-size: 18px;
+}
+
+.cameraHeader p,
+.cameraFooter span {
+  margin-top: 3px;
+  color: var(--ink-soft);
+  font-size: 12px;
+}
+
+.cameraClose {
+  width: 44px;
+  height: 44px;
+  border: 0;
+  border-radius: 50%;
+  color: var(--ink);
+  background: var(--pos-panel);
+  font-size: 26px;
+  cursor: pointer;
+}
+
+.cameraViewport {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: #020617;
+}
+
+.cameraViewport video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.scanGuide {
+  position: absolute;
+  inset: 28% 8%;
+  border: 3px solid #34d399;
+  border-radius: 12px;
+  box-shadow: 0 0 0 999px rgba(2, 6, 23, 0.3);
+}
+
+.cameraState {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(2, 6, 23, 0.72);
+  font-weight: 800;
+}
+
+.cameraError {
+  padding: 12px 16px;
+  color: var(--pos-danger);
+  background: var(--pos-danger-bg);
+  font-size: 13px;
+  font-weight: 700;
 }
 
 .scanPanel strong,
@@ -628,6 +749,16 @@
   .searchInput,
   .primaryBtn,
   .secondaryBtn {
+    width: 100%;
+  }
+
+  .cameraFooter {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+
+  .cameraFooter .secondaryBtn {
     width: 100%;
   }
 

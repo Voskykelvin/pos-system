@@ -40,6 +40,13 @@ async function main() {
   try {
     const health = await request(baseUrl, '/api/health');
     if (!health.ok) throw new Error('Health check did not return ok');
+    const ready = await request(baseUrl, '/api/ready');
+    if (!ready.ready) throw new Error('Readiness check did not return ready');
+    const metricsResponse = await fetch(`${baseUrl}/api/metrics`);
+    const metrics = await metricsResponse.text();
+    if (!metricsResponse.ok || !metrics.includes('jijenge_http_requests_total')) {
+      throw new Error('Prometheus metrics endpoint was unavailable');
+    }
 
     const login = await request(baseUrl, '/api/auth/login', {
       method: 'POST',
@@ -421,6 +428,111 @@ async function main() {
     const upgradedTenant = await request(baseUrl, '/api/bootstrap', { headers: ownerHeaders });
     if (upgradedTenant.tenant?.plan !== 'growth' || upgradedTenant.tenant.subscriptionEndsAt !== originalSubscriptionEnd) {
       throw new Error('Confirmed mid-cycle upgrade did not preserve the original renewal date');
+    }
+
+    const storeSetup = await request(baseUrl, '/api/admin/store/setup', { headers: ownerHeaders });
+    const sourceBranch = storeSetup.branches[0];
+    const destinationBranch = await request(baseUrl, '/api/admin/store/branches', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'Smoke Destination', code: 'SMK-DST' })
+    });
+    const tenantCategories = await request(baseUrl, '/api/admin/categories', { headers: ownerHeaders });
+    const lotProduct = await request(baseUrl, '/api/admin/products', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sku: `LOT-SMOKE-${Date.now()}`,
+        name: 'Lot-aware Smoke Product',
+        categoryId: tenantCategories[0].id,
+        costPrice: 50,
+        sellingPrice: 75,
+        stockQuantity: 0,
+        tracksLots: true
+      })
+    });
+    const sourceLot = await request(baseUrl, '/api/inventory-lots', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        productId: lotProduct.id,
+        branchId: sourceBranch.id,
+        lotNumber: 'SMOKE-LOT-01',
+        expiryDate: '2027-12-31',
+        quantity: 10,
+        unitCost: 50
+      })
+    });
+    await expectFailure(baseUrl, '/api/stock-transfers', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourceBranchId: sourceBranch.id,
+        destinationBranchId: destinationBranch.id,
+        items: [{ productId: lotProduct.id, quantity: 3 }]
+      })
+    }, 409);
+    await request(baseUrl, '/api/stock-transfers', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        sourceBranchId: sourceBranch.id,
+        destinationBranchId: destinationBranch.id,
+        note: 'Lot-aware smoke transfer',
+        items: [{ productId: lotProduct.id, inventoryLotId: sourceLot.id, quantity: 3 }]
+      })
+    });
+    const destinationLots = await request(
+      baseUrl,
+      `/api/inventory-lots?productId=${lotProduct.id}&branchId=${destinationBranch.id}&availableOnly=true`,
+      { headers: ownerHeaders }
+    );
+    if (destinationLots.length !== 1 || Number(destinationLots[0].availableQuantity) !== 3 || destinationLots[0].lotNumber !== sourceLot.lotNumber) {
+      throw new Error('Lot transfer did not preserve the lot identity and destination quantity');
+    }
+    const destinationCount = await request(baseUrl, '/api/stock-counts', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        branchId: destinationBranch.id,
+        productIds: [lotProduct.id],
+        note: 'Lot-aware smoke count'
+      })
+    });
+    const destinationCountLine = destinationCount.StockCountItems?.[0];
+    if (destinationCountLine?.inventoryLotId !== destinationLots[0].id || Number(destinationCountLine.expectedQuantity) !== 3) {
+      throw new Error('Lot-aware stock count did not snapshot the destination lot');
+    }
+    await request(baseUrl, `/api/stock-counts/${destinationCount.id}/items`, {
+      method: 'PUT',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [{
+          productId: lotProduct.id,
+          inventoryLotId: destinationLots[0].id,
+          countedQuantity: 2.5
+        }]
+      })
+    });
+    await request(baseUrl, `/api/stock-counts/${destinationCount.id}/complete`, {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const countedDestinationLots = await request(
+      baseUrl,
+      `/api/inventory-lots?productId=${lotProduct.id}&branchId=${destinationBranch.id}&availableOnly=true`,
+      { headers: ownerHeaders }
+    );
+    const sourceLotsAfterCount = await request(
+      baseUrl,
+      `/api/inventory-lots?productId=${lotProduct.id}&branchId=${sourceBranch.id}&availableOnly=true`,
+      { headers: ownerHeaders }
+    );
+    const lotProductsAfterCount = await request(baseUrl, '/api/admin/products', { headers: ownerHeaders });
+    const lotProductAfterCount = lotProductsAfterCount.find((row) => row.id === lotProduct.id);
+    if (Number(countedDestinationLots[0]?.availableQuantity) !== 2.5 || Number(sourceLotsAfterCount[0]?.availableQuantity) !== 7 || Number(lotProductAfterCount?.stockQuantity) !== 9.5) {
+      throw new Error('Lot count variance did not reconcile lot, branch, and tenant stock balances');
     }
 
     const cashierLogin = await request(baseUrl, '/api/auth/login', {

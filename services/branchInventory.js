@@ -1,4 +1,5 @@
 const { Branch, BranchInventory } = require('../models');
+const { transactionalFindOrCreate } = require('./transactionalFindOrCreate');
 
 async function resolveOperationalBranch(req, transaction) {
   if (!req.tenantId) return null;
@@ -14,7 +15,7 @@ async function resolveOperationalBranch(req, transaction) {
 
 async function addBranchStock({ branchId, productId, quantity, transaction }) {
   if (!branchId) return null;
-  const [balance] = await BranchInventory.findOrCreate({
+  const [balance] = await transactionalFindOrCreate(BranchInventory, {
     where: { branchId, productId },
     defaults: { quantity: 0 },
     transaction

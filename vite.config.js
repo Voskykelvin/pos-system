@@ -12,6 +12,7 @@ module.exports = defineConfig({
           const normalizedId = id.replace(/\\/g, '/');
           if (!normalizedId.includes('/node_modules/')) return undefined;
           if (normalizedId.includes('/node_modules/recharts/')) return 'vendor-recharts';
+          if (normalizedId.includes('/node_modules/@zxing/')) return 'barcode-scanner';
           if (
             normalizedId.includes('/node_modules/react/') ||
             normalizedId.includes('/node_modules/react-dom/') ||
@@ -60,11 +61,11 @@ module.exports = defineConfig({
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
         // The marketing hero is not required for offline till operation and
         // must not consume the initial PWA install cache.
-        globIgnores: ['**/jijenge-pos-hero-*.png'],
+        globIgnores: ['**/jijenge-pos-hero-*.png', '**/barcode-scanner-*.js'],
         importScripts: ['/sw-sync.js'],
         runtimeCaching: [
           {
-            urlPattern: /\/assets\/jijenge-pos-hero-.*\.png$/i,
+            urlPattern: /\/assets\/jijenge-pos-hero-.*\.jpg$/i,
             handler: 'StaleWhileRevalidate',
             options: {
               cacheName: 'marketing-images',

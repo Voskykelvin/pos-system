@@ -15,6 +15,7 @@ const {
 } = require('../models');
 const { logAudit } = require('../services/auditLogger');
 const { addBranchStock, resolveOperationalBranch } = require('../services/branchInventory');
+const { transactionalFindOrCreate } = require('../services/transactionalFindOrCreate');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 
 async function list(req, res) {
@@ -134,6 +135,7 @@ async function receive(req, res) {
           transaction: t
         });
         if (product) {
+          let inventoryLotId = null;
           if (product.tracksLots && !line.lotNumber) {
             throw Object.assign(new Error(`Lot number is required for ${product.name}`), { status: 400 });
           }
@@ -147,7 +149,7 @@ async function receive(req, res) {
           }, { transaction: t });
           await addBranchStock({ branchId, productId: product.id, quantity: recQty, transaction: t });
           if (product.tracksLots) {
-            const [lot, created] = await InventoryLot.findOrCreate({
+            const [lot, created] = await transactionalFindOrCreate(InventoryLot, {
               where: { branchId, productId: product.id, lotNumber: String(line.lotNumber).trim().toUpperCase() },
               defaults: {
                 tenantId: req.tenantId || null,
@@ -168,6 +170,7 @@ async function receive(req, res) {
                 unitCost: newCost
               }, { transaction: t });
             }
+            inventoryLotId = lot.id;
           }
 
           // Create audit transaction
@@ -180,7 +183,8 @@ async function receive(req, res) {
             referenceId: po.id,
             userId: req.user?.id || null,
             note: `Received PO ${po.poNumber}`,
-            branchId
+            branchId,
+            inventoryLotId
           }, { transaction: t });
         }
       }
@@ -292,6 +296,7 @@ async function createReturn(req, res) {
       await InventoryTransaction.create({
         productId: product.id,
         branchId: po.receivedBranchId,
+        inventoryLotId: lot?.id || null,
         type: 'purchase_return',
         quantity: -quantity,
         balanceAfter: branchBalance,

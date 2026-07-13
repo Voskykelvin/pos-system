@@ -54,6 +54,16 @@ Checkout clients should send a unique `Idempotency-Key` of at most 200 character
 - Orders preserve cumulative refunded subtotal, VAT, discount, and total values.
 - Daily reporting, analytics, product velocity, receipt search, and CSV exports use net values after recorded refunds.
 
+## Lot and Branch Inventory
+
+- A lot-tracked transfer requires the exact source lot; a generic product-only line is rejected.
+- Source-lot availability and source-branch stock are locked and validated in the transfer transaction.
+- The destination lot preserves the lot number and expiry identity. Conflicting expiry dates for the same product/lot number are rejected.
+- Inter-branch transfers change the two branch balances and two lot balances but never `products.stockQuantity`, the tenant aggregate.
+- A lot-tracked stock count snapshots one line per available lot at the selected branch.
+- Count completion recalculates variance against the live locked lot balance, then updates the lot, branch balance, tenant product balance, count line, inventory ledger, and audit log in one transaction.
+- Inventory ledger rows retain `inventoryLotId` when one exact lot caused the movement.
+
 ## Database Constraints
 
 Migration `017_financial_invariants.sql` adds constraints for:
@@ -69,6 +79,8 @@ Migration `018_refund_ledger.sql` adds:
 - refund headers and line-item ledgers;
 - cumulative order refund totals;
 - refund-total bounds and supporting reporting indexes.
+
+Migration `033_lot_aware_counts_transfers.sql` adds lot references and partial uniqueness indexes to stock-count and stock-transfer lines, allowing multiple lots of one product without allowing duplicate lines for the same lot.
 
 ## Known Next Work
 

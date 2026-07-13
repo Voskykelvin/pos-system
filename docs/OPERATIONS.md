@@ -21,6 +21,7 @@ npm run test:unit
 npm run smoke
 npm run build
 npm run test:e2e:run
+npm run test:load
 npm audit --omit=dev
 ```
 
@@ -31,11 +32,11 @@ The repository blueprint is [`render.yaml`](../render.yaml).
 - Build: `npm ci && npm run build`
 - Pre-deploy: `npm run db:migrate`
 - Start: `npm start`
-- Health check: `GET /api/health`
+- Deployment readiness check: `GET /api/ready`
 
-Use `GET /api/live` for process liveness and `GET /api/ready` for database/migration readiness. Retention cleanup runs daily by default; configure `SESSION_RETENTION_DAYS`, `CALLBACK_RETENTION_DAYS`, or disable it with `ENABLE_MAINTENANCE_SCHEDULER=false`.
+Use `GET /api/live` for process liveness, `GET /api/ready` for database/migration readiness, and `GET /api/health` for diagnostics. Prometheus scrapers call `GET /api/metrics` with `Authorization: Bearer <METRICS_TOKEN>`; production returns 404 when the token is absent or invalid. Configure `ALERT_WEBHOOK_URL` for deduplicated operational alerts. Retention cleanup runs daily by default; configure `SESSION_RETENTION_DAYS`, `CALLBACK_RETENTION_DAYS`, or disable it with `ENABLE_MAINTENANCE_SCHEDULER=false`.
 
-Required variables include `NODE_ENV=production`, `DATABASE_URL`, `AUTH_TOKEN_SECRET`, `BUSINESS_TIME_ZONE=Africa/Nairobi`, `BUSINESS_NAME`, and `BUSINESS_KRA_PIN`. Bootstrap the platform owner with `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
+Required variables include `NODE_ENV=production`, `DATABASE_URL`, `AUTH_TOKEN_SECRET`, `METRICS_TOKEN`, `BUSINESS_TIME_ZONE=Africa/Nairobi`, `BUSINESS_NAME`, and `BUSINESS_KRA_PIN`. Bootstrap the platform owner with `SUPER_ADMIN_EMAIL` and `SUPER_ADMIN_PASSWORD`.
 
 Never enable demo seeding in production. Run migrations before starting a new release and confirm the health endpoint reports PostgreSQL connectivity.
 
@@ -73,6 +74,8 @@ Configure the applicable `PLATFORM_MPESA_*`, `PLATFORM_BANK_*`, and `PLATFORM_BI
 
 - [ ] CI, build, smoke, browser checkout, and production audit pass.
 - [ ] PostgreSQL is provisioned, backed up, migrated, and visible in `/api/health`.
+- [ ] A backup has been restored into a disposable database with `BACKUP_VERIFY_DATABASE_URL`, and the result is recorded.
+- [ ] Metrics scraping, alert delivery, graceful restart, and the incident snapshot command have been exercised.
 - [ ] Production secrets and the platform owner account are configured.
 - [ ] A tenant can sign up, submit payment, be activated, and complete store setup.
 - [ ] Products have SKU/barcode, cost, price, VAT, unit, reorder level, and opening stock.

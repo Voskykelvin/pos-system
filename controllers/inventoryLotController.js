@@ -3,10 +3,13 @@ const { sequelize, InventoryLot, Product, Branch, BranchInventory, InventoryTran
 const { tenantWhere } = require('../utils/tenantScope');
 const { resolveOperationalBranch } = require('../services/branchInventory');
 const { logAudit } = require('../services/auditLogger');
+const { transactionalFindOrCreate } = require('../services/transactionalFindOrCreate');
 
 async function list(req, res) {
   const where = tenantWhere(req, {
     ...(req.query.productId ? { productId: req.query.productId } : {}),
+    ...(req.query.branchId ? { branchId: req.query.branchId } : {}),
+    ...(req.query.availableOnly === 'true' ? { availableQuantity: { [Op.gt]: 0 } } : {}),
     ...(req.query.expiringBefore ? { expiryDate: { [Op.lte]: req.query.expiringBefore } } : {})
   });
   return res.json(await InventoryLot.findAll({
@@ -28,7 +31,7 @@ async function receive(req, res) {
     if (!branchOwner) throw Object.assign(new Error('Branch is not active or does not belong to this store'), { status: 400 });
     const quantity = Math.round(Number(req.body.quantity) * 1000) / 1000;
     const lotNumber = String(req.body.lotNumber).trim().toUpperCase();
-    const [lot, created] = await InventoryLot.findOrCreate({
+    const [lot, created] = await transactionalFindOrCreate(InventoryLot, {
       where: { branchId, productId: product.id, lotNumber },
       defaults: {
         tenantId: req.tenantId || null,
@@ -48,11 +51,11 @@ async function receive(req, res) {
     }
     const aggregate = Number(product.stockQuantity) + quantity;
     await product.update({ stockQuantity: aggregate }, { transaction });
-    const [branch] = await BranchInventory.findOrCreate({ where: { branchId, productId: product.id }, defaults: { quantity: 0 }, transaction });
+    const [branch] = await transactionalFindOrCreate(BranchInventory, { where: { branchId, productId: product.id }, defaults: { quantity: 0 }, transaction });
     const branchBalance = Number(branch.quantity) + quantity;
     await branch.update({ quantity: branchBalance }, { transaction });
     await InventoryTransaction.create({
-      productId: product.id, branchId, type: 'purchase', quantity, balanceAfter: branchBalance,
+      productId: product.id, branchId, inventoryLotId: lot.id, type: 'purchase', quantity, balanceAfter: branchBalance,
       referenceType: 'inventory_lot', referenceId: lot.id, userId: req.user.id, note: `Lot ${lotNumber} received`
     }, { transaction });
     await logAudit({ req, action: 'inventory.lot_received', entityType: 'inventory_lot', entityId: lot.id, metadata: { productId: product.id, branchId, quantity, lotNumber }, transaction });
@@ -78,7 +81,7 @@ async function writeOff(req, res) {
     await branch.update({ quantity: branchBalance }, { transaction });
     await product.update({ stockQuantity: Number(product.stockQuantity) - quantity }, { transaction });
     await InventoryTransaction.create({
-      productId: product.id, branchId: lot.branchId, type: 'wastage', quantity: -quantity, balanceAfter: branchBalance,
+      productId: product.id, branchId: lot.branchId, inventoryLotId: lot.id, type: 'wastage', quantity: -quantity, balanceAfter: branchBalance,
       referenceType: 'inventory_lot', referenceId: lot.id, userId: req.user.id, note: req.body.note || `Lot ${lot.lotNumber} write-off`
     }, { transaction });
     await logAudit({ req, action: 'inventory.lot_written_off', entityType: 'inventory_lot', entityId: lot.id, metadata: { quantity, note: req.body.note }, transaction });

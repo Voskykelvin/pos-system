@@ -103,7 +103,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   const [message, setMessage] = useState(null);
   const [scanCode, setScanCode] = useState('');
   const [scanBusy, setScanBusy] = useState(false);
+  const [cameraOpen, setCameraOpen] = useState(false);
+  const [cameraStatus, setCameraStatus] = useState('idle');
+  const [cameraError, setCameraError] = useState(null);
   const productNameRef = useRef(null);
+  const cameraVideoRef = useRef(null);
+  const cameraControlsRef = useRef(null);
+  const cameraResultHandledRef = useRef(false);
 
   // Category inline modal
   const [newCatName, setNewCatName] = useState('');
@@ -213,6 +219,71 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     if (activeTab === 'vat') loadVatAudit();
   }, [activeTab]);
 
+  useEffect(() => {
+    if (!cameraOpen) return undefined;
+    let cancelled = false;
+    cameraResultHandledRef.current = false;
+
+    async function beginCameraScan() {
+      setCameraStatus('starting');
+      setCameraError(null);
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) throw new Error('Camera access is not supported by this browser.');
+        const { BrowserMultiFormatReader } = await import('@zxing/browser');
+        if (cancelled || !cameraVideoRef.current) return;
+        const reader = new BrowserMultiFormatReader();
+        const controls = await reader.decodeFromConstraints({
+          audio: false,
+          video: {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          }
+        }, cameraVideoRef.current, (result, _scanError, activeControls) => {
+          if (!result || cameraResultHandledRef.current) return;
+          const value = String(result.getText?.() || result.text || '').trim();
+          if (!value) return;
+          cameraResultHandledRef.current = true;
+          activeControls.stop();
+          setCameraOpen(false);
+          setScanCode(value);
+          lookupScannedProduct(value);
+        });
+        if (cancelled) {
+          controls.stop();
+          return;
+        }
+        cameraControlsRef.current = controls;
+        setCameraStatus('scanning');
+      } catch (err) {
+        if (cancelled) return;
+        const denied = err?.name === 'NotAllowedError' || /permission|denied/i.test(err?.message || '');
+        setCameraError(denied
+          ? 'Camera permission was denied. Allow camera access in the browser, or use the scanner input instead.'
+          : err.message || 'The camera could not start.');
+        setCameraStatus('error');
+      }
+    }
+
+    beginCameraScan();
+    return () => {
+      cancelled = true;
+      cameraControlsRef.current?.stop?.();
+      cameraControlsRef.current = null;
+      const stream = cameraVideoRef.current?.srcObject;
+      stream?.getTracks?.().forEach((track) => track.stop());
+    };
+  }, [cameraOpen]);
+
+  useEffect(() => {
+    if (!cameraOpen) return undefined;
+    const closeOnEscape = (event) => {
+      if (event.key === 'Escape') setCameraOpen(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [cameraOpen]);
+
   const filtered = useMemo(() => {
     return products.filter((p) => {
       const needle = search.toLowerCase();
@@ -255,9 +326,8 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     setDrawerOpen(true);
   }
 
-  async function handleProductScan(event) {
-    event.preventDefault();
-    const barcode = scanCode.trim();
+  async function lookupScannedProduct(rawBarcode) {
+    const barcode = String(rawBarcode || '').trim();
     if (!barcode) return;
     setScanBusy(true);
     setError(null);
@@ -293,6 +363,19 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     } finally {
       setScanBusy(false);
     }
+  }
+
+  async function handleProductScan(event) {
+    event.preventDefault();
+    await lookupScannedProduct(scanCode);
+  }
+
+  function openCameraScanner() {
+    if (!window.isSecureContext && window.location.hostname !== 'localhost') {
+      setError('Phone camera scanning requires HTTPS. Use the hardware scanner field on non-secure connections.');
+      return;
+    }
+    setCameraOpen(true);
   }
 
   function openEdit(p) {
@@ -690,7 +773,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
           <form className={styles.scanPanel} onSubmit={handleProductScan}>
             <div>
               <strong>Scan to add a product</strong>
-              <span>Use a USB/Bluetooth scanner or type the barcode, then press Enter.</span>
+              <span>Use a USB/Bluetooth scanner, phone camera, or type the barcode.</span>
             </div>
             <input
               type="text"
@@ -701,8 +784,9 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               value={scanCode}
               onChange={(event) => setScanCode(event.target.value.replace(/\s/g, '').slice(0, 64))}
             />
+            <button className={styles.cameraBtn} type="button" onClick={openCameraScanner} disabled={scanBusy}>Use camera</button>
             <button className={styles.primaryBtn} type="submit" disabled={scanBusy || !scanCode.trim()}>
-              {scanBusy ? 'Looking up…' : 'Find product'}
+              {scanBusy ? 'Looking up...' : 'Find product'}
             </button>
           </form>
           <div className={styles.controls}>
@@ -1036,6 +1120,30 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             />
             <button className={styles.primaryBtn} onClick={handleImportCsv}>Process CSV Import</button>
           </div>
+        </div>
+      )}
+
+      {cameraOpen && (
+        <div className={styles.cameraOverlay} role="presentation" onClick={() => setCameraOpen(false)}>
+          <section className={styles.cameraModal} role="dialog" aria-modal="true" aria-labelledby="camera-title" onClick={(event) => event.stopPropagation()}>
+            <div className={styles.cameraHeader}>
+              <div>
+                <h2 id="camera-title">Scan product barcode</h2>
+                <p>Hold the rear camera steady over the full barcode.</p>
+              </div>
+              <button type="button" className={styles.cameraClose} aria-label="Close camera scanner" onClick={() => setCameraOpen(false)}>&times;</button>
+            </div>
+            <div className={styles.cameraViewport}>
+              <video ref={cameraVideoRef} autoPlay muted playsInline aria-label="Live camera preview" />
+              <div className={styles.scanGuide} aria-hidden="true" />
+              {cameraStatus === 'starting' && <div className={styles.cameraState}>Starting camera...</div>}
+            </div>
+            {cameraError && <div className={styles.cameraError} role="alert">{cameraError}</div>}
+            <div className={styles.cameraFooter}>
+              <span>{cameraStatus === 'scanning' ? 'Scanning automatically...' : 'Camera access is used only while this window is open.'}</span>
+              <button type="button" className={styles.secondaryBtn} onClick={() => setCameraOpen(false)}>Cancel</button>
+            </div>
+          </section>
         </div>
       )}
 

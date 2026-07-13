@@ -15,6 +15,8 @@ const { authenticate } = require('./middleware/auth');
 const { getPlan } = require('./utils/planCatalog');
 const { resolveBillingStatus } = require('./services/subscriptionBilling');
 const { assertAuthTokenConfig } = require('./utils/authToken');
+const { renderPrometheus } = require('./services/metricsService');
+const { constantTimeTokenMatch } = require('./utils/secureToken');
 
 // Routes require the route files after app and limiter are configured.
 const authRoutes = require('./routes/auth');
@@ -148,6 +150,23 @@ app.get('/api/ready', async (req, res) => {
   } catch (err) {
     logger.error('Readiness check failed', err);
     return res.status(503).json({ ready: false, database: 'unavailable' });
+  }
+});
+
+function metricsAuthorized(req) {
+  if (process.env.NODE_ENV !== 'production' && !process.env.METRICS_TOKEN) return true;
+  const bearer = String(req.headers.authorization || '').match(/^Bearer\s+(.+)$/i)?.[1];
+  return constantTimeTokenMatch(process.env.METRICS_TOKEN, bearer || req.headers['x-metrics-token']);
+}
+
+app.get('/api/metrics', async (req, res) => {
+  if (!metricsAuthorized(req)) return res.status(404).json({ error: 'Route not found' });
+  try {
+    const metrics = await renderPrometheus();
+    return res.type('text/plain; version=0.0.4; charset=utf-8').send(metrics);
+  } catch (err) {
+    logger.error('Metrics collection failed', err);
+    return res.status(503).type('text/plain').send('Metrics temporarily unavailable\n');
   }
 });
 
@@ -297,10 +316,22 @@ async function start({ port = PORT, host = HOST } = {}) {
 }
 
 if (require.main === module) {
-  start().catch((err) => {
-    logger.error('Failed to start Jijenge POS', err);
-    process.exit(1);
-  });
+  start()
+    .then((server) => {
+      const { installProcessLifecycle } = require('./services/processLifecycle');
+      installProcessLifecycle({ server, sequelize });
+    })
+    .catch(async (err) => {
+      logger.error('Failed to start Jijenge POS', err);
+      const { sendOperationalAlert } = require('./services/alertService');
+      await sendOperationalAlert({
+        severity: 'critical',
+        title: 'Jijenge POS failed to start',
+        message: err.message,
+        dedupeKey: `startup:${err.message}`
+      });
+      process.exit(1);
+    });
 }
 
 module.exports = { app, start };

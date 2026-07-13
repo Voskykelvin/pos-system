@@ -125,7 +125,7 @@
 }
 
 .navCta {
-  background: #11a36a;
+  background: #047857;
   box-shadow: 0 10px 26px rgba(17, 163, 106, 0.26);
 }
 
@@ -246,6 +246,10 @@
   letter-spacing: 0;
 }
 
+.sectionHeader p {
+  color: #08784d;
+}
+
 .heroContent h1 {
   margin: 0;
   max-width: 690px;
@@ -283,7 +287,7 @@
 }
 
 .primaryBtn {
-  background: #11a36a;
+  background: #047857;
   color: #ffffff;
 }
 
@@ -553,7 +557,7 @@
 }
 
 .flowSteps span {
-  color: #bf6f1f;
+  color: #8a4b0f;
   font-weight: 900;
   font-size: 14px;
 }
