@@ -34,7 +34,7 @@
     "smoke": "node scripts/auth-token-test.js && node scripts/held-sales-smoke.mjs && node scripts/receipt-snapshot-test.js && node scripts/fiscal-guard-test.js && node scripts/financial-invariants-test.js && node scripts/smoke-test.js"
   },
   "dependencies": {
-    "@zxing/browser": "^0.2.1",
+    "@zxing/browser": "0.1.5",
     "axios": "^1.7.0",
     "compression": "^1.8.1",
     "dotenv": "^16.4.0",
