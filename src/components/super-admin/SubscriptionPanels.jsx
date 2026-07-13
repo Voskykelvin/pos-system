@@ -47,7 +47,9 @@ export default function SubscriptionPanels({ alerts, pendingReview, onReviewPaym
                   <tr key={payment.id}>
                     <td className={styles.tenantName}>
                       <strong>{payment.tenant?.name || '-'}</strong>
-                      <span>{labelize(payment.plan)}</span>
+                      <span>{payment.upgrade
+                        ? `${labelize(payment.upgrade.fromPlan)} → ${labelize(payment.upgrade.targetPlan)} upgrade`
+                        : labelize(payment.plan)}</span>
                     </td>
                     <td>{formatKes(payment.amount)}</td>
                     <td>

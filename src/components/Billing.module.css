@@ -54,6 +54,93 @@
   margin-bottom: 12px;
 }
 
+.upgradePanel {
+  margin-bottom: 14px;
+  padding: 18px;
+  border: 1px solid #a7f3d0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ecfdf5, var(--pos-surface) 72%);
+}
+
+.upgradeHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.upgradeHeader h2,
+.upgradeHeader p {
+  margin: 0;
+}
+
+.upgradeHeader h2 {
+  font-size: 20px;
+}
+
+.upgradeHeader p {
+  margin-top: 5px;
+  color: var(--pos-ink-soft);
+  font-size: 13px;
+}
+
+.upgradeGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.upgradeCard {
+  display: grid;
+  gap: 6px;
+  min-height: 142px;
+  padding: 15px;
+  border: 1px solid var(--pos-line);
+  border-radius: 10px;
+  color: var(--pos-ink);
+  background: var(--pos-surface);
+  text-align: left;
+  cursor: pointer;
+}
+
+.upgradeCard > span {
+  color: var(--pos-accent-dark);
+  font-size: 12px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.upgradeCard strong {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 21px;
+}
+
+.upgradeCard small,
+.upgradeCard p,
+.pendingHint {
+  margin: 0;
+  color: var(--pos-ink-soft);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.selectedUpgrade {
+  border-color: var(--pos-accent);
+  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.14), inset 4px 0 0 var(--pos-accent);
+}
+
+.upgradeCard:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.pendingHint {
+  margin-top: 10px;
+  color: var(--pos-warn);
+  font-weight: 800;
+}
+
 .metric,
 .panel {
   border: 1px solid var(--pos-line);
@@ -366,6 +453,14 @@
 
   .header {
     display: grid;
+  }
+
+  .upgradeHeader {
+    display: grid;
+  }
+
+  .upgradeGrid {
+    grid-template-columns: 1fr;
   }
 
   .actions,

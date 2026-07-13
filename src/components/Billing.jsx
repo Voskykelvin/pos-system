@@ -70,6 +70,7 @@ export default function Billing({ authToken, onContinue, onLogout }) {
   const [submitting, setSubmitting] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedUpgrade, setSelectedUpgrade] = useState('');
   const [form, setForm] = useState({
     method: 'mpesa_manual',
     payerName: '',
@@ -102,6 +103,9 @@ export default function Billing({ authToken, onContinue, onLogout }) {
   const billing = data?.billing;
   const instructions = data?.instructions || {};
   const charge = billing?.charge || {};
+  const upgradeQuotes = billing?.availableUpgrades || [];
+  const selectedQuote = upgradeQuotes.find((quote) => quote.targetPlan === selectedUpgrade) || null;
+  const displayCharge = selectedQuote || charge;
   const canContinue = billing?.status === 'active';
   const rejectedPayment = data?.recentPayments?.find((payment) => payment.status === 'rejected');
 
@@ -148,12 +152,13 @@ export default function Billing({ authToken, onContinue, onLogout }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${authToken}`
         },
-        body: JSON.stringify(form)
+        body: JSON.stringify({ ...form, targetPlan: selectedUpgrade || undefined })
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.error || 'Payment reference could not be submitted');
       setMessage(result.message || 'Payment reference submitted.');
       setForm((current) => ({ ...current, reference: '', notes: '' }));
+      setSelectedUpgrade('');
       await loadBilling();
     } catch (err) {
       setError(err.message);
@@ -195,11 +200,44 @@ export default function Billing({ authToken, onContinue, onLogout }) {
         </div>
       )}
 
+      {upgradeQuotes.length > 0 && (
+        <section className={styles.upgradePanel} aria-labelledby="upgrade-heading">
+          <div className={styles.upgradeHeader}>
+            <div>
+              <span className={styles.badge}>Upgrade anytime</span>
+              <h2 id="upgrade-heading">Unlock more features today</h2>
+              <p>Unused time on {billing?.plan?.name} is credited automatically. Your renewal date stays {formatDate(billing?.subscriptionEndsAt)}.</p>
+            </div>
+            {selectedQuote && (
+              <button className={styles.secondaryBtn} type="button" onClick={() => setSelectedUpgrade('')}>Keep current plan</button>
+            )}
+          </div>
+          <div className={styles.upgradeGrid}>
+            {upgradeQuotes.map((quote) => (
+              <button
+                key={quote.targetPlan}
+                type="button"
+                className={`${styles.upgradeCard} ${selectedUpgrade === quote.targetPlan ? styles.selectedUpgrade : ''}`}
+                onClick={() => setSelectedUpgrade(quote.targetPlan)}
+                disabled={Boolean(billing?.pendingPayment)}
+                aria-pressed={selectedUpgrade === quote.targetPlan}
+              >
+                <span>{quote.targetName}</span>
+                <strong>{formatMoney(quote.amount, quote.currency)} now</strong>
+                <small>{quote.remainingDays} days remaining · includes {formatMoney(quote.unusedCurrentPlanCredit, quote.currency)} unused-plan credit</small>
+                <p>{quote.featureSummary}</p>
+              </button>
+            ))}
+          </div>
+          {billing?.pendingPayment && <p className={styles.pendingHint}>Finish the pending payment review before requesting another upgrade.</p>}
+        </section>
+      )}
+
       <div className={styles.summaryGrid}>
         <article className={styles.metric}>
-          <span>Amount due</span>
-          <strong>{formatMoney(charge.amount, charge.currency)}</strong>
-          <small>{billing?.plan?.name || 'Plan'} / 30 days</small>
+          <span>{selectedQuote ? 'Upgrade amount due' : 'Amount due'}</span>
+          <strong>{formatMoney(displayCharge.amount, displayCharge.currency)}</strong>
+          <small>{selectedQuote ? `${billing?.plan?.name} → ${selectedQuote.targetName}, renewal date unchanged` : `${billing?.plan?.name || 'Plan'} / 30 days`}</small>
         </article>
         <article className={styles.metric}>
           <span>Status</span>
@@ -222,7 +260,7 @@ export default function Billing({ authToken, onContinue, onLogout }) {
         <section className={styles.panel}>
           <div className={styles.panelHeader}>
             <h2>Pay subscription</h2>
-            <span>{instructions.platformName || 'Jijenge POS'}</span>
+            <span>{selectedQuote ? `Upgrade to ${selectedQuote.targetName}` : (instructions.platformName || 'Jijenge POS')}</span>
           </div>
 
           <div className={styles.channelList}>
@@ -278,7 +316,7 @@ export default function Billing({ authToken, onContinue, onLogout }) {
             </label>
             <div className={styles.formActions}>
               <button className={styles.primaryBtn} type="submit" disabled={submitting}>
-                {submitting ? 'Submitting...' : 'Submit payment reference'}
+                {submitting ? 'Submitting...' : selectedQuote ? 'Submit upgrade payment' : 'Submit payment reference'}
               </button>
               {canContinue && (
                 <button className={styles.secondaryBtn} type="button" onClick={onContinue}>
@@ -300,6 +338,7 @@ export default function Billing({ authToken, onContinue, onLogout }) {
                 <div>
                   <strong>{formatMoney(payment.amount, payment.currency)}</strong>
                   <small>{payment.reference} - {titleCase(payment.method)}</small>
+                  {payment.upgrade && <small>{titleCase(payment.upgrade.fromPlan)} → {titleCase(payment.upgrade.targetPlan)} upgrade</small>}
                   {payment.status === 'rejected' && payment.adminNotes && <small className={styles.adminNote}>{payment.adminNotes}</small>}
                 </div>
                 <span className={`${styles.statusBadge} ${styles[payment.status]}`}>{titleCase(payment.status)}</span>

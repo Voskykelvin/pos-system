@@ -6,6 +6,7 @@ const {
   buildBillingInstructions,
   buildBillingSummary,
   getPlanCharge,
+  getMidCycleUpgradeQuotes,
   nextPeriodForTenant,
   publicPayment,
   sanitizePaymentSubmission
@@ -59,21 +60,7 @@ async function getBilling(req, res) {
       },
       billing: payload.billing,
       instructions: payload.instructions,
-      recentPayments: payload.payments.map((payment) => ({
-        id: payment.id,
-        plan: payment.plan,
-        amount: Number(payment.amount || 0),
-        currency: payment.currency,
-        method: payment.method,
-        status: payment.status,
-        reference: payment.reference,
-        submittedAt: payment.submittedAt,
-        confirmedAt: payment.confirmedAt,
-        rejectedAt: payment.rejectedAt,
-        periodStart: payment.periodStart,
-        periodEnd: payment.periodEnd,
-        adminNotes: payment.adminNotes
-      }))
+      recentPayments: payload.payments.map(publicPayment)
     });
   } catch (err) {
     return res.status(500).json({ error: err.message });
@@ -96,10 +83,20 @@ async function submitPayment(req, res) {
   const t = await sequelize.transaction();
 
   try {
-    const tenant = await Tenant.findByPk(req.tenantId, { transaction: t });
+    const tenant = await Tenant.findByPk(req.tenantId, { transaction: t, lock: t.LOCK.UPDATE });
     if (!tenant) {
       await t.rollback();
       return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    const pending = await SubscriptionPayment.findOne({
+      where: { tenantId: tenant.id, status: 'pending' },
+      transaction: t,
+      lock: t.LOCK.UPDATE
+    });
+    if (pending) {
+      await t.rollback();
+      return res.status(409).json({ error: 'A subscription payment is already awaiting review.' });
     }
 
     const duplicate = await SubscriptionPayment.findOne({
@@ -116,11 +113,37 @@ async function submitPayment(req, res) {
       return res.status(409).json({ error: 'That payment reference has already been submitted.' });
     }
 
-    const charge = getPlanCharge(tenant.plan, tenant.currency || 'KES');
+    let paymentPlan = tenant.plan;
+    let charge = getPlanCharge(tenant.plan, tenant.currency || 'KES');
+    let paymentMetadata = {
+      submittedByUserId: req.user.id,
+      source: 'tenant_billing_page',
+      billingType: 'renewal'
+    };
+
+    if (submission.targetPlan) {
+      const quote = getMidCycleUpgradeQuotes(tenant).find((item) => item.targetPlan === submission.targetPlan);
+      if (!quote) {
+        await t.rollback();
+        return res.status(400).json({ error: 'That plan is not an available mid-cycle upgrade for this subscription.' });
+      }
+      paymentPlan = quote.targetPlan;
+      charge = { amount: quote.amount, currency: quote.currency };
+      paymentMetadata = {
+        ...paymentMetadata,
+        billingType: 'mid_cycle_upgrade',
+        fromPlan: quote.fromPlan,
+        targetPlan: quote.targetPlan,
+        unusedCurrentPlanCredit: quote.unusedCurrentPlanCredit,
+        targetPlanProratedValue: quote.targetPlanProratedValue,
+        remainingDays: quote.remainingDays,
+        subscriptionEndsAt: quote.subscriptionEndsAt.toISOString()
+      };
+    }
 
     const payment = await SubscriptionPayment.create({
       tenantId: tenant.id,
-      plan: tenant.plan,
+      plan: paymentPlan,
       amount: charge.amount,
       currency: charge.currency,
       method: submission.method,
@@ -128,10 +151,7 @@ async function submitPayment(req, res) {
       payerName: submission.payerName || null,
       payerPhone: submission.payerPhone || null,
       notes: submission.notes || null,
-      metadata: {
-        submittedByUserId: req.user.id,
-        source: 'tenant_billing_page'
-      }
+      metadata: paymentMetadata
     }, { transaction: t });
 
     const settings = tenant.settings || {};
@@ -140,7 +160,7 @@ async function submitPayment(req, res) {
       billing: {
         ...((settings || {}).billing || {}),
         subscriptionPaymentMethod: submission.method,
-        status: 'manual_review',
+        status: submission.targetPlan ? 'upgrade_review' : 'manual_review',
         billingContactName: submission.payerName || settings.billing?.billingContactName || '',
         billingPhone: submission.payerPhone || settings.billing?.billingPhone || '',
         billingReference: submission.reference
@@ -156,7 +176,9 @@ async function submitPayment(req, res) {
 
     const payload = await loadTenantBilling(req.tenantId);
     return res.status(201).json({
-      message: 'Payment reference submitted for admin verification.',
+      message: submission.targetPlan
+        ? `Upgrade payment submitted. ${paymentPlan} features activate after verification.`
+        : 'Payment reference submitted for admin verification.',
       paymentId: payment.id,
       billing: payload.billing,
       recentPayments: payload.payments.map(publicPayment)
@@ -198,7 +220,16 @@ async function confirmSubscriptionPayment(req, res) {
       return res.status(404).json({ error: 'Tenant not found for this subscription payment' });
     }
 
-    const { periodStart, periodEnd } = nextPeriodForTenant(tenant);
+    const isUpgrade = payment.metadata?.billingType === 'mid_cycle_upgrade';
+    if (isUpgrade && tenant.plan !== payment.metadata.fromPlan) {
+      await t.rollback();
+      return res.status(409).json({ error: 'The store plan changed after this upgrade was submitted. Review the payment manually.' });
+    }
+    const renewalPeriod = nextPeriodForTenant(tenant);
+    const periodStart = isUpgrade ? new Date() : renewalPeriod.periodStart;
+    const periodEnd = isUpgrade
+      ? new Date(payment.metadata.subscriptionEndsAt)
+      : renewalPeriod.periodEnd;
     const settings = tenant.settings || {};
     const adminNotes = String(req.body?.adminNotes || '').trim().slice(0, 1000) || null;
 
@@ -247,7 +278,7 @@ async function confirmSubscriptionPayment(req, res) {
     }).catch(() => {});
 
     return res.json({
-      message: 'Subscription payment confirmed.',
+      message: isUpgrade ? `Upgrade to ${payment.plan} confirmed.` : 'Subscription payment confirmed.',
       paymentId: payment.id,
       tenantId: tenant.id,
       periodStart,

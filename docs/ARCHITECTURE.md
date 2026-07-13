@@ -25,7 +25,7 @@ The application uses shared code and a shared database. Tenant-aware tables are 
 | Path | Purpose |
 | --- | --- |
 | `/home` | Public product, plans, and signup entry. |
-| `/billing` | Subscription state, payment instructions, references, and history. |
+| `/billing` | Subscription state, prorated mid-cycle upgrades, payment instructions, references, and history. |
 | `/` | Store dashboard. |
 | `/checkout` | Online/offline cashier checkout and reconciliation. |
 | `/inventory` | Products, suppliers, purchasing, promotions, CSV, and labels. |

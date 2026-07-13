@@ -389,6 +389,40 @@ async function main() {
       throw new Error('Confirmed subscription payment did not activate tenant access');
     }
 
+    const originalSubscriptionEnd = activatedTenant.tenant.subscriptionEndsAt;
+    const upgradeBilling = await request(baseUrl, '/api/billing', { headers: ownerHeaders });
+    const growthQuote = upgradeBilling.billing.availableUpgrades.find((quote) => quote.targetPlan === 'growth');
+    if (!growthQuote || growthQuote.amount <= 0) throw new Error('Active Starter tenant did not receive a Growth upgrade quote');
+
+    const upgradeReference = `SMOKEUPGRADE${Date.now()}`;
+    await request(baseUrl, '/api/billing/payments', {
+      method: 'POST',
+      headers: { ...ownerHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        method: 'mpesa_manual',
+        reference: upgradeReference,
+        payerPhone: '0712345678',
+        payerName: 'Smoke Owner',
+        targetPlan: 'growth'
+      })
+    });
+    reviewDashboard = await request(baseUrl, '/api/super-admin/dashboard', { headers: superAdminHeaders });
+    const upgradePayment = reviewDashboard.subscriptionPayments.pendingReview.find(
+      (payment) => payment.reference === upgradeReference
+    );
+    if (upgradePayment?.upgrade?.fromPlan !== 'starter' || upgradePayment.upgrade.targetPlan !== 'growth') {
+      throw new Error('Mid-cycle upgrade did not enter review with its plan transition metadata');
+    }
+    await request(baseUrl, `/api/billing/payments/${upgradePayment.id}/confirm`, {
+      method: 'POST',
+      headers: { ...superAdminHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({})
+    });
+    const upgradedTenant = await request(baseUrl, '/api/bootstrap', { headers: ownerHeaders });
+    if (upgradedTenant.tenant?.plan !== 'growth' || upgradedTenant.tenant.subscriptionEndsAt !== originalSubscriptionEnd) {
+      throw new Error('Confirmed mid-cycle upgrade did not preserve the original renewal date');
+    }
+
     const cashierLogin = await request(baseUrl, '/api/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

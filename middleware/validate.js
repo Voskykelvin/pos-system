@@ -333,7 +333,8 @@ const schemas = {
     reference: { type: 'string', minLength: 4, maxLength: 255 },
     payerName:  { type: 'string', required: false, maxLength: 255 },
     payerPhone: { type: 'string', required: false, maxLength: 30 },
-    notes:      { type: 'string', required: false, maxLength: 500 }
+    notes:      { type: 'string', required: false, maxLength: 500 },
+    targetPlan: { type: 'string', required: false, enumValues: ['growth', 'enterprise'] }
   },
 
   // -- Supplier schemas ------------------------------------------------------

@@ -85,6 +85,17 @@ Use `POST /api/auth/logout-all` to revoke every active session belonging to the 
 
 ---
 
+## Subscription Billing and Mid-cycle Upgrades
+
+- `GET /api/billing` returns the current subscription, payment history, and `billing.availableUpgrades`. Each upgrade quote includes the unused-plan credit, prorated amount due, remaining days, target features, and unchanged subscription end date.
+- `POST /api/billing/payments` accepts the normal payment fields plus optional `targetPlan: "growth" | "enterprise"`. A target plan creates a pending mid-cycle upgrade rather than a renewal.
+- Only active, unexpired subscriptions can upgrade mid-cycle. Moves must be to a higher-priced plan, and only one subscription payment may await review at a time.
+- `POST /api/billing/payments/:id/confirm` activates the target plan immediately while preserving the original renewal date. Rejection leaves the existing plan and access unchanged.
+
+Proration uses the unused fraction of the plan's 30-day billing interval: `(target price - current price) × remaining time ÷ 30 days`.
+
+---
+
 ## Catalog & Products
 
 ### 4. Product Search

@@ -2,7 +2,7 @@
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-const { getPlan, getPlanAmount, getPlanBillingIntervalDays } = require('../utils/planCatalog');
+const { getPlan, getPlanAmount, getPlanBillingIntervalDays, getPlanCatalog } = require('../utils/planCatalog');
 
 function cleanString(value, max = 255) {
   return String(value || '').trim().slice(0, max);
@@ -34,6 +34,43 @@ function getPlanCharge(planId, currency = 'KES') {
     currency: normalizedCurrency,
     amount: getPlanAmount(planId, normalizedCurrency)
   };
+}
+
+function money(value) {
+  return Math.round((Number(value || 0) + Number.EPSILON) * 100) / 100;
+}
+
+function getMidCycleUpgradeQuotes(tenant, now = new Date()) {
+  const currentPlan = getPlan(tenant?.plan);
+  const end = tenant?.subscriptionEndsAt ? new Date(tenant.subscriptionEndsAt) : null;
+  if (!currentPlan || resolveBillingStatus(tenant) !== 'active' || !end || end <= now) return [];
+
+  const currency = String(tenant.currency || 'KES').toUpperCase();
+  const intervalDays = getPlanBillingIntervalDays(currentPlan.id);
+  const remainingMs = Math.max(end.getTime() - now.getTime(), 0);
+  const remainingFraction = Math.min(remainingMs / (intervalDays * MS_PER_DAY), 1);
+  const currentPrice = getPlanAmount(currentPlan.id, currency);
+
+  return getPlanCatalog()
+    .filter((plan) => getPlanAmount(plan.id, currency) > currentPrice)
+    .map((plan) => {
+      const targetPrice = getPlanAmount(plan.id, currency);
+      return {
+        fromPlan: currentPlan.id,
+        targetPlan: plan.id,
+        targetName: plan.name,
+        currency,
+        fullPlanPrice: targetPrice,
+        unusedCurrentPlanCredit: money(currentPrice * remainingFraction),
+        targetPlanProratedValue: money(targetPrice * remainingFraction),
+        amount: money((targetPrice - currentPrice) * remainingFraction),
+        remainingDays: Math.max(Math.ceil(remainingMs / MS_PER_DAY), 0),
+        effectiveAt: now,
+        subscriptionEndsAt: end,
+        enabledFeatures: plan.enabledFeatures,
+        featureSummary: plan.featureSummary
+      };
+    });
 }
 
 function buildBillingInstructions(tenant) {
@@ -85,7 +122,13 @@ function publicPayment(payment) {
     periodStart: plain.periodStart,
     periodEnd: plain.periodEnd,
     notes: plain.notes,
-    adminNotes: plain.adminNotes
+    adminNotes: plain.adminNotes,
+    upgrade: plain.metadata?.billingType === 'mid_cycle_upgrade' ? {
+      fromPlan: plain.metadata.fromPlan,
+      targetPlan: plain.metadata.targetPlan,
+      unusedCurrentPlanCredit: Number(plain.metadata.unusedCurrentPlanCredit || 0),
+      subscriptionEndsAt: plain.metadata.subscriptionEndsAt || plain.periodEnd
+    } : null
   };
 }
 
@@ -103,7 +146,8 @@ function buildBillingSummary({ tenant, latestPayment, pendingPayment }) {
     subscriptionEndsAt: tenant?.subscriptionEndsAt || null,
     daysRemaining,
     latestPayment: publicPayment(latestPayment),
-    pendingPayment: publicPayment(pendingPayment)
+    pendingPayment: publicPayment(pendingPayment),
+    availableUpgrades: getMidCycleUpgradeQuotes(tenant)
   };
 }
 
@@ -123,7 +167,8 @@ function sanitizePaymentSubmission(body = {}) {
     reference: cleanString(body.reference, 120),
     payerName: cleanString(body.payerName, 255),
     payerPhone: cleanString(body.payerPhone, 50),
-    notes: cleanString(body.notes, 1000)
+    notes: cleanString(body.notes, 1000),
+    targetPlan: cleanString(body.targetPlan, 50)
   };
 }
 
@@ -132,6 +177,7 @@ module.exports = {
   buildBillingSummary,
   cleanString,
   getPlanCharge,
+  getMidCycleUpgradeQuotes,
   isExpired,
   nextPeriodForTenant,
   publicPayment,
