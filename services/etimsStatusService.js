@@ -76,6 +76,7 @@ async function getEtimsStatus({ tenantId = null, includeRecent = false } = {}) {
     baseUrlSet: Boolean(runtimeConfig.etims.baseUrl),
     apiKeySet: Boolean(runtimeConfig.etims.apiKey)
   };
+  readiness.enabled = readiness.sellerPinSet;
 
   return {
     summary: {
@@ -90,7 +91,7 @@ async function getEtimsStatus({ tenantId = null, includeRecent = false } = {}) {
     warnings: {
       hasPending: queued > 0,
       hasFailed: failed > 0,
-      productionBlocked: productionMode && !readiness.sellerPinSet
+      productionBlocked: readiness.enabled && productionMode && !(readiness.deviceSerialSet && readiness.baseUrlSet && readiness.apiKeySet)
     },
     recent: recent.map(mapInvoice)
   };

@@ -22,6 +22,7 @@ Last reviewed: 2026-07-12.
 - SQL access is through Sequelize or migration scripts with parameterized replacements.
 - Production schema changes use `npm run db:migrate`.
 - CI runs lint, unit/component tests, API smoke tests, browser checkout tests, the frontend build, and a dependency audit.
+- Product barcode enrichment performs read-only requests and can be disabled with `PRODUCT_CATALOG_LOOKUP_ENABLED=false`. Catalogue responses remain untrusted drafts and never set prices or create products automatically.
 
 ## Audit Notes
 

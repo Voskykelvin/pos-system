@@ -15,6 +15,7 @@ router.get('/status', requireRoles('admin', 'manager', 'cashier'), async (req, r
       failed: status.summary.failed,
       retrying: status.summary.retrying,
       transmitted: status.summary.transmitted,
+      readiness: status.readiness,
       productionMode: status.readiness.productionMode,
       sellerPinSet: status.readiness.sellerPinSet,
       deviceSerialSet: status.readiness.deviceSerialSet,

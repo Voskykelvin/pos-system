@@ -151,6 +151,8 @@ Checkout accepts `store_credit` as a customer-bound payment method. Refund endpo
 - `GET/POST /api/stock-transfers` moves branch balances without changing tenant aggregate stock. Generic transfers reject lot-tracked products until a lot-specific allocation is supplied.
 - `GET/POST /api/inventory-lots` manages lot receipts, expiry visibility, and write-offs.
 - `POST /api/purchase-orders/:id/returns` removes unsold supplier stock; `POST /api/purchase-orders/returns/:id/confirm-credit` records the later supplier credit reference.
+- `POST /api/admin/products/scan-lookup` accepts a barcode, rejects tenant duplicates, optionally enriches it from Open Food Facts, selects the closest existing category, and returns a unique SKU draft. The user confirms commercial fields before creation.
+- Hardware scanners may append Enter. In the scan-first panel Enter runs lookup; inside the product drawer it advances focus to the product name and never submits an incomplete product.
 
 ### 6. Create Checkout Order
 - **Endpoint:** `POST /api/orders/checkout`

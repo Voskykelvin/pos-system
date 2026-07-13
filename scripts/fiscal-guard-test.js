@@ -22,13 +22,6 @@ async function request(baseUrl, path, options) {
   return data;
 }
 
-async function expectFailure(baseUrl, path, options, expectedStatus) {
-  const response = await fetch(`${baseUrl}${path}`, options);
-  const data = await response.json();
-  assert.equal(response.status, expectedStatus, data.error || response.statusText);
-  return data;
-}
-
 async function main() {
   const server = await start({ port: 0 });
   const { port } = server.address();
@@ -45,19 +38,22 @@ async function main() {
     });
     const headers = { Authorization: `Bearer ${login.token}` };
     const [product] = await request(baseUrl, '/api/products/search?q=milk', { headers });
+    const statusBefore = await request(baseUrl, '/api/etims/status', { headers });
 
-    const failure = await expectFailure(baseUrl, '/api/orders/checkout', {
+    const order = await request(baseUrl, '/api/orders/checkout', {
       method: 'POST',
       headers: { ...headers, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         items: [{ productId: product.id, quantity: 1 }],
         payments: [{ method: 'cash', amount: '65.00' }]
       })
-    }, 400);
+    });
 
-    assert.match(failure.error, /Production eTIMS checkout is blocked/);
-    assert.match(failure.error, /seller KRA PIN/);
-    console.log('Fiscal receipt guard passed');
+    assert.ok(order.orderId, 'Non-fiscal checkout should complete normally');
+    const fiscalStatus = await request(baseUrl, '/api/etims/status', { headers });
+    assert.equal(fiscalStatus.queued, statusBefore.queued, 'A store without a seller PIN must not queue an eTIMS invoice');
+    assert.equal(fiscalStatus.readiness.enabled, false);
+    console.log('Non-fiscal receipt guard passed');
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

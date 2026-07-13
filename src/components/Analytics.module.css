@@ -40,6 +40,63 @@
   gap: 10px;
 }
 
+.liveBtn {
+  min-height: 40px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  background: var(--surface);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.liveActive {
+  color: var(--pos-success);
+  border-color: #86efac;
+  background: var(--pos-success-bg);
+}
+
+.liveDot,
+.pausedDot {
+  width: 8px;
+  height: 8px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--pos-success);
+  box-shadow: 0 0 0 4px rgba(22, 163, 74, 0.12);
+}
+
+.liveActive .liveDot {
+  animation: livePulse 1.8s ease-out infinite;
+}
+
+.pausedDot {
+  background: var(--ink-soft);
+  box-shadow: none;
+}
+
+.updateStrip {
+  min-height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  margin: -10px 2px 12px;
+  color: var(--ink-soft);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+@keyframes livePulse {
+  70% { box-shadow: 0 0 0 7px rgba(22, 163, 74, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0); }
+}
+
 .exportBtn {
   min-height: 40px;
   display: inline-flex;
@@ -126,10 +183,27 @@
   align-content: space-between;
 }
 
-.metric:first-child {
-  border-color: var(--accent-dark);
-  box-shadow: inset 4px 0 0 var(--accent);
+.metric {
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.04);
 }
+
+.metric::after {
+  content: '';
+  position: absolute;
+  width: 88px;
+  height: 88px;
+  right: -34px;
+  bottom: -42px;
+  border-radius: 50%;
+  background: var(--metric-glow, rgba(5, 150, 105, 0.1));
+}
+
+.salesMetric { --metric-glow: rgba(5, 150, 105, 0.16); border-top: 3px solid var(--pos-accent); }
+.profitMetric { --metric-glow: rgba(37, 99, 235, 0.14); border-top: 3px solid #2563eb; }
+.orderMetric { --metric-glow: rgba(217, 119, 6, 0.14); border-top: 3px solid #d97706; }
+.stockMetric { --metric-glow: rgba(124, 58, 237, 0.13); border-top: 3px solid #7c3aed; }
 
 .metric span,
 .healthCard span {
@@ -209,6 +283,34 @@
   width: 100%;
   height: 286px;
   padding: 14px;
+}
+
+.chartLegend {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  padding: 0 16px 16px;
+}
+
+.chartLegend div {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 7px;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.chartLegend i {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+.chartLegend strong {
+  color: var(--ink);
+  font-family: "IBM Plex Mono", Consolas, monospace;
 }
 
 .table {
@@ -354,6 +456,34 @@
   text-align: center;
 }
 
+.staleWarning {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  color: var(--pos-warn);
+  background: var(--pos-warn-bg);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.errorPanel strong,
+.errorPanel span {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.errorPanel button {
+  min-height: 40px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 8px;
+  color: #fff;
+  background: var(--pos-danger);
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .errorPanel {
   color: var(--pos-danger);
   background: var(--pos-danger-bg);
@@ -392,6 +522,7 @@
   }
 
   .actions,
+  .liveBtn,
   .segmented,
   .exportBtn,
   .refreshBtn {

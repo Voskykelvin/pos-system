@@ -1,5 +1,7 @@
 process.env.PORT = '0';
 process.env.ENABLE_ETIMS_SCHEDULER = 'false';
+process.env.BUSINESS_KRA_PIN = 'P051234567X';
+process.env.PRODUCT_CATALOG_LOOKUP_ENABLED = 'false';
 
 try {
   require('moment').suppressDeprecationWarnings = true;
@@ -132,6 +134,15 @@ async function main() {
       headers: authHeaders
     });
     if (!products.length) throw new Error('Seed product search returned no products');
+
+    const scannedDraft = await request(baseUrl, '/api/admin/products/scan-lookup', {
+      method: 'POST',
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ barcode: '9876543210123' })
+    });
+    if (scannedDraft.existing || scannedDraft.catalogMatch || !scannedDraft.draft?.sku || scannedDraft.draft.barcode !== '9876543210123') {
+      throw new Error('Scan-first product lookup did not return a safe manual draft');
+    }
 
     const product = products[0];
     const total = Number(product.sellingPrice);

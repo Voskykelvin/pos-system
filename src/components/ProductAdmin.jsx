@@ -101,6 +101,9 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   const [error, setError] = useState(null);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+  const [scanCode, setScanCode] = useState('');
+  const [scanBusy, setScanBusy] = useState(false);
+  const productNameRef = useRef(null);
 
   // Category inline modal
   const [newCatName, setNewCatName] = useState('');
@@ -250,6 +253,46 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
     setError(null);
     setMessage(null);
     setDrawerOpen(true);
+  }
+
+  async function handleProductScan(event) {
+    event.preventDefault();
+    const barcode = scanCode.trim();
+    if (!barcode) return;
+    setScanBusy(true);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await api('/api/admin/products/scan-lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ barcode })
+      });
+      if (result.existing) {
+        openEdit(result.product);
+        setMessage(`${result.product.name} is already in the catalogue. Its record is open for review.`);
+      } else {
+        const draft = result.draft;
+        setEditingId(null);
+        setForm({
+          ...EMPTY_FORM,
+          ...draft,
+          name: draft.name || '',
+          imageUrl: draft.imageUrl || '',
+          sellingPrice: '',
+          costPrice: ''
+        });
+        setDrawerOpen(true);
+        setMessage(result.catalogMatch
+          ? `Product details found via ${result.source}. Confirm prices and save.`
+          : 'Barcode is new. A unique SKU was generated; complete the product name and prices.');
+      }
+      setScanCode('');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setScanBusy(false);
+    }
   }
 
   function openEdit(p) {
@@ -644,6 +687,24 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
       {/* PRODUCTS TAB */}
       {activeTab === 'products' && (
         <>
+          <form className={styles.scanPanel} onSubmit={handleProductScan}>
+            <div>
+              <strong>Scan to add a product</strong>
+              <span>Use a USB/Bluetooth scanner or type the barcode, then press Enter.</span>
+            </div>
+            <input
+              type="text"
+              inputMode="numeric"
+              autoComplete="off"
+              aria-label="Product barcode to scan"
+              placeholder="Scan barcode here"
+              value={scanCode}
+              onChange={(event) => setScanCode(event.target.value.replace(/\s/g, '').slice(0, 64))}
+            />
+            <button className={styles.primaryBtn} type="submit" disabled={scanBusy || !scanCode.trim()}>
+              {scanBusy ? 'Looking up…' : 'Find product'}
+            </button>
+          </form>
           <div className={styles.controls}>
             <input
               type="text"
@@ -985,8 +1046,18 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
             <form onSubmit={handleSubmit} className={styles.form}>
               <label>SKU * <input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} required /></label>
-              <label>Barcode <input value={form.barcode} onChange={(e) => setForm({...form, barcode: e.target.value})} /></label>
-              <label className={styles.fullWidth}>Name * <input value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
+              <label>Barcode <input
+                value={form.barcode}
+                inputMode="numeric"
+                autoComplete="off"
+                onChange={(e) => setForm({...form, barcode: e.target.value.replace(/\s/g, '').slice(0, 100)})}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  productNameRef.current?.focus();
+                }}
+              /></label>
+              <label className={styles.fullWidth}>Name * <input ref={productNameRef} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
               <label className={styles.fullWidth}>Category *
                 <div className={styles.categorySelectRow}>
                   <select

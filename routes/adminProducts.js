@@ -3,7 +3,7 @@ const router = express.Router();
 const { authenticate, requireRoles } = require('../middleware/auth');
 const { validate, schemas } = require('../middleware/validate');
 const {
-  list, create, update, deactivate, adjustStock, lowStock
+  list, create, update, deactivate, adjustStock, lowStock, scanLookup
 } = require('../controllers/productAdminController');
 const { exportCatalogCsv, importCatalogCsv } = require('../controllers/csvController');
 
@@ -13,6 +13,7 @@ router.get('/', requireRoles('admin', 'manager'), list);
 router.get('/low-stock', requireRoles('admin', 'manager'), lowStock);
 router.get('/export-csv', requireRoles('admin', 'manager'), exportCatalogCsv);
 router.post('/import-csv', requireRoles('admin', 'manager'), importCatalogCsv);
+router.post('/scan-lookup', requireRoles('admin', 'manager'), validate({ barcode: { type: 'string', minLength: 6, maxLength: 64 } }), scanLookup);
 router.post('/', requireRoles('admin', 'manager'), validate(schemas.createProduct), create);
 router.put('/:id', requireRoles('admin', 'manager'), validate(schemas.updateProduct), update);
 router.delete('/:id', requireRoles('admin', 'manager'), deactivate);

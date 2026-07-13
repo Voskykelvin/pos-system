@@ -62,6 +62,10 @@ function isProductionFiscalMode(runtimeConfig) {
   return String(runtimeConfig?.etims?.env || '').toLowerCase() === 'production';
 }
 
+function isFiscalEnabled(runtimeConfig) {
+  return Boolean(String(runtimeConfig?.business?.kraPin || '').trim());
+}
+
 function missingProductionFiscalFields(runtimeConfig) {
   const missing = [];
   if (!runtimeConfig.business.kraPin) missing.push('seller KRA PIN');
@@ -211,7 +215,7 @@ async function checkout(req, res) {
   }
 
   const runtimeConfig = await resolveTenantConfig(req.tenantId);
-  const missingFiscalFields = isProductionFiscalMode(runtimeConfig)
+  const missingFiscalFields = isFiscalEnabled(runtimeConfig) && isProductionFiscalMode(runtimeConfig)
     ? missingProductionFiscalFields(runtimeConfig)
     : [];
   if (missingFiscalFields.length) {
@@ -577,20 +581,22 @@ async function checkout(req, res) {
       await customer.update({ loyaltyPoints: currentPoints }, { transaction: t });
     }
 
-    // 6. Queue the eTIMS invoice for later transmission (offline-first)
-    const customerKraPin = customer?.kraPin || null;
+    // Queue fiscal documents only for stores that have enrolled with a seller PIN.
+    // Non-fiscal stores still issue normal sales receipts without creating dead jobs.
+    if (isFiscalEnabled(runtimeConfig)) {
+      const customerKraPin = customer?.kraPin || null;
+      const payload = buildEtimsPayload({
+        order: { ...order.toJSON(), customerKraPin },
+        orderItems: etimsLineItems,
+        business: runtimeConfig.business
+      });
 
-    const payload = buildEtimsPayload({
-      order: { ...order.toJSON(), customerKraPin },
-      orderItems: etimsLineItems,
-      business: runtimeConfig.business
-    });
-
-    await EtimsInvoice.create({
-      orderId: order.id,
-      status: 'queued',
-      payload
-    }, { transaction: t });
+      await EtimsInvoice.create({
+        orderId: order.id,
+        status: 'queued',
+        payload
+      }, { transaction: t });
+    }
 
     if (appliedPromotion) {
       await appliedPromotion.update({

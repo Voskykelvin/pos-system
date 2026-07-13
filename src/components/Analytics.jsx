@@ -58,6 +58,8 @@ export default function Analytics({ authToken }) {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [live, setLive] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   async function load(nextDays = days) {
     setLoading(true);
@@ -69,6 +71,7 @@ export default function Analytics({ authToken }) {
       if (!response.ok) throw new Error(payload.error || 'Analytics failed');
       setData(payload);
       setError(null);
+      setLastUpdated(new Date());
     } catch (err) {
       setError(err.message);
     } finally {
@@ -79,6 +82,12 @@ export default function Analytics({ authToken }) {
   useEffect(() => {
     load(days);
   }, [authToken, days]);
+
+  useEffect(() => {
+    if (!live) return undefined;
+    const timer = window.setInterval(() => load(days), 30000);
+    return () => window.clearInterval(timer);
+  }, [authToken, days, live]);
 
   const conversionCards = useMemo(() => {
     if (!data) return [];
@@ -120,10 +129,14 @@ export default function Analytics({ authToken }) {
     window.URL.revokeObjectURL(url);
   }
 
-  if (error) {
+  if (error && !data) {
     return (
       <section className={styles.page}>
-        <div className={styles.errorPanel}>{error}</div>
+        <div className={styles.errorPanel} role="alert">
+          <strong>Analytics could not refresh</strong>
+          <span>{error}</span>
+          <button type="button" onClick={() => load()}>Try again</button>
+        </div>
       </section>
     );
   }
@@ -138,6 +151,14 @@ export default function Analytics({ authToken }) {
           </p>
         </div>
         <div className={styles.actions}>
+          <button
+            className={`${styles.liveBtn} ${live ? styles.liveActive : ''}`}
+            type="button"
+            aria-pressed={live}
+            onClick={() => setLive((value) => !value)}
+          >
+            <span className={styles.liveDot} /> {live ? 'Live · 30s' : 'Live off'}
+          </button>
           <a href={`/api/reports/export?days=${days}`} className={styles.exportBtn} onClick={downloadCsv}>
             Export CSV
           </a>
@@ -159,24 +180,39 @@ export default function Analytics({ authToken }) {
         </div>
       </header>
 
+      <div className={styles.updateStrip} role="status" aria-live="polite">
+        <span className={live ? styles.liveDot : styles.pausedDot} />
+        {loading && data
+          ? 'Refreshing live data…'
+          : lastUpdated
+            ? `Updated ${lastUpdated.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}`
+            : 'Preparing analytics'}
+      </div>
+
+      {error && data && (
+        <div className={styles.staleWarning} role="alert">
+          Live refresh failed; showing the last successful snapshot. {error}
+        </div>
+      )}
+
       {!data ? (
         <div className={styles.loading}>Loading analytics...</div>
       ) : (
         <>
           <div className={styles.metrics}>
-            <article className={styles.metric}>
+            <article className={`${styles.metric} ${styles.salesMetric}`}>
               <span>Gross sales</span>
               <strong>{formatKes(data.summary.grossSales)}</strong>
             </article>
-            <article className={styles.metric}>
+            <article className={`${styles.metric} ${styles.profitMetric}`}>
               <span>Estimated profit</span>
               <strong>{formatKes(data.summary.estimatedGrossProfit)}</strong>
             </article>
-            <article className={styles.metric}>
+            <article className={`${styles.metric} ${styles.orderMetric}`}>
               <span>Average order</span>
               <strong>{formatKes(data.summary.averageOrderValue)}</strong>
             </article>
-            <article className={styles.metric}>
+            <article className={`${styles.metric} ${styles.stockMetric}`}>
               <span>Inventory at cost</span>
               <strong>{formatKes(data.summary.inventoryValueAtCost)}</strong>
             </article>
@@ -201,12 +237,22 @@ export default function Analytics({ authToken }) {
               <div className={styles.chartFrame}>
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.salesTrend}>
+                    <defs>
+                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.42} />
+                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                      </linearGradient>
+                      <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
+                      </linearGradient>
+                    </defs>
                     <CartesianGrid stroke="#e2e8f0" vertical={false} />
                     <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={24} />
                     <YAxis tickFormatter={compactKes} tick={{ fontSize: 11 }} width={72} />
                     <Tooltip formatter={(value, name) => [formatKes(value), name]} />
-                    <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="#bbf7d0" strokeWidth={2} />
-                    <Area type="monotone" dataKey="grossProfit" name="Profit" stroke="#2563eb" fill="#bfdbfe" strokeWidth={2} />
+                    <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="url(#salesGradient)" strokeWidth={3} activeDot={{ r: 5 }} />
+                    <Area type="monotone" dataKey="grossProfit" name="Profit" stroke="#2563eb" fill="url(#profitGradient)" strokeWidth={2} activeDot={{ r: 4 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
@@ -258,6 +304,17 @@ export default function Analytics({ authToken }) {
                   </ResponsiveContainer>
                 )}
               </div>
+              {data.paymentMixChart.length > 0 && (
+                <div className={styles.chartLegend}>
+                  {data.paymentMixChart.map((entry, index) => (
+                    <div key={entry.method}>
+                      <i style={{ background: CHART_COLORS[index % CHART_COLORS.length] }} />
+                      <span>{entry.method.replace(/_/g, ' ')}</span>
+                      <strong>{formatPercent(entry.share)}</strong>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
 
             <section className={styles.panel}>

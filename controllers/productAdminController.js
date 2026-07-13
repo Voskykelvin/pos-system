@@ -5,6 +5,15 @@ const { resolveManagerApproval } = require('../services/managerApproval');
 const { tenantWhere, withTenant } = require('../utils/tenantScope');
 const { normalizeTaxCategory } = require('../utils/taxCategories');
 const { addBranchStock, resolveOperationalBranch } = require('../services/branchInventory');
+const { buildScannedProductDraft } = require('../services/productCatalogLookup');
+
+async function scanLookup(req, res) {
+  try {
+    return res.json(await buildScannedProductDraft(req, req.body.barcode));
+  } catch (err) {
+    return res.status(err.status || 500).json({ error: err.message });
+  }
+}
 
 async function assertUniqueProductIdentity(req, { sku, barcode, excludeId = null }) {
   const identityChecks = [];
@@ -331,4 +340,4 @@ async function lowStock(req, res) {
   }
 }
 
-module.exports = { list, create, update, deactivate, adjustStock, lowStock };
+module.exports = { list, create, update, deactivate, adjustStock, lowStock, scanLookup };

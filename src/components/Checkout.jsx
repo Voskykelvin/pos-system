@@ -1370,7 +1370,9 @@ export default function Checkout({ authToken, cashierId, user }) {
     printWindow.document.close();
   }
 
-  const etimsNotice = !isOnline
+  const etimsNotice = etimsStatus?.readiness?.enabled === false
+    ? null
+    : !isOnline
     ? { tone: 'pending', text: 'Offline mode: eTIMS sync is paused until internet returns.' }
     : Number(etimsStatus?.failed || 0) > 0
       ? { tone: 'error', text: `${etimsStatus.failed} failed eTIMS invoice(s) need manager attention.` }

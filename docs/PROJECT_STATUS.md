@@ -7,8 +7,10 @@ This is the single source of truth for shipped capabilities and planned product 
 - Mobile-first checkout with barcode/text search, held sales, customer lookup, promotions, loyalty, split tender, M-Pesa, credit, receipt printing, and offline cash-sale reconciliation.
 - Transactional stock, promotion, loyalty, credit, idempotency, refund, void, receipt-number, and offline replay invariants.
 - Product, category, supplier, purchasing, stock adjustment, CSV, barcode-label, and reorder workflows.
+- Scan-first product drafts with duplicate detection, optional catalogue enrichment, category matching, and tenant-unique SKU generation.
 - Shift management, petty cash, cash reconciliation, receipt search, refund ledger, and audit review.
 - Store analytics for sales trends, payments, categories, staff, customers, stock health, velocity, and restocking.
+- Live analytics refresh with responsive trend, conversion, category, payment-mix, and operational KPI visualizations.
 - Shared-database SaaS tenancy, public signup, plan enforcement, subscription review, billing-only access, and platform analytics.
 - PWA installation, cached catalog, resilient offline queue, conflict handling, and device/sequence identity.
 - Layered CI covering lint, unit/component tests, API/workflow smoke tests, PostgreSQL contention checks, production build and bundle budgets, Playwright checkout tests, and dependency audit.
