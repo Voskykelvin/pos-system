@@ -2,6 +2,8 @@
 
 This is the single source of truth for shipped capabilities and planned product work. Code and automated tests take precedence if this document becomes stale.
 
+The operational handoff for a real-store trial is maintained in [PILOT_LAUNCH_PACK.md](PILOT_LAUNCH_PACK.md).
+
 ## Current capabilities
 
 - Mobile-first checkout with barcode/text search, held sales, customer lookup, promotions, loyalty, split tender, M-Pesa, credit, receipt printing, and offline cash-sale reconciliation.

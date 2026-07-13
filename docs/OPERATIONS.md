@@ -2,6 +2,8 @@
 
 This guide consolidates local startup, production deployment, integrations, tax setup, subscription billing, and pilot launch.
 
+For the store-facing rollout procedure, training checklist, role guides, and daily scorecard, use the [Pilot Launch Pack](PILOT_LAUNCH_PACK.md).
+
 ## Local development
 
 ```bash

@@ -1,0 +1,5 @@
+sku,barcode,name,category,taxCategory,unit,isWeighted,costPrice,sellingPrice,reorderLevel,stockQuantity
+MILK-500,6160000000012,Fresh Milk 500ml,Dairy,zero_rated,each,false,48.00,65.00,8,24
+BREAD-400,6160000000029,White Bread 400g,Bakery,zero_rated,each,false,55.00,70.00,6,18
+SOAP-800,6160000000043,Laundry Soap 800g,Household,standard,each,false,120.00,165.00,5,12
+BANANA-KG,6160000000036,Bananas,Produce,exempt,kg,true,80.00,120.00,10,20.5

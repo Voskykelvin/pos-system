@@ -98,6 +98,8 @@ npm run test:e2e
 
 See [`docs/TESTING_STRATEGY.md`](docs/TESTING_STRATEGY.md) for the complete test model and current coverage boundaries.
 
+For a real-store rollout, start with the [`Pilot Launch Pack`](docs/PILOT_LAUNCH_PACK.md), then print the linked cashier and manager guides and prepare the catalogue from the supplied CSV template.
+
 ### Operations and recovery
 
 Production exposes liveness, readiness, diagnostics, and token-protected Prometheus metrics under `/api/live`, `/api/ready`, `/api/health`, and `/api/metrics`. Configure `METRICS_TOKEN` and an optional `ALERT_WEBHOOK_URL`; then follow [`docs/INCIDENT_RESPONSE.md`](docs/INCIDENT_RESPONSE.md) for snapshots, backup verification, restores, and incident handling.
