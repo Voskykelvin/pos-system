@@ -57,13 +57,13 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                   {tenant.subscription.pendingPayment && <small className="upgradeHint">Payment review</small>}
                 </td>
                 <td>
-                  <span className={`${"healthBadge"} ${styles[tenant.activity.health]}`}>
+                  <span className={`healthBadge ${tenant.activity.health}`}>
                     {labelize(tenant.activity.health)}
                   </span>
                   {tenant.activity.upgradeSignal && <small className="upgradeHint">Upgrade lead</small>}
                 </td>
                 <td>
-                  <span className={`${"statusBadge"} ${styles[tenant.status]}`}>{labelize(tenant.status)}</span>
+                  <span className={`statusBadge ${tenant.status}`}>{labelize(tenant.status)}</span>
                 </td>
                 <td>
                   <div className="rowActions">

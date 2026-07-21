@@ -352,7 +352,7 @@ export default function Analytics({ authToken }) {
                       <div>
                         <div className="rowTitle">
                           <strong>{product.name}</strong>
-                          <span className={`${"urgency"} ${styles[product.urgency]}`}>
+                          <span className={`urgency ${product.urgency}`}>
                             {getUrgencyLabel(product.urgency)}
                           </span>
                         </div>

@@ -340,7 +340,7 @@ export default function Billing({ authToken, onContinue, onLogout }) {
                   {payment.upgrade && <small>{titleCase(payment.upgrade.fromPlan)} → {titleCase(payment.upgrade.targetPlan)} upgrade</small>}
                   {payment.status === 'rejected' && payment.adminNotes && <small className="adminNote">{payment.adminNotes}</small>}
                 </div>
-                <span className={`${"statusBadge"} ${styles[payment.status]}`}>{titleCase(payment.status)}</span>
+                <span className={`statusBadge ${payment.status}`}>{titleCase(payment.status)}</span>
                 <small>{formatDate(payment.submittedAt)}</small>
               </article>
             ))}

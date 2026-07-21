@@ -10,7 +10,7 @@ export default function SubscriptionPanels({ alerts, pendingReview, onReviewPaym
         </div>
         <div className="alertList">
           {alerts.slice(0, 8).map((alert) => (
-            <article className={`${"alertRow"} ${styles[alert.severity]}`} key={`${alert.type}-${alert.tenantId}-${alert.paymentId || alert.createdAt}`}>
+            <article className={`alertRow ${alert.severity}`} key={`${alert.type}-${alert.tenantId}-${alert.paymentId || alert.createdAt}`}>
               <div>
                 <strong>{alert.tenantName}</strong>
                 <span>{alert.message}</span>

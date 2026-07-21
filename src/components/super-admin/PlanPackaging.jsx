@@ -11,7 +11,7 @@ export default function PlanPackaging({ plans }) {
         {plans.map((plan) => (
           <article className="planCard" key={plan.id}>
             <div className="planTopline">
-              <span className={`${"planBadge"} ${styles[plan.id]}`}>{plan.name}</span>
+              <span className={`planBadge ${plan.id}`}>{plan.name}</span>
               <strong>{formatUsd(plan.priceUsd)} / mo</strong>
             </div>
             <p>{plan.featureSummary}</p>

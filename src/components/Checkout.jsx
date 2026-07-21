@@ -436,7 +436,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
 
       {payments.map((p, idx) => (
         <div key={idx} className="paymentRow">
-          <span className={`${"paymentMethodBadge"} ${styles[p.method]}`}>
+          <span className={`paymentMethodBadge ${p.method}`}>
             {p.method === 'cash' ? 'Cash' : p.method === 'mpesa' ? 'M-Pesa' : p.method === 'store_credit' ? 'Store credit' : 'Credit'}
           </span>
           <input
@@ -1868,7 +1868,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         </button>
 
         {etimsNotice && (
-          <div className={`${"etimsNotice"} ${styles[`etims${etimsNotice.tone}`]}`}>
+          <div className={`etimsNotice etims${etimsNotice.tone}`}>
             {etimsNotice.text}
           </div>
         )}
