@@ -1,4 +1,3 @@
-import styles from '../SuperAdmin.module.css';
 
 const RANGE_OPTIONS = [
   { label: '30 days', value: 30 },
@@ -33,30 +32,30 @@ export default function PlatformHeader({ days, loading, metrics, section, onDays
   const copy = SECTION_COPY[section] || SECTION_COPY.overview;
 
   return (
-    <header className={styles.header}>
-      <div className={styles.headerCopy}>
-        <span className={styles.badge}>Platform owner</span>
-        <h1 className={styles.title}>{copy.title}</h1>
+    <header className="header">
+      <div className="headerCopy">
+        <span className="badge">Platform owner</span>
+        <h1 className="title">{copy.title}</h1>
         <p>{copy.text}</p>
-        <div className={styles.headerMeta}>
+        <div className="headerMeta">
           <span>{metrics.totalTenants || 'No'} registered stores</span>
           <span>{days}-day view</span>
         </div>
       </div>
-      <div className={styles.actions}>
-        <div className={styles.segmented} aria-label="Date range">
+      <div className="actions">
+        <div className="segmented" aria-label="Date range">
           {RANGE_OPTIONS.map((option) => (
             <button
               key={option.value}
               type="button"
-              className={days === option.value ? styles.activeSegment : ''}
+              className={days === option.value ? "activeSegment" : ''}
               onClick={() => onDaysChange(option.value)}
             >
               {option.label}
             </button>
           ))}
         </div>
-        <button className={styles.refreshBtn} onClick={onRefresh} type="button">
+        <button className="refreshBtn" onClick={onRefresh} type="button">
           {loading ? 'Refreshing...' : 'Refresh'}
         </button>
       </div>

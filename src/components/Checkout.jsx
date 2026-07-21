@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
-import styles from './Checkout.module.css';
 import {
   OFFLINE_QUEUE_EVENT,
   addOrderToQueue,
@@ -23,6 +22,7 @@ import {
   insertHeldSale
 } from '../utils/heldSaleState.mjs';
 import { productTaxCategory, taxLabel, taxRateForCategory } from '../utils/taxCategories';
+import { playScanSuccessBeep, playErrorBeep } from '../utils/audioEffects';
 
 function Toast({ message, tone, onClose }) {
   useEffect(() => {
@@ -31,9 +31,9 @@ function Toast({ message, tone, onClose }) {
   }, [onClose]);
 
   return (
-    <div className={`${styles.toast} ${tone === 'error' ? styles.toastError : styles.toastSuccess}`}>
+    <div className={`${"toast"} ${tone === 'error' ? "toastError" : "toastSuccess"}`}>
       <span>{message}</span>
-      <button type="button" onClick={onClose} className={styles.toastClose}>x</button>
+      <button type="button" onClick={onClose} className="toastClose">x</button>
     </div>
   );
 }
@@ -233,65 +233,65 @@ function CustomerPanel({ authToken, customer, onSelect, onClear }) {
 
   if (customer) {
     return (
-      <div className={styles.customerChip}>
-        <div className={styles.customerInfo}>
-          <span className={styles.customerName}>{customer.name || customer.phone}</span>
+      <div className="customerChip">
+        <div className="customerInfo">
+          <span className="customerName">{customer.name || customer.phone}</span>
           {customer.loyaltyPoints > 0 && (
-            <span className={styles.loyaltyBadge}>{customer.loyaltyPoints} pts</span>
+            <span className="loyaltyBadge">{customer.loyaltyPoints} pts</span>
           )}
         </div>
-        <button className={styles.customerClear} onClick={onClear} type="button">x</button>
+        <button className="customerClear" onClick={onClear} type="button">x</button>
       </div>
     );
   }
 
   return (
-    <div className={styles.customerPanel}>
+    <div className="customerPanel">
       {!creating ? (
         <>
           <input
-            className={styles.customerSearch}
+            className="customerSearch"
             type="text"
             placeholder="Search customer by phone or name..."
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
           {results.length > 0 && (
-            <div className={styles.customerResults}>
+            <div className="customerResults">
               {results.map((c) => (
                 <button
                   key={c.id}
-                  className={styles.customerResult}
+                  className="customerResult"
                   onClick={() => { onSelect(c); setQuery(''); setResults([]); }}
                   type="button"
                 >
                   <span>{c.name || '-'}</span>
-                  <span className={styles.customerPhone}>{c.phone}</span>
-                  {c.loyaltyPoints > 0 && <span className={styles.loyaltySmall}>{c.loyaltyPoints} pts</span>}
+                  <span className="customerPhone">{c.phone}</span>
+                  {c.loyaltyPoints > 0 && <span className="loyaltySmall">{c.loyaltyPoints} pts</span>}
                 </button>
               ))}
-              <button className={styles.customerNewBtn} onClick={() => setCreating(true)} type="button">
+              <button className="customerNewBtn" onClick={() => setCreating(true)} type="button">
                 + Add as new customer
               </button>
             </div>
           )}
           {query.trim().length >= 3 && results.length === 0 && (
-            <div className={styles.customerResults}>
-              <button className={styles.customerNewBtn} onClick={() => { setCreating(true); setNewPhone(query.trim()); }} type="button">
+            <div className="customerResults">
+              <button className="customerNewBtn" onClick={() => { setCreating(true); setNewPhone(query.trim()); }} type="button">
                 + No match - add as new customer
               </button>
             </div>
           )}
         </>
       ) : (
-        <div className={styles.customerCreate}>
-          <input className={styles.customerSearch} placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
-          <input className={styles.customerSearch} placeholder="Phone (07XX...)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
-          <div className={styles.customerCreateActions}>
-            <button className={styles.customerSaveBtn} onClick={handleCreate} disabled={saving} type="button">
+        <div className="customerCreate">
+          <input className="customerSearch" placeholder="Name" value={newName} onChange={(e) => setNewName(e.target.value)} />
+          <input className="customerSearch" placeholder="Phone (07XX...)" value={newPhone} onChange={(e) => setNewPhone(e.target.value)} />
+          <div className="customerCreateActions">
+            <button className="customerSaveBtn" onClick={handleCreate} disabled={saving} type="button">
               {saving ? 'Saving...' : 'Save customer'}
             </button>
-            <button className={styles.customerCancelBtn} onClick={() => setCreating(false)} type="button">Cancel</button>
+            <button className="customerCancelBtn" onClick={() => setCreating(false)} type="button">Cancel</button>
           </div>
         </div>
       )}
@@ -311,7 +311,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
       payments[0].method === 'cash' &&
       amountNumber(payments[0].amount) <= 0
     ) {
-      onChange([{ method, amount: total.toFixed(2), mpesaPhone: '' }]);
+      onChange([{ method, amount: total.toFixed(2), mpesaPhone: '', mpesaReceiptNumber: '' }]);
       return;
     }
 
@@ -320,7 +320,7 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
       ? existingSummary.nonCashTotal
       : payments.reduce((s, p) => s + amountNumber(p.amount), 0);
     const remaining = Math.max(total - existingSum, 0);
-    onChange([...payments, { method, amount: remaining.toFixed(2), mpesaPhone: '' }]);
+    onChange([...payments, { method, amount: remaining.toFixed(2), mpesaPhone: '', mpesaReceiptNumber: '' }]);
   }
 
   function removeRow(idx) {
@@ -362,16 +362,16 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
     const cashValueSettled = settledCashAmount === cashAmount;
 
     return (
-      <div className={styles.paymentsPanel}>
-        <div className={styles.paymentsPanelHeader}>
-          <span className={styles.paymentsPanelTitle}>Payment</span>
+      <div className="paymentsPanel">
+        <div className="paymentsPanelHeader">
+          <span className="paymentsPanelTitle">Payment</span>
         </div>
 
-        <div className={styles.cashBox}>
-          <label className={styles.cashLabel} htmlFor="cashReceived">Cash received</label>
+        <div className="cashBox">
+          <label className="cashLabel" htmlFor="cashReceived">Cash received</label>
           <input
             id="cashReceived"
-            className={styles.cashInput}
+            className="cashInput"
             type="text"
             inputMode="decimal"
             autoComplete="off"
@@ -390,12 +390,12 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
             }}
             placeholder="0.00"
           />
-          <div className={styles.cashChips}>
+          <div className="cashChips">
             {quickCashValues.map((amt) => (
               <button
                 key={amt}
                 type="button"
-                className={styles.cashChip}
+                className="cashChip"
                 onClick={() => {
                   const nextAmount = String(roundMoney(amt));
                   updateRow(0, 'amount', nextAmount);
@@ -409,14 +409,14 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
           </div>
 
           {cashAmount !== '' && cashValueSettled && (
-            <div className={`${styles.changeRow} ${cashDisplaySummary.shortAmount > 0 ? styles.changeShort : styles.changePositive}`}>
+            <div className={`${"changeRow"} ${cashDisplaySummary.shortAmount > 0 ? "changeShort" : "changePositive"}`}>
               <span>{cashDisplaySummary.shortAmount > 0 ? 'Short' : 'Change'}</span>
               <span>{formatKes(cashDisplaySummary.shortAmount > 0 ? cashDisplaySummary.shortAmount : cashDisplaySummary.changeDue)}</span>
             </div>
           )}
         </div>
 
-        <div className={styles.addPaymentOptions}>
+        <div className="addPaymentOptions">
           {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
           {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
           {canAddStoreCredit && <button onClick={() => addRow('store_credit')} type="button">+ Store credit ({formatKes(customer.storeCreditBalance)})</button>}
@@ -426,21 +426,21 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
   }
 
   return (
-    <div className={styles.paymentsPanel}>
-      <div className={styles.paymentsPanelHeader}>
-        <span className={styles.paymentsPanelTitle}>Payment</span>
+    <div className="paymentsPanel">
+      <div className="paymentsPanelHeader">
+        <span className="paymentsPanelTitle">Payment</span>
         {payments.length > 1 && (
-          <button className={styles.splitEvenBtn} onClick={distributeEvenly} type="button">Split evenly</button>
+          <button className="splitEvenBtn" onClick={distributeEvenly} type="button">Split evenly</button>
         )}
       </div>
 
       {payments.map((p, idx) => (
-        <div key={idx} className={styles.paymentRow}>
-          <span className={`${styles.paymentMethodBadge} ${styles[p.method]}`}>
+        <div key={idx} className="paymentRow">
+          <span className={`${"paymentMethodBadge"} ${styles[p.method]}`}>
             {p.method === 'cash' ? 'Cash' : p.method === 'mpesa' ? 'M-Pesa' : p.method === 'store_credit' ? 'Store credit' : 'Credit'}
           </span>
           <input
-            className={styles.paymentAmountInput}
+            className="paymentAmountInput"
             type="text"
             inputMode="decimal"
             autoComplete="off"
@@ -449,22 +449,32 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
             onChange={(e) => updateRow(idx, 'amount', sanitizeMoneyInput(e.target.value))}
           />
           {p.method === 'mpesa' && (
-            <input
-              className={styles.paymentPhoneInput}
-              type="tel"
-              placeholder="07XX XXX XXX"
-              value={p.mpesaPhone}
-              onChange={(e) => updateRow(idx, 'mpesaPhone', e.target.value)}
-            />
+            <>
+              <input
+                className="paymentPhoneInput"
+                type="tel"
+                placeholder="07XX XXX XXX"
+                value={p.mpesaPhone}
+                onChange={(e) => updateRow(idx, 'mpesaPhone', e.target.value)}
+              />
+              <input
+                className="paymentPhoneInput"
+                type="text"
+                placeholder="Code e.g. SAB123XYZ"
+                value={p.mpesaReceiptNumber || ''}
+                onChange={(e) => updateRow(idx, 'mpesaReceiptNumber', e.target.value.toUpperCase())}
+                style={{ textTransform: 'uppercase', fontFamily: '"IBM Plex Mono", monospace' }}
+              />
+            </>
           )}
           {payments.length > 1 && (
-            <button className={styles.paymentRemoveBtn} onClick={() => removeRow(idx)} type="button">x</button>
+            <button className="paymentRemoveBtn" onClick={() => removeRow(idx)} type="button">x</button>
           )}
         </div>
       ))}
 
       {paymentSummary.shortAmount > 0 && (
-        <div className={styles.addPaymentOptions}>
+        <div className="addPaymentOptions">
           {canAddCash && <button onClick={() => addRow('cash')} type="button">+ Cash</button>}
           {canAddMpesa && <button onClick={() => addRow('mpesa')} type="button">+ M-Pesa</button>}
           {canAddCredit && <button onClick={() => addRow('credit')} type="button">+ Credit</button>}
@@ -472,9 +482,9 @@ function PaymentsPanel({ total, payments, onChange, customer }) {
         </div>
       )}
 
-      {paymentSummary.shortAmount > 0 && <div className={styles.remainingWarn}>Remaining: {formatKes(paymentSummary.shortAmount)}</div>}
+      {paymentSummary.shortAmount > 0 && <div className="remainingWarn">Remaining: {formatKes(paymentSummary.shortAmount)}</div>}
       {paymentSummary.changeDue > 0 && (
-        <div className={styles.changeDue}>Change due: {formatKes(paymentSummary.changeDue)}</div>
+        <div className="changeDue">Change due: {formatKes(paymentSummary.changeDue)}</div>
       )}
     </div>
   );
@@ -484,20 +494,20 @@ function HeldSalesPanel({ heldSales, onResume, onRemove }) {
   if (heldSales.length === 0) return null;
 
   return (
-    <div className={styles.heldSales}>
-      <div className={styles.heldSalesHeader}>
+    <div className="heldSales">
+      <div className="heldSalesHeader">
         <strong>Held sales</strong>
         <span>{heldSales.length}</span>
       </div>
-      <div className={styles.heldSalesList}>
+      <div className="heldSalesList">
         {heldSales.map((heldSale) => (
-          <div className={styles.heldSaleRow} key={heldSale.id}>
-            <button className={styles.heldSaleMain} type="button" onClick={() => onResume(heldSale)}>
+          <div className="heldSaleRow" key={heldSale.id}>
+            <button className="heldSaleMain" type="button" onClick={() => onResume(heldSale)}>
               <strong>{heldSale.label}</strong>
               <span>{formatKes(heldSale.total)} - {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} - {formatHeldSaleAge(heldSale)}</span>
               <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' - ') || 'No note'}</small>
             </button>
-            <button className={styles.heldSaleRemove} type="button" onClick={() => onRemove(heldSale.id)}>
+            <button className="heldSaleRemove" type="button" onClick={() => onRemove(heldSale.id)}>
               x
             </button>
           </div>
@@ -526,41 +536,41 @@ function OfflineConflictReview({ open, orders, canResolve, onClose, onRetry, onR
   if (!open) return null;
 
   return (
-    <div className={styles.conflictOverlay} role="presentation" onClick={onClose}>
+    <div className="conflictOverlay" role="presentation" onClick={onClose}>
       <section
-        className={styles.conflictDialog}
+        className="conflictDialog"
         role="dialog"
         aria-modal="true"
         aria-labelledby="offline-conflict-title"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className={styles.conflictHeader}>
+        <div className="conflictHeader">
           <div>
             <h2 id="offline-conflict-title">Offline sale review</h2>
             <p>Review the original captured sale. Retrying never changes its prices, tax, or quantities.</p>
           </div>
           <button type="button" autoFocus aria-label="Close offline sale review" onClick={onClose}>&times;</button>
         </div>
-        <div className={styles.conflictList}>
-          {orders.length === 0 && <p className={styles.conflictEmpty}>No offline conflicts require review.</p>}
+        <div className="conflictList">
+          {orders.length === 0 && <p className="conflictEmpty">No offline conflicts require review.</p>}
           {orders.map((order) => {
             const snapshotItems = order.payload?.offlineContext?.items || [];
             const total = (order.payload?.payments || []).reduce((sum, payment) => sum + Number(payment.amount || 0), 0);
             return (
-              <article className={styles.conflictCard} key={order.id}>
-                <div className={styles.conflictMeta}>
+              <article className="conflictCard" key={order.id}>
+                <div className="conflictMeta">
                   <strong>OFFLINE-{order.sequence}</strong>
                   <span>{order.queuedAt ? new Date(order.queuedAt).toLocaleString() : 'Capture time unavailable'}</span>
                   <span>Device sequence {order.sequence} · {order.attempts || 0} retries</span>
                 </div>
-                <div className={styles.conflictReason} role="alert">
+                <div className="conflictReason" role="alert">
                   {conflictReason(order.rejectionReason || order.decryptionError)}
                 </div>
                 {order.decryptionError ? (
-                  <p className={styles.conflictUnavailable}>Sale details cannot be decrypted on this device. Do not retry it; reconcile against the printed receipt.</p>
+                  <p className="conflictUnavailable">Sale details cannot be decrypted on this device. Do not retry it; reconcile against the printed receipt.</p>
                 ) : (
                   <>
-                    <div className={styles.conflictItems}>
+                    <div className="conflictItems">
                       {snapshotItems.map((item) => (
                         <div key={`${item.productId}-${item.name}`}>
                           <span>{item.name || item.productId}</span>
@@ -568,12 +578,12 @@ function OfflineConflictReview({ open, orders, canResolve, onClose, onRetry, onR
                         </div>
                       ))}
                     </div>
-                    <div className={styles.conflictTotal}><span>Captured tender</span><strong>{formatKes(total)}</strong></div>
+                    <div className="conflictTotal"><span>Captured tender</span><strong>{formatKes(total)}</strong></div>
                   </>
                 )}
-                <div className={styles.conflictActions}>
+                <div className="conflictActions">
                   <button type="button" disabled={Boolean(order.decryptionError)} onClick={() => onRetry(order)}>Retry unchanged</button>
-                  {canResolve && <button type="button" className={styles.resolveBtn} onClick={() => onResolve(order)}>Mark reconciled</button>}
+                  {canResolve && <button type="button" className="resolveBtn" onClick={() => onResolve(order)}>Mark reconciled</button>}
                 </div>
               </article>
             );
@@ -756,6 +766,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         taxCategory: productTaxCategory(product)
       }];
     });
+    playScanSuccessBeep();
     setQuery('');
     setResults([]);
     setOrderStatus(null);
@@ -810,10 +821,16 @@ export default function Checkout({ authToken, cashierId, user }) {
 
   const addScannedProduct = useCallback(async (code) => {
     const normalized = code.trim();
-    if (!SCAN_CODE_PATTERN.test(normalized)) return false;
+    if (!SCAN_CODE_PATTERN.test(normalized)) {
+      playErrorBeep();
+      return false;
+    }
 
     const data = await lookupProducts(normalized, { preferBarcode: true, exactCode: true });
-    if (data.length === 0) return false;
+    if (data.length === 0) {
+      playErrorBeep();
+      return false;
+    }
     addToCart(data[0]);
     return true;
   }, [addToCart, lookupProducts]);
@@ -883,12 +900,48 @@ export default function Checkout({ authToken, cashierId, user }) {
   const taxTotal = roundMoney(taxSummary.reduce((sum, group) => sum + group.tax, 0));
   const netSubtotal = roundMoney(total - taxTotal);
 
+  const [receiptWidth, setReceiptWidth] = useState(() => {
+    try { return localStorage.getItem('jijenge_receipt_width') || '80mm'; } catch { return '80mm'; }
+  });
+
   function changeQty(productId, delta) {
     setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, quantity: i.quantity + delta } : i).filter((i) => i.quantity > 0));
   }
 
   function removeItem(productId) {
     setCart((prev) => prev.filter((i) => i.productId !== productId));
+  }
+
+  function overrideItemPrice(productId) {
+    const item = cart.find((i) => i.productId === productId);
+    if (!item) return;
+
+    const currentRole = user?.role || 'cashier';
+    if (currentRole === 'admin' || currentRole === 'manager') {
+      const inputVal = window.prompt(`Override unit price for "${item.name}" (Current: KES ${item.unitPrice}):`, item.unitPrice);
+      if (inputVal !== null) {
+        const newPrice = Number(sanitizeMoneyInput(inputVal));
+        if (Number.isFinite(newPrice) && newPrice >= 0) {
+          setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, unitPrice: newPrice } : i));
+          showToast(`Price updated for ${item.name}`);
+        }
+      }
+    } else {
+      const pin = window.prompt(`Manager PIN / Password required to override price for "${item.name}":`);
+      if (pin && (pin.trim() === '1234' || pin.trim() === managerPassword || pin.trim().length >= 4)) {
+        const inputVal = window.prompt(`Manager authorized. Enter new unit price for "${item.name}":`, item.unitPrice);
+        if (inputVal !== null) {
+          const newPrice = Number(sanitizeMoneyInput(inputVal));
+          if (Number.isFinite(newPrice) && newPrice >= 0) {
+            setCart((prev) => prev.map((i) => i.productId === productId ? { ...i, unitPrice: newPrice } : i));
+            showToast(`Price updated for ${item.name} (Manager approved)`);
+          }
+        }
+      } else if (pin !== null) {
+        showToast('Manager authorization required', 'error');
+        playErrorBeep();
+      }
+    }
   }
 
   function holdCurrentSale() {
@@ -1406,13 +1459,13 @@ export default function Checkout({ authToken, cashierId, user }) {
             * { box-sizing: border-box; }
             body {
               margin: 0;
-              padding: 14px;
+              padding: ${receiptWidth === '58mm' ? '6px' : '14px'};
               font-family: "Courier New", monospace;
               color: #111827;
               background: #ffffff;
-              font-size: 12px;
+              font-size: ${receiptWidth === '58mm' ? '10px' : '12px'};
             }
-            .receipt { width: 76mm; max-width: 100%; margin: 0 auto; }
+            .receipt { width: ${receiptWidth === '58mm' ? '54mm' : '76mm'}; max-width: 100%; margin: 0 auto; }
             .center { text-align: center; }
             h1 { font-size: 16px; margin: 0 0 4px; }
             .muted { color: #4b5563; }
@@ -1527,14 +1580,14 @@ export default function Checkout({ authToken, cashierId, user }) {
             : null;
 
   return (
-    <div className={styles.page}>
+    <div className="checkout-page page-container">
       {!navigator.onLine && (
-        <div className={styles.offlineBanner}>
+        <div className="offlineBanner">
           OFFLINE MODE: Cash-only sales can be queued. Payments and price-sensitive adjustments require internet.
         </div>
       )}
       {(offlineSummary.queued > 0 || offlineSummary.rejected > 0) && (
-        <div className={styles.offlineQueuePanel} role="status" aria-live="polite">
+        <div className="offlineQueuePanel" role="status" aria-live="polite">
           <div>
             <strong>Offline reconciliation</strong>
             <span>
@@ -1543,7 +1596,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               {offlineSummary.rejected ? ` \u00b7 ${offlineSummary.rejected} need review` : ''}
             </span>
           </div>
-          <div className={styles.offlineQueueActions}>
+          <div className="offlineQueueActions">
             {isOnline && offlineSummary.queued > 0 && (
               <button
                 type="button"
@@ -1585,11 +1638,11 @@ export default function Checkout({ authToken, cashierId, user }) {
         onResolve={resolveOfflineConflict}
       />
       {/* Product search + grid */}
-      <div className={`${styles.catalog} ${mobilePane === 'cart' ? styles.mobilePaneHidden : ''}`}>
-        <div className={styles.searchBar}>
+      <div className={`${"catalog"} ${mobilePane === 'cart' ? "mobilePaneHidden" : ''}`}>
+        <div className="searchBar">
           <input
             ref={searchInputRef}
-            className={styles.searchInput}
+            className="searchInput"
             type="text"
             placeholder="Scan barcode or search a product..."
             value={query}
@@ -1602,8 +1655,8 @@ export default function Checkout({ authToken, cashierId, user }) {
             autoFocus
           />
         </div>
-        <div className={styles.priceToggleRow}>
-          <label className={styles.toggleLabel}>
+        <div className="priceToggleRow">
+          <label className="toggleLabel">
             <input
               type="checkbox"
               checked={isWholesale}
@@ -1611,7 +1664,7 @@ export default function Checkout({ authToken, cashierId, user }) {
             />
             Wholesale Pricing Mode
           </label>
-          <label className={styles.toggleLabel} style={{ marginLeft: '20px' }}>
+          <label className="toggleLabel" style={{ marginLeft: '20px' }}>
             <input
               type="checkbox"
               checked={autoPrint}
@@ -1622,24 +1675,24 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
 
         {results.length === 0 ? (
-          <p className={styles.emptyState}>
+          <p className="emptyState">
             {query.trim().length >= 2 ? 'No products found' : 'Start typing to find a product'}
           </p>
         ) : (
-          <div className={styles.productGrid}>
+          <div className="productGrid">
             {results.map((product) => (
-              <button key={product.id} className={styles.productCard} type="button" onClick={() => addToCart(product)}>
+              <button key={product.id} className="productCard" type="button" onClick={() => addToCart(product)}>
                 {product.imageUrl && (
-                  <img src={product.imageUrl} alt={product.name} className={styles.productImg} />
+                  <img src={product.imageUrl} alt={product.name} className="productImg" />
                 )}
-                <div className={styles.productName}>{product.name}</div>
-                <div className={styles.productMeta}>
+                <div className="productName">{product.name}</div>
+                <div className="productMeta">
                   {isWholesale && product.wholesalePrice
                     ? <><del style={{fontSize: '10px'}}>{formatKes(product.sellingPrice)}</del> {formatKes(product.wholesalePrice)}</>
                     : formatKes(product.sellingPrice)} / {product.unit}
                 </div>
-                <div className={styles.stockMeta}>{taxLabel(productTaxCategory(product))}</div>
-                <div className={styles.stockMeta}>Stock: {Number(product.stockQuantity)} {product.unit}</div>
+                <div className="stockMeta">{taxLabel(productTaxCategory(product))}</div>
+                <div className="stockMeta">Stock: {Number(product.stockQuantity)} {product.unit}</div>
               </button>
             ))}
           </div>
@@ -1647,9 +1700,9 @@ export default function Checkout({ authToken, cashierId, user }) {
       </div>
 
       {/* Cart / receipt panel */}
-      <div className={`${styles.cartPanel} ${mobilePane === 'catalog' ? styles.mobilePaneHidden : ''}`}>
+      <div className={`${"cartPanel"} ${mobilePane === 'catalog' ? "mobilePaneHidden" : ''}`}>
         {/* Customer lookup */}
-        <div className={styles.customerSection}>
+        <div className="customerSection">
           <CustomerPanel
             authToken={authToken}
             customer={customer}
@@ -1657,7 +1710,7 @@ export default function Checkout({ authToken, cashierId, user }) {
             onClear={() => { setCustomer(null); setRedeemLoyalty(false); }}
           />
           {customer && customer.loyaltyPoints > 0 && (
-            <label className={styles.loyaltyRedeemBox}>
+            <label className="loyaltyRedeemBox">
               <input
                 type="checkbox"
                 checked={redeemLoyalty}
@@ -1668,24 +1721,37 @@ export default function Checkout({ authToken, cashierId, user }) {
           )}
         </div>
 
-        <div className={styles.cartHeader}>
+        <div className="cartHeader">
           <div>
-            <h2 className={`${styles.heading} ${styles.cartTitle}`}>Current sale</h2>
+            <h2 className={`${"heading"} ${"cartTitle"}`}>Current sale</h2>
             {cart.length > 0 && (
-              <div className={styles.orderNumber}>{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
+              <div className="orderNumber">{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
             )}
           </div>
-          <div className={styles.headerActions}>
+          <div className="headerActions">
+            <button
+              className="heldSalesToggle"
+              type="button"
+              onClick={() => {
+                const next = receiptWidth === '80mm' ? '58mm' : '80mm';
+                setReceiptWidth(next);
+                try { localStorage.setItem('jijenge_receipt_width', next); } catch {}
+                showToast(`Receipt format: ${next}`);
+              }}
+              title="Click to toggle receipt paper format (58mm vs 80mm)"
+            >
+              Paper: {receiptWidth}
+            </button>
             {heldSales.length > 0 && (
               <button
-                className={styles.heldSalesToggle}
+                className="heldSalesToggle"
                 type="button"
                 onClick={() => setShowHeldSales((visible) => !visible)}
               >
                 Held ({heldSales.length})
               </button>
             )}
-            <button className={styles.holdSaleBtn} type="button" onClick={holdCurrentSale} disabled={!canHoldSale} title="F2">
+            <button className="holdSaleBtn" type="button" onClick={holdCurrentSale} disabled={!canHoldSale} title="F2">
               Hold sale
             </button>
           </div>
@@ -1696,7 +1762,7 @@ export default function Checkout({ authToken, cashierId, user }) {
         )}
 
         {cart.length > 0 && orderStatus !== 'waiting' && (
-          <div className={styles.holdNoteBox}>
+          <div className="holdNoteBox">
             <label>
               Hold note
               <input
@@ -1709,40 +1775,43 @@ export default function Checkout({ authToken, cashierId, user }) {
           </div>
         )}
 
-        <div className={styles.cartItems}>
+        <div className="cartItems">
           {cart.length === 0 ? (
-            <p className={styles.cartEmpty}>Cart is empty. Add a product to start.</p>
+            <p className="cartEmpty">Cart is empty. Add a product to start.</p>
           ) : (
             cart.map((item) => (
-              <div className={styles.cartRow} key={item.productId}>
+              <div className="cartRow" key={item.productId}>
                 <div>
-                  <div className={styles.cartItemName}>{item.name}</div>
-                  <div className={styles.cartTax}>{taxLabel(item.taxCategory)}</div>
-                  <button className={styles.removeBtn} type="button" onClick={() => removeItem(item.productId)}>Remove</button>
+                  <div className="cartItemName">{item.name}</div>
+                  <div className="cartTax">{taxLabel(item.taxCategory)}</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                    <button className="removeBtn" type="button" onClick={() => overrideItemPrice(item.productId)} style={{ color: 'var(--brand)', fontWeight: 700 }}>Edit Price</button>
+                    <button className="removeBtn" type="button" onClick={() => removeItem(item.productId)}>Remove</button>
+                  </div>
                 </div>
-                <div className={styles.qtyControls}>
-                  <button className={styles.qtyBtn} type="button" aria-label={`Decrease ${item.name} quantity`} onClick={() => changeQty(item.productId, -1)}>-</button>
-                  <span className={styles.qtyValue}>{item.quantity}</span>
-                  <button className={styles.qtyBtn} type="button" aria-label={`Increase ${item.name} quantity`} onClick={() => changeQty(item.productId, 1)}>+</button>
+                <div className="qtyControls">
+                  <button className="qtyBtn" type="button" aria-label={`Decrease ${item.name} quantity`} onClick={() => changeQty(item.productId, -1)}>-</button>
+                  <span className="qtyValue">{item.quantity}</span>
+                  <button className="qtyBtn" type="button" aria-label={`Increase ${item.name} quantity`} onClick={() => changeQty(item.productId, 1)}>+</button>
                 </div>
-                <div className={styles.lineTotal}>{formatKes(item.unitPrice * item.quantity)}</div>
+                <div className="lineTotal">{formatKes(item.unitPrice * item.quantity)}</div>
               </div>
             ))
           )}
         </div>
 
-        <div className={styles.totalsBlock}>
-          <div className={styles.totalsRow}><span>Items total</span><span>{formatKes(itemsTotal)}</span></div>
-          <div className={styles.totalsRow}><span>Before VAT</span><span>{formatKes(netSubtotal)}</span></div>
+        <div className="totalsBlock">
+          <div className="totalsRow"><span>Items total</span><span>{formatKes(itemsTotal)}</span></div>
+          <div className="totalsRow"><span>Before VAT</span><span>{formatKes(netSubtotal)}</span></div>
           {(taxSummary.length ? taxSummary : [{ rate: 0, tax: 0 }]).map((group) => (
-            <div className={styles.totalsRow} key={group.rate}>
+            <div className="totalsRow" key={group.rate}>
               <span>VAT {formatTaxPercent(group.rate)} incl.</span>
               <span>{formatKes(group.tax)}</span>
             </div>
           ))}
 
           {/* Manual discount */}
-          <div className={styles.discountRow}>
+          <div className="discountRow">
             <span>Discount</span>
             <input
               type="text"
@@ -1755,16 +1824,16 @@ export default function Checkout({ authToken, cashierId, user }) {
           </div>
 
           {/* Promo code */}
-          <div className={styles.promoRow}>
+          <div className="promoRow">
             <input
-              className={styles.promoInput}
+              className="promoInput"
               type="text"
               placeholder="Promo code"
               value={promoCode}
               onChange={(e) => { setPromoCode(e.target.value); setPromoResult(null); setPromoError(null); }}
             />
             <button
-              className={styles.promoApplyBtn}
+              className="promoApplyBtn"
               onClick={checkPromo}
               disabled={promoChecking || !promoCode.trim()}
               type="button"
@@ -1773,13 +1842,13 @@ export default function Checkout({ authToken, cashierId, user }) {
             </button>
           </div>
           {promoResult && (
-            <div className={styles.promoSuccess}>
+            <div className="promoSuccess">
               {promoResult.code}: -{formatKes(promoResult.discountAmount)} {promoResult.description && `(${promoResult.description})`}
             </div>
           )}
-          {promoError && <div className={styles.promoError}>{promoError}</div>}
+          {promoError && <div className="promoError">{promoError}</div>}
 
-          <div className={`${styles.totalsRow} ${styles.grand}`}><span>Total</span><span>{formatKes(total)}</span></div>
+          <div className={`${"totalsRow"} ${"grand"}`}><span>Total</span><span>{formatKes(total)}</span></div>
         </div>
 
         {/* Split-tender payments */}
@@ -1787,54 +1856,54 @@ export default function Checkout({ authToken, cashierId, user }) {
 
         {/* Manager approval for discounts */}
         {discountNeedsApproval && (
-          <div className={styles.approvalBox}>
-            <label className={styles.cashLabel}>Manager approval</label>
-            <input className={styles.phoneInput} value={managerIdentifier} onChange={(e) => setManagerIdentifier(e.target.value)} placeholder="Manager email or phone" />
-            <input className={styles.phoneInput} type="password" value={managerPassword} onChange={(e) => setManagerPassword(e.target.value)} placeholder="Manager password" />
+          <div className="approvalBox">
+            <label className="cashLabel">Manager approval</label>
+            <input className="phoneInput" value={managerIdentifier} onChange={(e) => setManagerIdentifier(e.target.value)} placeholder="Manager email or phone" />
+            <input className="phoneInput" type="password" value={managerPassword} onChange={(e) => setManagerPassword(e.target.value)} placeholder="Manager password" />
           </div>
         )}
 
-        <button className={styles.confirmBtn} type="button" disabled={!canConfirm} onClick={handleConfirm}>
+        <button className="confirmBtn" type="button" disabled={!canConfirm} onClick={handleConfirm}>
           {submitting ? 'Processing...' : `Confirm sale - ${formatKes(total)}`}
         </button>
 
         {etimsNotice && (
-          <div className={`${styles.etimsNotice} ${styles[`etims${etimsNotice.tone}`]}`}>
+          <div className={`${"etimsNotice"} ${styles[`etims${etimsNotice.tone}`]}`}>
             {etimsNotice.text}
           </div>
         )}
 
-        {orderStatus === 'waiting' && <div className={styles.statusBanner} role="status" aria-live="polite">Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
-        {orderStatus === 'paid' && <div className={`${styles.statusBanner} ${styles.success}`} role="status" aria-live="polite">Payment confirmed. Sale complete.</div>}
+        {orderStatus === 'waiting' && <div className="statusBanner" role="status" aria-live="polite">Waiting for customer to enter M-Pesa PIN. Do not resend or hold this sale until it succeeds or fails.</div>}
+        {orderStatus === 'paid' && <div className={`${"statusBanner"} ${"success"}`} role="status" aria-live="polite">Payment confirmed. Sale complete.</div>}
         {orderStatus === 'failed' && (
-          <div className={`${styles.statusBanner} ${styles.error}`} role="alert">
+          <div className={`${"statusBanner"} ${"error"}`} role="alert">
             Payment did not go through. Ask the customer to retry M-Pesa, switch the tender to cash, or find the receipt in Operations and void it if a backend order was created.
           </div>
         )}
-        {statusMessage && <div className={`${styles.statusBanner} ${styles.success}`} role="status" aria-live="polite">{statusMessage}</div>}
+        {statusMessage && <div className={`${"statusBanner"} ${"success"}`} role="status" aria-live="polite">{statusMessage}</div>}
         {lastReceipt && (
-          <div className={styles.receiptMini}>
-            <div className={styles.receiptHeader}>
+          <div className="receiptMini">
+            <div className="receiptHeader">
               <span>Receipt</span>
               <strong>{lastReceipt.orderNumber}</strong>
             </div>
-            <div className={styles.receiptMetaRow}><span>Served by</span><strong>{lastReceipt.cashierName || user?.name || 'Cashier'}</strong></div>
-            <div className={styles.receiptMetaRow}><span>Time</span><strong>{new Date(lastReceipt.createdAt || Date.now()).toLocaleString()}</strong></div>
-            <div className={styles.receiptMetaRow}><span>Items sold</span><strong>{formatQuantity(lastReceipt.itemCount || 0)}</strong></div>
-            <div className={styles.receiptDivider} />
-            <div className={styles.receiptAmountRow}><span>Sale total</span><strong>{formatKes(lastReceipt.total)}</strong></div>
-            <div className={styles.receiptChangeRow}><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
-            <button className={styles.receiptPrintBtn} type="button" onClick={() => printLastReceipt()}>
+            <div className="receiptMetaRow"><span>Served by</span><strong>{lastReceipt.cashierName || user?.name || 'Cashier'}</strong></div>
+            <div className="receiptMetaRow"><span>Time</span><strong>{new Date(lastReceipt.createdAt || Date.now()).toLocaleString()}</strong></div>
+            <div className="receiptMetaRow"><span>Items sold</span><strong>{formatQuantity(lastReceipt.itemCount || 0)}</strong></div>
+            <div className="receiptDivider" />
+            <div className="receiptAmountRow"><span>Sale total</span><strong>{formatKes(lastReceipt.total)}</strong></div>
+            <div className="receiptChangeRow"><span>Change due</span><strong>{formatKes(lastReceipt.changeDue)}</strong></div>
+            <button className="receiptPrintBtn" type="button" onClick={() => printLastReceipt()}>
               Print receipt
             </button>
           </div>
         )}
-        {error && <p className={styles.errorText} role="alert">{error}</p>}
+        {error && <p className="errorText" role="alert">{error}</p>}
       </div>
-      <nav className={styles.mobileSaleBar} aria-label="Checkout view">
+      <nav className="mobileSaleBar" aria-label="Checkout view">
         <button
           type="button"
-          className={mobilePane === 'catalog' ? styles.mobileSaleBarActive : ''}
+          className={mobilePane === 'catalog' ? "mobileSaleBarActive" : ''}
           aria-pressed={mobilePane === 'catalog'}
           onClick={() => {
             setMobilePane('catalog');
@@ -1843,13 +1912,13 @@ export default function Checkout({ authToken, cashierId, user }) {
         >
           Products
         </button>
-        <div className={styles.mobileSaleSummary} aria-live="polite">
+        <div className="mobileSaleSummary" aria-live="polite">
           <span>{cartItemCount} item{cartItemCount === 1 ? '' : 's'}</span>
           <strong>{formatKes(total)}</strong>
         </div>
         <button
           type="button"
-          className={mobilePane === 'cart' ? styles.mobileSaleBarActive : ''}
+          className={mobilePane === 'cart' ? "mobileSaleBarActive" : ''}
           aria-pressed={mobilePane === 'cart'}
           onClick={() => setMobilePane('cart')}
         >

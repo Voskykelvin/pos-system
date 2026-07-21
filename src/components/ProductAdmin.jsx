@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react';
 import JsBarcode from 'jsbarcode';
-import styles from './ProductAdmin.module.css';
 import { TAX_CATEGORY_OPTIONS, normalizeTaxCategory, taxLabel } from '../utils/taxCategories';
 
 const EMPTY_FORM = {
@@ -78,10 +77,10 @@ function BarcodePreview({ value }) {
   }, [value]);
 
   if (invalid) {
-    return <div className={styles.barcodeError}>Invalid code</div>;
+    return <div className="barcodeError">Invalid code</div>;
   }
 
-  return <svg ref={svgRef} className={styles.barcodeSvg} aria-label={`Barcode ${value}`} />;
+  return <svg ref={svgRef} className="barcodeSvg" aria-label={`Barcode ${value}`} />;
 }
 
 export default function ProductAdmin({ authToken, userId, tenant }) {
@@ -745,14 +744,14 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   }
 
   return (
-    <div className={styles.page}>
+    <div className="product-admin-page page-container">
       {/* Sub-nav tabs */}
-      <div className={styles.topBar}>
-        <div className={styles.tabGroup} role="tablist" aria-label="Inventory sections">
+      <div className="topBar">
+        <div className="tabGroup" role="tablist" aria-label="Inventory sections">
           {visibleTabs.map((tab) => (
             <button
               key={tab.id}
-              className={`${styles.tabBtn} ${activeTab === tab.id ? styles.active : ''}`}
+              className={`${"tabBtn"} ${activeTab === tab.id ? "active" : ''}`}
               onClick={() => setActiveTab(tab.id)}
               type="button"
               role="tab"
@@ -764,13 +763,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
         </div>
       </div>
 
-      {message && <div className={styles.successBanner} role="status">{message}</div>}
-      {error && <div className={styles.errorBanner} role="alert">{error}</div>}
+      {message && <div className="successBanner" role="status">{message}</div>}
+      {error && <div className="errorBanner" role="alert">{error}</div>}
 
       {/* PRODUCTS TAB */}
       {activeTab === 'products' && (
         <>
-          <form className={styles.scanPanel} onSubmit={handleProductScan}>
+          <form className="scanPanel" onSubmit={handleProductScan}>
             <div>
               <strong>Scan to add a product</strong>
               <span>Use a USB/Bluetooth scanner, phone camera, or type the barcode.</span>
@@ -784,20 +783,20 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               value={scanCode}
               onChange={(event) => setScanCode(event.target.value.replace(/\s/g, '').slice(0, 64))}
             />
-            <button className={styles.cameraBtn} type="button" onClick={openCameraScanner} disabled={scanBusy}>Use camera</button>
-            <button className={styles.primaryBtn} type="submit" disabled={scanBusy || !scanCode.trim()}>
+            <button className="cameraBtn" type="button" onClick={openCameraScanner} disabled={scanBusy}>Use camera</button>
+            <button className="primaryBtn" type="submit" disabled={scanBusy || !scanCode.trim()}>
               {scanBusy ? 'Looking up...' : 'Find product'}
             </button>
           </form>
-          <div className={styles.controls}>
+          <div className="controls">
             <input
               type="text"
               placeholder="Search by name, SKU, or barcode..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className={styles.searchInput}
+              className="searchInput"
             />
-            <label className={styles.checkboxLabel}>
+            <label className="checkboxLabel">
               <input
                 type="checkbox"
                 checked={lowStockOnly}
@@ -805,11 +804,11 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               />
               Low stock only
             </label>
-            <button className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(true)}>Print Barcode Stickers</button>
-            <button className={styles.primaryBtn} onClick={openCreate}>+ Add Product</button>
+            <button className="secondaryBtn" onClick={() => setShowBarcodeModal(true)}>Print Barcode Stickers</button>
+            <button className="primaryBtn" onClick={openCreate}>+ Add Product</button>
           </div>
 
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr>
                 <th>SKU</th>
@@ -828,7 +827,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
               {filtered.map((p) => {
                 const isLow = Number(p.stockQuantity) <= Number(p.reorderLevel);
                 return (
-                  <tr key={p.id} className={isLow ? styles.lowStockRow : ''}>
+                  <tr key={p.id} className={isLow ? "lowStockRow" : ''}>
                     <td><code>{p.sku}</code></td>
                     <td><code>{p.barcode || '-'}</code></td>
                     <td>{p.name}</td>
@@ -837,13 +836,13 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                     <td>KES {Number(p.sellingPrice).toFixed(2)}</td>
                     <td>{taxLabel(p.taxCategory || p.Category?.taxCategory)}</td>
                     <td>
-                      <span className={isLow ? styles.badgeLow : styles.badgeOk}>
+                      <span className={isLow ? "badgeLow" : "badgeOk"}>
                         {Number(p.stockQuantity)} {p.unit}
                       </span>
                     </td>
                     <td>{p.isActive ? 'Active' : 'Inactive'}</td>
                     <td>
-                      <button className={styles.secondaryBtn} onClick={() => openEdit(p)}>Edit / Stock</button>
+                      <button className="secondaryBtn" onClick={() => openEdit(p)}>Edit / Stock</button>
                     </td>
                   </tr>
                 );
@@ -855,17 +854,17 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* SUPPLIERS TAB */}
       {activeTab === 'suppliers' && canUseFeature('purchasing') && (
-        <div className={styles.tabContent}>
+        <div className="tabContent">
           <h2>Suppliers Directory</h2>
-          <form onSubmit={handleCreateSupplier} className={styles.inlineForm}>
+          <form onSubmit={handleCreateSupplier} className="inlineForm">
             <input placeholder="Supplier Name *" value={supplierForm.name} onChange={(e) => setSupplierForm({...supplierForm, name: e.target.value})} required />
             <input placeholder="Phone" value={supplierForm.phone} onChange={(e) => setSupplierForm({...supplierForm, phone: e.target.value})} />
             <input placeholder="Email" value={supplierForm.email} onChange={(e) => setSupplierForm({...supplierForm, email: e.target.value})} />
             <input placeholder="Contact Person" value={supplierForm.contactPerson} onChange={(e) => setSupplierForm({...supplierForm, contactPerson: e.target.value})} />
-            <button type="submit" className={styles.primaryBtn}>Save Supplier</button>
+            <button type="submit" className="primaryBtn">Save Supplier</button>
           </form>
 
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr><th>Name</th><th>Phone</th><th>Email</th><th>Contact Person</th></tr>
             </thead>
@@ -885,17 +884,17 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* PURCHASE ORDERS TAB */}
       {activeTab === 'pos' && canUseFeature('purchasing') && (
-        <div className={styles.tabContent}>
+        <div className="tabContent">
           <h2>Create Purchase Order</h2>
-          <form onSubmit={handleCreatePo} className={styles.poForm}>
+          <form onSubmit={handleCreatePo} className="poForm">
             <select value={poSupplierId} onChange={(e) => setPoSupplierId(e.target.value)} required>
               <option value="">Select Supplier *</option>
               {suppliers.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select>
 
-            <div className={styles.addPoItemBox}>
+            <div className="addPoItemBox">
               <h4>Add Line Item</h4>
-              <div className={styles.inlineForm}>
+              <div className="inlineForm">
                 <select id="poProd">
                   {products.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.sku})</option>)}
                 </select>
@@ -903,7 +902,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 <input id="poCost" type="number" placeholder="Unit Cost KES" defaultValue="100" />
                 <button
                   type="button"
-                  className={styles.secondaryBtn}
+                  className="secondaryBtn"
                   onClick={() => {
                     const prodId = document.getElementById('poProd').value;
                     const qty = Number(document.getElementById('poQty').value);
@@ -918,18 +917,18 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             </div>
 
             {poItems.length > 0 && (
-              <ul className={styles.poItemList}>
+              <ul className="poItemList">
                 {poItems.map((item, idx) => (
                   <li key={idx}>{item.name}: {item.orderedQuantity} units @ KES {item.unitCostPrice}</li>
                 ))}
               </ul>
             )}
 
-            <button type="submit" className={styles.primaryBtn}>Submit PO</button>
+            <button type="submit" className="primaryBtn">Submit PO</button>
           </form>
 
           <h2>Existing Purchase Orders</h2>
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr><th>PO Number</th><th>Supplier</th><th>Status</th><th>Total Cost</th><th>Action</th></tr>
             </thead>
@@ -942,7 +941,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   <td>KES {Number(po.totalCost).toFixed(2)}</td>
                   <td>
                     {po.status !== 'received' && (
-                      <button className={styles.primaryBtn} onClick={() => handleReceivePo(po)}>Receive Stock</button>
+                      <button className="primaryBtn" onClick={() => handleReceivePo(po)}>Receive Stock</button>
                     )}
                   </td>
                 </tr>
@@ -954,19 +953,19 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* REORDER SUGGESTIONS TAB */}
       {activeTab === 'reorder' && canUseFeature('reorder_suggestions') && (
-        <div className={styles.tabContent}>
-          <div className={styles.tabHeaderAction}>
+        <div className="tabContent">
+          <div className="tabHeaderAction">
             <div>
               <h2>Intelligent Reorder Suggestions (30-day Velocity)</h2>
-              <p className={styles.subtitle}>Recommends stock intake based on daily sales velocity and current stock levels.</p>
+              <p className="subtitle">Recommends stock intake based on daily sales velocity and current stock levels.</p>
             </div>
             {reorderSuggestions.length > 0 && (
-              <button className={styles.primaryBtn} onClick={generatePoFromReorder}>
+              <button className="primaryBtn" onClick={generatePoFromReorder}>
                 Auto-Generate PO with Suggested Items
               </button>
             )}
           </div>
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr><th>SKU</th><th>Product</th><th>Stock</th><th>Reorder Level</th><th>Daily Velocity</th><th>Suggested Order</th></tr>
             </thead>
@@ -991,9 +990,9 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* PROMOTIONS TAB */}
       {activeTab === 'promotions' && canUseFeature('promotions') && (
-        <div className={styles.tabContent}>
+        <div className="tabContent">
           <h2>Promotions & Discount Codes</h2>
-          <form onSubmit={handleCreatePromo} className={styles.inlineForm}>
+          <form onSubmit={handleCreatePromo} className="inlineForm">
             <input placeholder="Promo Code (e.g. SAVE10) *" value={promoForm.code} onChange={(e) => setPromoForm({...promoForm, code: e.target.value})} required />
             <select value={promoForm.type} onChange={(e) => setPromoForm({...promoForm, type: e.target.value})}>
               <option value="percent">Percentage (%)</option>
@@ -1002,10 +1001,10 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             <input type="number" placeholder="Discount Value *" value={promoForm.value} onChange={(e) => setPromoForm({...promoForm, value: e.target.value})} required />
             <input type="number" placeholder="Min Order Total" value={promoForm.minOrderTotal} onChange={(e) => setPromoForm({...promoForm, minOrderTotal: e.target.value})} />
             <input placeholder="Description" value={promoForm.description} onChange={(e) => setPromoForm({...promoForm, description: e.target.value})} />
-            <button type="submit" className={styles.primaryBtn}>Create Promotion</button>
+            <button type="submit" className="primaryBtn">Create Promotion</button>
           </form>
 
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr><th>Code</th><th>Type</th><th>Value</th><th>Min Order</th><th>Uses</th><th>Status</th><th>Action</th></tr>
             </thead>
@@ -1018,12 +1017,12 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   <td>KES {p.minOrderTotal}</td>
                   <td>{p.usedCount} {p.maxUses > 0 ? `/ ${p.maxUses}` : ''}</td>
                   <td>
-                    <span className={p.isActive ? styles.badgeOk : styles.badgeLow}>
+                    <span className={p.isActive ? "badgeOk" : "badgeLow"}>
                       {p.isActive ? 'Active' : 'Inactive'}
                     </span>
                   </td>
                   <td>
-                    <button className={styles.secondaryBtn} onClick={() => togglePromoStatus(p)}>
+                    <button className="secondaryBtn" onClick={() => togglePromoStatus(p)}>
                       {p.isActive ? 'Deactivate' : 'Activate'}
                     </button>
                   </td>
@@ -1036,34 +1035,34 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* VAT AUDIT TAB */}
       {activeTab === 'vat' && (
-        <div className={styles.tabContent}>
-          <div className={styles.tabHeaderAction}>
+        <div className="tabContent">
+          <div className="tabHeaderAction">
             <div>
               <h2>VAT Classification Audit</h2>
-              <p className={styles.subtitle}>Review active products by VAT treatment before they reach checkout.</p>
+              <p className="subtitle">Review active products by VAT treatment before they reach checkout.</p>
             </div>
-            <button className={styles.secondaryBtn} type="button" onClick={loadVatAudit}>Refresh Audit</button>
+            <button className="secondaryBtn" type="button" onClick={loadVatAudit}>Refresh Audit</button>
           </div>
 
-          <div className={styles.auditCards}>
+          <div className="auditCards">
             {TAX_CATEGORY_OPTIONS.map((option) => {
               const summary = vatAudit?.summary?.[option.value] || { count: 0, stockValue: 0 };
               return (
-                <article key={option.value} className={styles.auditCard}>
+                <article key={option.value} className="auditCard">
                   <span>{option.label}</span>
                   <strong>{summary.count}</strong>
                   <small>KES {Number(summary.stockValue || 0).toFixed(2)} stock value</small>
                 </article>
               );
             })}
-            <article className={styles.auditCard}>
+            <article className="auditCard">
               <span>Needs review</span>
               <strong>{vatAudit?.reviewCount || 0}</strong>
               <small>Product/category tax mismatch</small>
             </article>
           </div>
 
-          <table className={styles.table}>
+          <table className="table">
             <thead>
               <tr>
                 <th>SKU</th>
@@ -1077,7 +1076,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
             </thead>
             <tbody>
               {(vatAudit?.products || []).map((product) => (
-                <tr key={product.id} className={product.needsReview ? styles.lowStockRow : ''}>
+                <tr key={product.id} className={product.needsReview ? "lowStockRow" : ''}>
                   <td><code>{product.sku}</code></td>
                   <td>{product.name}</td>
                   <td>{product.category}</td>
@@ -1085,7 +1084,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   <td>{taxLabel(product.categoryTaxCategory || product.taxCategory)}</td>
                   <td>KES {Number(product.stockValue || 0).toFixed(2)}</td>
                   <td>
-                    <span className={product.needsReview ? styles.badgeLow : styles.badgeOk}>
+                    <span className={product.needsReview ? "badgeLow" : "badgeOk"}>
                       {product.needsReview ? 'Review' : 'OK'}
                     </span>
                   </td>
@@ -1101,47 +1100,47 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* CSV IMPORT/EXPORT TAB */}
       {activeTab === 'csv' && (
-        <div className={styles.tabContent}>
+        <div className="tabContent">
           <h2>Bulk CSV Catalog Management</h2>
-          <div className={styles.csvBox}>
-            <a href="/api/admin/products/export-csv" className={styles.primaryBtn} download>
+          <div className="csvBox">
+            <a href="/api/admin/products/export-csv" className="primaryBtn" download>
               Export Product Catalog CSV
             </a>
           </div>
 
-          <div className={styles.csvImportArea}>
+          <div className="csvImportArea">
             <h3>Import / Update Catalog via CSV</h3>
             <textarea
-              className={styles.csvTextarea}
+              className="csvTextarea"
               rows="8"
               placeholder="Paste CSV contents here (Headers: sku, barcode, name, category, taxCategory, unit, costPrice, sellingPrice, reorderLevel, stockQuantity)"
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
             />
-            <button className={styles.primaryBtn} onClick={handleImportCsv}>Process CSV Import</button>
+            <button className="primaryBtn" onClick={handleImportCsv}>Process CSV Import</button>
           </div>
         </div>
       )}
 
       {cameraOpen && (
-        <div className={styles.cameraOverlay} role="presentation" onClick={() => setCameraOpen(false)}>
-          <section className={styles.cameraModal} role="dialog" aria-modal="true" aria-labelledby="camera-title" onClick={(event) => event.stopPropagation()}>
-            <div className={styles.cameraHeader}>
+        <div className="cameraOverlay" role="presentation" onClick={() => setCameraOpen(false)}>
+          <section className="cameraModal" role="dialog" aria-modal="true" aria-labelledby="camera-title" onClick={(event) => event.stopPropagation()}>
+            <div className="cameraHeader">
               <div>
                 <h2 id="camera-title">Scan product barcode</h2>
                 <p>Hold the rear camera steady over the full barcode.</p>
               </div>
-              <button type="button" className={styles.cameraClose} aria-label="Close camera scanner" onClick={() => setCameraOpen(false)}>&times;</button>
+              <button type="button" className="cameraClose" aria-label="Close camera scanner" onClick={() => setCameraOpen(false)}>&times;</button>
             </div>
-            <div className={styles.cameraViewport}>
+            <div className="cameraViewport">
               <video ref={cameraVideoRef} autoPlay muted playsInline aria-label="Live camera preview" />
-              <div className={styles.scanGuide} aria-hidden="true" />
-              {cameraStatus === 'starting' && <div className={styles.cameraState}>Starting camera...</div>}
+              <div className="scanGuide" aria-hidden="true" />
+              {cameraStatus === 'starting' && <div className="cameraState">Starting camera...</div>}
             </div>
-            {cameraError && <div className={styles.cameraError} role="alert">{cameraError}</div>}
-            <div className={styles.cameraFooter}>
+            {cameraError && <div className="cameraError" role="alert">{cameraError}</div>}
+            <div className="cameraFooter">
               <span>{cameraStatus === 'scanning' ? 'Scanning automatically...' : 'Camera access is used only while this window is open.'}</span>
-              <button type="button" className={styles.secondaryBtn} onClick={() => setCameraOpen(false)}>Cancel</button>
+              <button type="button" className="secondaryBtn" onClick={() => setCameraOpen(false)}>Cancel</button>
             </div>
           </section>
         </div>
@@ -1149,10 +1148,10 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* Drawer overlay for product edit */}
       {drawerOpen && (
-        <div className={styles.drawerOverlay} onClick={() => setDrawerOpen(false)}>
-          <div className={styles.drawer} onClick={(e) => e.stopPropagation()}>
+        <div className="drawerOverlay" onClick={() => setDrawerOpen(false)}>
+          <div className="drawer" onClick={(e) => e.stopPropagation()}>
             <h3>{editingId ? 'Edit Product' : 'Add New Product'}</h3>
-            <form onSubmit={handleSubmit} className={styles.form}>
+            <form onSubmit={handleSubmit} className="form">
               <label>SKU * <input value={form.sku} onChange={(e) => setForm({...form, sku: e.target.value})} required /></label>
               <label>Barcode <input
                 value={form.barcode}
@@ -1165,9 +1164,9 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   productNameRef.current?.focus();
                 }}
               /></label>
-              <label className={styles.fullWidth}>Name * <input ref={productNameRef} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
-              <label className={styles.fullWidth}>Category *
-                <div className={styles.categorySelectRow}>
+              <label className="fullWidth">Name * <input ref={productNameRef} value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required /></label>
+              <label className="fullWidth">Category *
+                <div className="categorySelectRow">
                   <select
                     value={form.categoryId}
                     onChange={(e) => {
@@ -1184,12 +1183,12 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   >
                     {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
                   </select>
-                  <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(true)}>+ Category</button>
+                  <button type="button" className="secondaryBtn" onClick={() => setShowCatModal(true)}>+ Category</button>
                 </div>
               </label>
               <label>Unit <input value={form.unit} onChange={(e) => setForm({...form, unit: e.target.value})} /></label>
               {form.isWeighted && <label>Scale PLU code <input inputMode="numeric" maxLength="5" value={form.scaleCode} onChange={(e) => setForm({...form, scaleCode: e.target.value.replace(/\D/g, '').slice(0, 5)})} placeholder="00001" /></label>}
-              <label className={styles.checkboxLabel}>
+              <label className="checkboxLabel">
                 <input
                   type="checkbox"
                   checked={form.isWeighted}
@@ -1197,7 +1196,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 />
                 Sold by weight
               </label>
-              <label className={styles.checkboxLabel}>
+              <label className="checkboxLabel">
                 <input
                   type="checkbox"
                   checked={form.tracksLots}
@@ -1205,7 +1204,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 />
                 Track batch / lot expiry
               </label>
-              <label className={styles.fullWidth}>Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
+              <label className="fullWidth">Image URL <input value={form.imageUrl} onChange={(e) => setForm({...form, imageUrl: e.target.value})} placeholder="https://example.com/photo.jpg" /></label>
               <label>Cost Price KES <input type="number" step="0.01" value={form.costPrice} onChange={(e) => setForm({...form, costPrice: e.target.value})} /></label>
               <label>Selling Price KES * <input type="number" step="0.01" value={form.sellingPrice} onChange={(e) => setForm({...form, sellingPrice: e.target.value})} required /></label>
               <label>Tax Category *
@@ -1220,16 +1219,16 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                 <label>Opening Stock <input type="number" step="0.001" value={form.stockQuantity} onChange={(e) => setForm({...form, stockQuantity: e.target.value})} /></label>
               )}
 
-              <div className={styles.drawerActions}>
-                <button type="submit" className={styles.primaryBtn} disabled={saving}>Save Product</button>
-                <button type="button" className={styles.secondaryBtn} onClick={() => setDrawerOpen(false)}>Cancel</button>
+              <div className="drawerActions">
+                <button type="submit" className="primaryBtn" disabled={saving}>Save Product</button>
+                <button type="button" className="secondaryBtn" onClick={() => setDrawerOpen(false)}>Cancel</button>
               </div>
             </form>
 
             {editingId && (
-              <div className={styles.adjustSection}>
+              <div className="adjustSection">
                 <h4>Quick Stock Adjustment</h4>
-                <form onSubmit={handleAdjustStock} className={styles.adjustForm}>
+                <form onSubmit={handleAdjustStock} className="adjustForm">
                   <select value={adjustType} onChange={(e) => setAdjustType(e.target.value)}>
                     <option value="purchase">Purchase (+ Stock In)</option>
                     <option value="adjustment">Adjustment (Correction)</option>
@@ -1238,7 +1237,7 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   </select>
                   <input type="number" placeholder="Quantity" value={adjustQty} onChange={(e) => setAdjustQty(e.target.value)} required />
                   <input placeholder="Note" value={adjustNote} onChange={(e) => setAdjustNote(e.target.value)} />
-                  <button type="submit" className={styles.primaryBtn} disabled={saving}>Adjust Stock</button>
+                  <button type="submit" className="primaryBtn" disabled={saving}>Adjust Stock</button>
                 </form>
               </div>
             )}
@@ -1248,10 +1247,10 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* Inline Category Creation Modal */}
       {showCatModal && (
-        <div className={styles.drawerOverlay} onClick={() => setShowCatModal(false)}>
-          <div className={styles.catModal} onClick={(e) => e.stopPropagation()}>
+        <div className="drawerOverlay" onClick={() => setShowCatModal(false)}>
+          <div className="catModal" onClick={(e) => e.stopPropagation()}>
             <h3>Add New Product Category</h3>
-            <form onSubmit={handleCreateCategory} className={styles.form}>
+            <form onSubmit={handleCreateCategory} className="form">
               <input
                 placeholder="Category Name (e.g. Dairy, Beverages) *"
                 value={newCatName}
@@ -1264,9 +1263,9 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
-              <div className={styles.drawerActions}>
-                <button type="submit" className={styles.primaryBtn}>Create Category</button>
-                <button type="button" className={styles.secondaryBtn} onClick={() => setShowCatModal(false)}>Cancel</button>
+              <div className="drawerActions">
+                <button type="submit" className="primaryBtn">Create Category</button>
+                <button type="button" className="secondaryBtn" onClick={() => setShowCatModal(false)}>Cancel</button>
               </div>
             </form>
           </div>
@@ -1275,16 +1274,16 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
 
       {/* Barcode Sticker Label Sheet Printing Modal */}
       {showBarcodeModal && (
-        <div className={styles.drawerOverlay} onClick={() => setShowBarcodeModal(false)}>
-          <div className={styles.barcodeModal} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.tabHeaderAction}>
+        <div className="drawerOverlay" onClick={() => setShowBarcodeModal(false)}>
+          <div className="barcodeModal" onClick={(e) => e.stopPropagation()}>
+            <div className="tabHeaderAction">
               <h3>Printable Barcode Sticker Sheets</h3>
-              <button className={styles.primaryBtn} onClick={printBarcodeLabels} disabled={printableLabels.length === 0}>
+              <button className="primaryBtn" onClick={printBarcodeLabels} disabled={printableLabels.length === 0}>
                 Print Labels
               </button>
             </div>
 
-            <div className={styles.barcodeControls}>
+            <div className="barcodeControls">
               <label>
                 Products
                 <select value={barcodeScope} onChange={(e) => setBarcodeScope(e.target.value)}>
@@ -1302,28 +1301,28 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
                   onChange={(e) => setBarcodeCopies(e.target.value)}
                 />
               </label>
-              <div className={styles.labelCount}>{printableLabels.length} labels</div>
+              <div className="labelCount">{printableLabels.length} labels</div>
             </div>
 
-            <div className={styles.stickerGrid}>
+            <div className="stickerGrid">
               {printableLabels.slice(0, 60).map(({ key, product, code }) => (
-                <div key={key} className={styles.stickerCard}>
-                  <div className={styles.stickerTitle}>{product.name}</div>
+                <div key={key} className="stickerCard">
+                  <div className="stickerTitle">{product.name}</div>
                   <BarcodePreview value={code} />
-                  <div className={styles.barcodeCode}>{code}</div>
-                  <div className={styles.stickerPrice}>KES {Number(product.sellingPrice).toFixed(2)}</div>
+                  <div className="barcodeCode">{code}</div>
+                  <div className="stickerPrice">KES {Number(product.sellingPrice).toFixed(2)}</div>
                 </div>
               ))}
               {printableLabels.length === 0 && (
-                <div className={styles.stickerEmpty}>No active products are ready for labels.</div>
+                <div className="stickerEmpty">No active products are ready for labels.</div>
               )}
               {printableLabels.length > 60 && (
-                <div className={styles.stickerEmpty}>Preview shows the first 60 labels.</div>
+                <div className="stickerEmpty">Preview shows the first 60 labels.</div>
               )}
             </div>
 
-            <div className={styles.drawerActions}>
-              <button type="button" className={styles.secondaryBtn} onClick={() => setShowBarcodeModal(false)}>Close</button>
+            <div className="drawerActions">
+              <button type="button" className="secondaryBtn" onClick={() => setShowBarcodeModal(false)}>Close</button>
             </div>
           </div>
         </div>

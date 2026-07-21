@@ -1,0 +1,172 @@
+/* =======================================================
+   Jijenge POS - Design Tokens
+   Single source of truth for every visual decision.
+   Emerald Green + Mustard Gold + Warm Neutrals
+   ======================================================= */
+
+:root {
+  /* -- Brand Greens (preserved) ------------------------ */
+  --brand: #059669;
+  --brand-mid: #10b981;
+  --brand-dark: #047857;
+  --brand-deep: #065f46;
+  --brand-light: #34d399;
+  --brand-text: #059669;
+  --brand-soft: rgba(5, 150, 105, 0.10);
+  --brand-border: rgba(5, 150, 105, 0.22);
+
+  /* -- Accent Gold (from iTruck) ----------------------- */
+  --accent: #ffce1b;
+  --accent-hover: #ffe066;
+  --accent-dark: #c49e00;
+  --accent-soft: rgba(255, 206, 27, 0.15);
+  --accent-border: rgba(255, 206, 27, 0.32);
+
+  /* -- Surfaces (Warm Light) --------------------------- */
+  --bg: #f7f7f2;
+  --surface: #ffffff;
+  --surface-2: #f0ede2;
+  --surface-3: #e6e2d4;
+  --surface-glass: rgba(255, 255, 255, 0.68);
+  --surface-glass-hover: rgba(255, 255, 255, 0.85);
+
+  /* -- Typography Colors ------------------------------- */
+  --ink: #0a1f14;
+  --text: #1a3328;
+  --text-secondary: #4a6b5c;
+  --text-muted: #7a9a8b;
+  --text-dim: #a3bbb0;
+  --text-on-brand: #ffffff;
+  --text-on-accent: #1a1400;
+
+  /* -- Borders & Lines --------------------------------- */
+  --border: rgba(5, 150, 105, 0.09);
+  --border-strong: rgba(5, 150, 105, 0.18);
+  --border-focus: #059669;
+
+  /* -- Sidebar (Deep Emerald-Black) -------------------- */
+  --sidebar-bg: #071a12;
+  --sidebar-surface: #0d2a1e;
+  --sidebar-border: rgba(255, 255, 255, 0.07);
+  --sidebar-text: #92ada1;
+  --sidebar-text-hover: #e8f0ec;
+  --sidebar-active-bg: rgba(255, 206, 27, 0.12);
+  --sidebar-active-text: #ffce1b;
+
+  /* -- Semantic Colors --------------------------------- */
+  --success: #16a34a;
+  --success-soft: rgba(22, 163, 74, 0.10);
+  --success-border: rgba(22, 163, 74, 0.25);
+
+  --warning: #d97706;
+  --warning-soft: rgba(217, 119, 6, 0.10);
+  --warning-border: rgba(217, 119, 6, 0.25);
+
+  --danger: #dc2626;
+  --danger-soft: rgba(220, 38, 38, 0.10);
+  --danger-border: rgba(220, 38, 38, 0.25);
+
+  --info: #2563eb;
+  --info-soft: rgba(37, 99, 235, 0.10);
+  --info-border: rgba(37, 99, 235, 0.25);
+
+  /* -- Shadows ----------------------------------------- */
+  --shadow-xs: 0 1px 2px rgba(10, 31, 20, 0.05);
+  --shadow-sm: 0 2px 8px rgba(10, 31, 20, 0.07);
+  --shadow-md: 0 8px 24px rgba(10, 31, 20, 0.09);
+  --shadow-lg: 0 16px 48px rgba(10, 31, 20, 0.12);
+  --shadow-glow: 0 0 20px rgba(255, 206, 27, 0.18);
+
+  /* -- Radius ------------------------------------------ */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius: 10px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* -- Spacing (4px grid) ------------------------------ */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+  --space-16: 64px;
+  --space-20: 80px;
+
+  /* -- Typography Scale -------------------------------- */
+  --font-main: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-heading: 'Manrope', 'Inter', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.8125rem;   /* 13px */
+  --text-base: 0.9375rem; /* 15px */
+  --text-md: 1rem;        /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+
+  /* -- Transitions ------------------------------------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --duration-fast: 150ms;
+  --duration-normal: 250ms;
+  --duration-slow: 400ms;
+
+  /* -- Z-Index Scale ----------------------------------- */
+  --z-base: 1;
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-overlay: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+
+  /* -- Layout ------------------------------------------ */
+  --sidebar-width: 250px;
+  --sidebar-collapsed: 72px;
+  --topbar-height: 56px;
+  --mobile-nav-height: 64px;
+  --content-max: 1280px;
+}
+
+/* -- Dark Mode ------------------------------------------- */
+[data-theme="dark"] {
+  --bg: #080d0b;
+  --surface: #111a15;
+  --surface-2: #182420;
+  --surface-3: #1f2e28;
+  --surface-glass: rgba(17, 26, 21, 0.72);
+  --surface-glass-hover: rgba(24, 36, 32, 0.85);
+
+  --ink: #e8f0ec;
+  --text: #d4e0d9;
+  --text-secondary: #92ada1;
+  --text-muted: #6b8a7c;
+  --text-dim: #4a6b5c;
+
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --border-focus: #ffce1b;
+
+  --brand-soft: rgba(16, 185, 129, 0.15);
+  --brand-border: rgba(16, 185, 129, 0.30);
+
+  --sidebar-bg: #060e0a;
+  --sidebar-surface: #0a1810;
+  --sidebar-border: rgba(255, 255, 255, 0.05);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.20);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+  --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.30);
+  --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.40);
+  --shadow-glow: 0 0 24px rgba(255, 206, 27, 0.14);
+}

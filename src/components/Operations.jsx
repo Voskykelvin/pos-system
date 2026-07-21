@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import styles from './Operations.module.css';
 import {
   formatHeldSaleAge,
   heldSalesStorageKey,
@@ -322,23 +321,23 @@ export default function Operations({ authToken, user }) {
   const etimsReadiness = etimsDashboard?.readiness || {};
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
+    <section className="operations-page page-container">
+      <header className="header">
         <div>
           <h1>Operations</h1>
           <p>Shift control, multi-till cash reconciliation, and receipt lookup.</p>
         </div>
       </header>
 
-      <div className={styles.grid}>
+      <div className="grid">
         {/* Current Shift panel */}
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
+        <section className="panel">
+          <div className="panelHeader">
             <h2>Current shift</h2>
             <span>{shift?.status || 'none'}</span>
           </div>
           {!shift ? (
-            <div className={styles.formBlock}>
+            <div className="formBlock">
               <label>
                 Opening float
                 <input
@@ -350,27 +349,27 @@ export default function Operations({ authToken, user }) {
               <button type="button" onClick={openShift}>Open shift</button>
             </div>
           ) : (
-            <div className={styles.shiftDetails}>
-              <div className={styles.row}>
+            <div className="shiftDetails">
+              <div className="row">
                 <span>Opened</span>
                 <strong>{formatDate(shift.openedAt)}</strong>
               </div>
-              <div className={styles.row}>
+              <div className="row">
                 <span>Opening float</span>
                 <strong>{formatKes(shift.openingFloat)}</strong>
               </div>
-              <div className={styles.row}>
+              <div className="row">
                 <span>Cash sales</span>
                 <strong>{formatKes(shift.currentCashSalesExpected ?? shift.cashSalesExpected)}</strong>
               </div>
-              <div className={styles.row}>
+              <div className="row">
                 <span>Till Expenses</span>
                 <strong style={{ color: '#ef4444' }}>- {formatKes(shift.totalExpenses)}</strong>
               </div>
               {shift.status === 'open' ? (
                 <>
                   {heldSales.length > 0 && (
-                    <div className={staleHeldSales.length > 0 ? styles.heldSaleWarning : styles.heldSaleNotice}>
+                    <div className={staleHeldSales.length > 0 ? "heldSaleWarning" : "heldSaleNotice"}>
                       <strong>{heldSales.length} held sale{heldSales.length === 1 ? '' : 's'} still parked on this till.</strong>
                       <span>
                         {staleHeldSales.length > 0
@@ -379,9 +378,9 @@ export default function Operations({ authToken, user }) {
                       </span>
                     </div>
                   )}
-                  <form className={styles.expenseForm} onSubmit={logExpense}>
+                  <form className="expenseForm" onSubmit={logExpense}>
                     <h4>Log Petty Cash Expense</h4>
-                    <div className={styles.expenseInputs}>
+                    <div className="expenseInputs">
                       <select value={expenseCategory} onChange={e => setExpenseCategory(e.target.value)}>
                         <option value="wages">Casual Wages</option>
                         <option value="utilities">Utilities (Tokens/Water)</option>
@@ -403,11 +402,11 @@ export default function Operations({ authToken, user }) {
                       value={expenseDesc}
                       onChange={e => setExpenseDesc(e.target.value)}
                     />
-                    <button type="submit" disabled={expenseLogging} className={styles.expenseBtn}>
+                    <button type="submit" disabled={expenseLogging} className="expenseBtn">
                       {expenseLogging ? 'Logging...' : 'Log Expense'}
                     </button>
                   </form>
-                  <div className={styles.formBlock}>
+                  <div className="formBlock">
                   <label>
                     Cash counted
                     <input
@@ -424,11 +423,11 @@ export default function Operations({ authToken, user }) {
                 </>
               ) : (
                 <>
-                  <div className={styles.row}>
+                  <div className="row">
                     <span>Cash counted</span>
                     <strong>{formatKes(shift.cashCounted)}</strong>
                   </div>
-                  <div className={styles.row}>
+                  <div className="row">
                     <span>Variance</span>
                     <strong>{formatKes(shift.cashVariance)}</strong>
                   </div>
@@ -436,19 +435,19 @@ export default function Operations({ authToken, user }) {
               )}
             </div>
           )}
-          {shiftError && <div className={styles.error}>{shiftError}</div>}
-          {shiftMessage && <div className={styles.success}>{shiftMessage}</div>}
+          {shiftError && <div className="error">{shiftError}</div>}
+          {shiftMessage && <div className="success">{shiftMessage}</div>}
         </section>
 
         {/* Multi-Till Shift Summary for Managers */}
         {canManageOrders && shiftSummary && (
-          <section className={`${styles.panel} ${styles.summaryPanel}`}>
-            <div className={styles.panelHeader}>
+          <section className={`${"panel"} ${"summaryPanel"}`}>
+            <div className="panelHeader">
               <h2>Today&apos;s Multi-Till Shift Summary</h2>
               <span>{shiftSummary.date}</span>
             </div>
-            <div className={styles.tableWrap}>
-              <table className={styles.summaryTable}>
+            <div className="tableWrap">
+              <table className="summaryTable">
                 <thead>
                   <tr>
                     <th>Cashier</th>
@@ -463,57 +462,57 @@ export default function Operations({ authToken, user }) {
                   {shiftSummary.shifts.map((s) => (
                     <tr key={s.id}>
                       <td><strong>{s.cashierName}</strong></td>
-                      <td><span className={s.status === 'open' ? styles.statusOpen : styles.statusClosed}>{s.status.toUpperCase()}</span></td>
+                      <td><span className={s.status === 'open' ? "statusOpen" : "statusClosed"}>{s.status.toUpperCase()}</span></td>
                       <td>{formatKes(s.openingFloat)}</td>
                       <td>{formatKes(s.currentCashSalesExpected ?? s.cashSalesExpected)}</td>
                       <td>{s.cashCounted !== null ? formatKes(s.cashCounted) : '-'}</td>
-                      <td className={Number(s.cashVariance) < 0 ? styles.varNeg : styles.varOk}>
+                      <td className={Number(s.cashVariance) < 0 ? "varNeg" : "varOk"}>
                         {s.cashVariance !== null ? formatKes(s.cashVariance) : '-'}
                       </td>
                     </tr>
                   ))}
                   {shiftSummary.shifts.length === 0 && (
-                    <tr><td colSpan="6" className={styles.empty}>No shifts recorded today.</td></tr>
+                    <tr><td colSpan="6" className="empty">No shifts recorded today.</td></tr>
                   )}
                 </tbody>
               </table>
             </div>
             {shiftSummary.totals && (
-              <div className={styles.summaryTotalsRow}>
+              <div className="summaryTotalsRow">
                 <div><span>Total Floats:</span> <strong>{formatKes(shiftSummary.totals.totalFloats)}</strong></div>
                 <div><span>Total Cash Expected:</span> <strong>{formatKes(shiftSummary.totals.totalExpectedCash)}</strong></div>
                 <div><span>Total Counted:</span> <strong>{formatKes(shiftSummary.totals.totalCashCounted)}</strong></div>
-                <div><span>Total Variance:</span> <strong className={Number(shiftSummary.totals.totalVariance) < 0 ? styles.varNeg : styles.varOk}>{formatKes(shiftSummary.totals.totalVariance)}</strong></div>
+                <div><span>Total Variance:</span> <strong className={Number(shiftSummary.totals.totalVariance) < 0 ? "varNeg" : "varOk"}>{formatKes(shiftSummary.totals.totalVariance)}</strong></div>
               </div>
             )}
           </section>
         )}
 
         {canManageOrders && (
-          <section className={`${styles.panel} ${styles.etimsPanel}`}>
-            <div className={styles.panelHeader}>
+          <section className={`${"panel"} ${"etimsPanel"}`}>
+            <div className="panelHeader">
               <h2>eTIMS control</h2>
               <span>{etimsReadiness.productionMode ? 'production' : (etimsReadiness.env || 'sandbox')}</span>
             </div>
-            <div className={styles.etimsBody}>
-              <div className={styles.etimsStats}>
+            <div className="etimsBody">
+              <div className="etimsStats">
                 <div><span>Queued</span><strong>{etimsSummary.queued || 0}</strong></div>
                 <div><span>Transmitted</span><strong>{etimsSummary.transmitted || 0}</strong></div>
                 <div><span>Failed</span><strong>{etimsSummary.failed || 0}</strong></div>
                 <div><span>Retrying</span><strong>{etimsSummary.retrying || 0}</strong></div>
               </div>
-              <div className={styles.etimsReadiness}>
-                <span className={etimsReadiness.sellerPinSet ? styles.readyPill : styles.blockedPill}>
+              <div className="etimsReadiness">
+                <span className={etimsReadiness.sellerPinSet ? "readyPill" : "blockedPill"}>
                   Seller PIN {etimsReadiness.sellerPinSet ? 'set' : 'missing'}
                 </span>
-                <span className={etimsReadiness.deviceSerialSet ? styles.readyPill : styles.pendingPill}>
+                <span className={etimsReadiness.deviceSerialSet ? "readyPill" : "pendingPill"}>
                   Device serial {etimsReadiness.deviceSerialSet ? 'set' : 'missing'}
                 </span>
-                <span className={etimsReadiness.baseUrlSet && etimsReadiness.apiKeySet ? styles.readyPill : styles.pendingPill}>
+                <span className={etimsReadiness.baseUrlSet && etimsReadiness.apiKeySet ? "readyPill" : "pendingPill"}>
                   API {etimsReadiness.baseUrlSet && etimsReadiness.apiKeySet ? 'configured' : 'pending'}
                 </span>
               </div>
-              <div className={styles.etimsActions}>
+              <div className="etimsActions">
                 <button type="button" onClick={() => runEtimsAction('sync')} disabled={etimsBusy}>
                   Sync now
                 </button>
@@ -524,20 +523,20 @@ export default function Operations({ authToken, user }) {
                   Refresh
                 </button>
               </div>
-              {etimsError && <div className={styles.error}>{etimsError}</div>}
-              <div className={styles.etimsList}>
+              {etimsError && <div className="error">{etimsError}</div>}
+              <div className="etimsList">
                 {(etimsDashboard?.recent || []).length === 0 ? (
-                  <p className={styles.empty}>No queued or failed eTIMS invoices need attention.</p>
+                  <p className="empty">No queued or failed eTIMS invoices need attention.</p>
                 ) : (
                   etimsDashboard.recent.map((invoice) => (
-                    <div className={styles.etimsRow} key={invoice.id}>
+                    <div className="etimsRow" key={invoice.id}>
                       <div>
                         <strong>{invoice.orderNumber || invoice.orderId}</strong>
                         <small>
                           {invoice.status.toUpperCase()} - retry {invoice.retryCount}/{invoice.maxRetries}
                           {invoice.fiscalReady ? ' - fiscal ready' : ''}
                         </small>
-                        {invoice.error && <small className={styles.etimsErrorText}>{invoice.error}</small>}
+                        {invoice.error && <small className="etimsErrorText">{invoice.error}</small>}
                       </div>
                       <b>{formatKes(invoice.orderTotal)}</b>
                     </div>
@@ -549,22 +548,22 @@ export default function Operations({ authToken, user }) {
         )}
 
         {canManageOrders && (
-          <section className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <section className="panel">
+            <div className="panelHeader">
               <h2>M-Pesa exceptions</h2>
               <button type="button" onClick={loadMpesaExceptions}>Refresh</button>
             </div>
-            {mpesaError && <div className={styles.error}>{mpesaError}</div>}
-            <div className={styles.etimsList}>
+            {mpesaError && <div className="error">{mpesaError}</div>}
+            <div className="etimsList">
               {mpesaExceptions.length === 0 ? (
-                <p className={styles.empty}>No M-Pesa callback exceptions need review.</p>
+                <p className="empty">No M-Pesa callback exceptions need review.</p>
               ) : mpesaExceptions.map((event) => (
-                <div className={styles.etimsRow} key={event.id}>
+                <div className="etimsRow" key={event.id}>
                   <div>
                     <strong>{event.payment?.orderNumber || event.checkoutRequestId}</strong>
                     <small>{event.status.toUpperCase()} · delivered {event.deliveryCount} time{event.deliveryCount === 1 ? '' : 's'}</small>
-                    <small className={styles.etimsErrorText}>{event.error}</small>
-                    <div className={styles.etimsActions}>
+                    <small className="etimsErrorText">{event.error}</small>
+                    <div className="etimsActions">
                       <button type="button" onClick={() => resolveMpesaException(event, 'confirm')}>Confirm from statement</button>
                       <button type="button" onClick={() => resolveMpesaException(event, 'dismiss')}>Dismiss</button>
                     </div>
@@ -577,12 +576,12 @@ export default function Operations({ authToken, user }) {
         )}
 
         {/* Receipt search */}
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
+        <section className="panel">
+          <div className="panelHeader">
             <h2>Receipt search</h2>
             <span>{orders.length}</span>
           </div>
-          <div className={styles.searchBar}>
+          <div className="searchBar">
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
@@ -590,7 +589,7 @@ export default function Operations({ authToken, user }) {
             />
             <button type="button" onClick={() => searchOrders()}>Search</button>
           </div>
-          <div className={styles.orderList}>
+          <div className="orderList">
             {orders.map((order) => (
               <button key={order.id} type="button" onClick={() => loadReceipt(order.id)}>
                 <span>
@@ -601,20 +600,20 @@ export default function Operations({ authToken, user }) {
               </button>
             ))}
           </div>
-          {orderError && <div className={styles.error}>{orderError}</div>}
+          {orderError && <div className="error">{orderError}</div>}
         </section>
 
         {/* Receipt Details */}
-        <section className={`${styles.panel} ${styles.receiptPanel}`}>
-          <div className={styles.panelHeader}>
+        <section className={`${"panel"} ${"receiptPanel"}`}>
+          <div className="panelHeader">
             <h2>Receipt</h2>
             {receipt && <span>{receipt.status}</span>}
           </div>
           {!receipt ? (
-            <p className={styles.empty}>Select an order to view the receipt.</p>
+            <p className="empty">Select an order to view the receipt.</p>
           ) : (
-            <div className={styles.receipt}>
-              <div className={styles.receiptTop}>
+            <div className="receipt">
+              <div className="receiptTop">
                 {receipt.business.receiptPolicy && <small>{receipt.business.receiptPolicy}</small>}
                 <strong>{receipt.business.name}</strong>
                 {receipt.business.kraPin && <small>PIN {receipt.business.kraPin}</small>}
@@ -627,9 +626,9 @@ export default function Operations({ authToken, user }) {
                   {receipt.etims?.fiscalReady ? 'Fiscal ready' : `${receipt.etims?.status || 'eTIMS pending'} - CU/QR pending`}
                 </small>
               </div>
-              <div className={styles.receiptLines}>
+              <div className="receiptLines">
                 {receipt.items.map((item) => (
-                  <div className={styles.receiptLine} key={item.id}>
+                  <div className="receiptLine" key={item.id}>
                     <span>
                       {item.name} x {item.quantity}
                       <small>{item.itemCode || item.barcode || item.sku || '-'} - VAT {(Number(item.taxRate || 0) * 100).toFixed(0)}%</small>
@@ -639,17 +638,17 @@ export default function Operations({ authToken, user }) {
                   </div>
                 ))}
               </div>
-              <div className={styles.totals}>
+              <div className="totals">
                 <div><span>Total items sold</span><b>{receipt.itemCount || receipt.items.length}</b></div>
                 <div><span>Before VAT</span><b>{formatKes(receipt.subtotal)}</b></div>
                 <div><span>VAT included</span><b>{formatKes(receipt.taxTotal)}</b></div>
                 <div><span>Discount</span><b>{formatKes(receipt.discountTotal)}</b></div>
-                <div className={styles.grand}><span>Total</span><b>{formatKes(receipt.total)}</b></div>
+                <div className="grand"><span>Total</span><b>{formatKes(receipt.total)}</b></div>
                 {receipt.refundedTotal > 0 && <div><span>Refunded</span><b>-{formatKes(receipt.refundedTotal)}</b></div>}
-                {receipt.refundedTotal > 0 && <div className={styles.grand}><span>Net sale</span><b>{formatKes(receipt.netTotal)}</b></div>}
+                {receipt.refundedTotal > 0 && <div className="grand"><span>Net sale</span><b>{formatKes(receipt.netTotal)}</b></div>}
               </div>
               {receipt.refunds?.length > 0 && (
-                <div className={styles.paymentList}>
+                <div className="paymentList">
                   <strong>Refund history</strong>
                   {receipt.refunds.map((refund) => (
                     <div key={refund.id}>
@@ -659,7 +658,7 @@ export default function Operations({ authToken, user }) {
                   ))}
                 </div>
               )}
-              <div className={styles.paymentList}>
+              <div className="paymentList">
                 {receipt.payments.map((payment) => (
                   <div key={payment.id}>
                     {payment.method} - {payment.status} - {formatKes(payment.method === 'cash' ? receipt.tender?.amountTendered || payment.amount : payment.amount)}
@@ -669,7 +668,7 @@ export default function Operations({ authToken, user }) {
                   <div>change - {formatKes(receipt.tender.changeDue)}</div>
                 )}
               </div>
-              <div className={styles.receiptFiscal}>
+              <div className="receiptFiscal">
                 <div><span>eTIMS</span><b>{receipt.etims?.status || 'pending'}</b></div>
                 <div><span>CU serial</span><b>{receipt.etims?.deviceSerial || 'pending'}</b></div>
                 <div><span>CU invoice</span><b>{receipt.etims?.cuInvoiceNumber || 'pending'}</b></div>
@@ -680,7 +679,7 @@ export default function Operations({ authToken, user }) {
                 )}
               </div>
               {canManageOrders && ['completed', 'partial_refund'].includes(receipt.status) && (
-                <div className={styles.actionBox}>
+                <div className="actionBox">
                   <input
                     value={actionReason}
                     onChange={(event) => setActionReason(event.target.value)}
@@ -691,17 +690,17 @@ export default function Operations({ authToken, user }) {
                     <option value="store_credit">Customer store credit</option>
                   </select>
                   {receipt.status === 'completed' && (
-                    <div className={styles.actionButtons}>
+                    <div className="actionButtons">
                       <button type="button" onClick={() => orderAction('void')}>Full Void</button>
                       <button type="button" onClick={() => orderAction('refund')}>Full Refund</button>
                     </div>
                   )}
 
                   {/* Partial Refund Section */}
-                  <div className={styles.partialRefundBox}>
+                  <div className="partialRefundBox">
                     <small>Select line items to return:</small>
                     {receipt.items.map((item) => (
-                      <div key={item.id} className={styles.partialRow}>
+                      <div key={item.id} className="partialRow">
                         <span>{item.name} (Remaining {item.refundableQuantity ?? item.quantity})</span>
                         <input
                           type="number"
@@ -710,13 +709,13 @@ export default function Operations({ authToken, user }) {
                           disabled={(item.refundableQuantity ?? item.quantity) <= 0}
                           placeholder="0"
                           id={`refund-qty-${item.id}`}
-                          className={styles.partialInput}
+                          className="partialInput"
                         />
                       </div>
                     ))}
                     <button
                       type="button"
-                      className={styles.partialBtn}
+                      className="partialBtn"
                       onClick={async () => {
                         const itemsToRefund = receipt.items.map((item) => {
                           const val = Number(document.getElementById(`refund-qty-${item.id}`)?.value || 0);
@@ -749,11 +748,11 @@ export default function Operations({ authToken, user }) {
                 </div>
               )}
               {canManageOrders && !receipt.etims?.fiscalReady && (
-                <button className={styles.secondaryPrintBtn} type="button" onClick={syncAndRefreshReceipt} disabled={etimsBusy}>
+                <button className="secondaryPrintBtn" type="button" onClick={syncAndRefreshReceipt} disabled={etimsBusy}>
                   Sync eTIMS and refresh receipt
                 </button>
               )}
-              <button className={styles.printBtn} type="button" onClick={() => window.print()}>
+              <button className="printBtn" type="button" onClick={() => window.print()}>
                 {receipt.etims?.fiscalReady ? 'Reprint fiscal receipt' : 'Print sales copy'}
               </button>
             </div>
@@ -762,14 +761,14 @@ export default function Operations({ authToken, user }) {
 
         {/* Audit Trail */}
         {canViewAudit && (
-          <section className={`${styles.panel} ${styles.auditPanel}`}>
-            <div className={styles.panelHeader}>
+          <section className={`${"panel"} ${"auditPanel"}`}>
+            <div className="panelHeader">
               <h2>Recent audit trail</h2>
               <span>{auditLogs.length}</span>
             </div>
-            <div className={styles.auditList}>
+            <div className="auditList">
               {auditLogs.map((entry) => (
-                <div className={styles.auditRow} key={entry.id}>
+                <div className="auditRow" key={entry.id}>
                   <span>
                     <strong>{entry.action}</strong>
                     <small>
@@ -783,9 +782,9 @@ export default function Operations({ authToken, user }) {
                 </div>
               ))}
               {auditLogs.length === 0 && !auditError && (
-                <p className={styles.empty}>No audit events yet.</p>
+                <p className="empty">No audit events yet.</p>
               )}
-              {auditError && <div className={styles.error}>{auditError}</div>}
+              {auditError && <div className="error">{auditError}</div>}
             </div>
           </section>
         )}

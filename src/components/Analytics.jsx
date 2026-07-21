@@ -15,7 +15,6 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import styles from './Analytics.module.css';
 
 const RANGE_OPTIONS = [
   { label: '7 days', value: 7 },
@@ -131,8 +130,8 @@ export default function Analytics({ authToken }) {
 
   if (error && !data) {
     return (
-      <section className={styles.page}>
-        <div className={styles.errorPanel} role="alert">
+      <section className="analytics-page page-container">
+        <div className="errorPanel" role="alert">
           <strong>Analytics could not refresh</strong>
           <span>{error}</span>
           <button type="button" onClick={() => load()}>Try again</button>
@@ -142,46 +141,46 @@ export default function Analytics({ authToken }) {
   }
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
+    <section className="analytics-page page-container">
+      <header className="header">
         <div>
-          <h1 className={styles.title}>Analytics</h1>
-          <p className={styles.subtitle}>
+          <h1 className="title">Analytics</h1>
+          <p className="subtitle">
             Sales trends, conversion, stock exposure, and replenishment signals.
           </p>
         </div>
-        <div className={styles.actions}>
+        <div className="actions">
           <button
-            className={`${styles.liveBtn} ${live ? styles.liveActive : ''}`}
+            className={`${"liveBtn"} ${live ? "liveActive" : ''}`}
             type="button"
             aria-pressed={live}
             onClick={() => setLive((value) => !value)}
           >
-            <span className={styles.liveDot} /> {live ? 'Live · 30s' : 'Live off'}
+            <span className="liveDot" /> {live ? 'Live · 30s' : 'Live off'}
           </button>
-          <a href={`/api/reports/export?days=${days}`} className={styles.exportBtn} onClick={downloadCsv}>
+          <a href={`/api/reports/export?days=${days}`} className="exportBtn" onClick={downloadCsv}>
             Export CSV
           </a>
-          <div className={styles.segmented}>
+          <div className="segmented">
             {RANGE_OPTIONS.map((option) => (
               <button
                 key={option.value}
                 type="button"
-                className={days === option.value ? styles.activeSegment : ''}
+                className={days === option.value ? "activeSegment" : ''}
                 onClick={() => setDays(option.value)}
               >
                 {option.label}
               </button>
             ))}
           </div>
-          <button className={styles.refreshBtn} onClick={() => load()} type="button">
+          <button className="refreshBtn" onClick={() => load()} type="button">
             {loading ? 'Refreshing...' : 'Refresh'}
           </button>
         </div>
       </header>
 
-      <div className={styles.updateStrip} role="status" aria-live="polite">
-        <span className={live ? styles.liveDot : styles.pausedDot} />
+      <div className="updateStrip" role="status" aria-live="polite">
+        <span className={live ? "liveDot" : "pausedDot"} />
         {loading && data
           ? 'Refreshing live data…'
           : lastUpdated
@@ -190,37 +189,37 @@ export default function Analytics({ authToken }) {
       </div>
 
       {error && data && (
-        <div className={styles.staleWarning} role="alert">
+        <div className="staleWarning" role="alert">
           Live refresh failed; showing the last successful snapshot. {error}
         </div>
       )}
 
       {!data ? (
-        <div className={styles.loading}>Loading analytics...</div>
+        <div className="loading">Loading analytics...</div>
       ) : (
         <>
-          <div className={styles.metrics}>
-            <article className={`${styles.metric} ${styles.salesMetric}`}>
+          <div className="metrics">
+            <article className={`${"metric"} ${"salesMetric"}`}>
               <span>Gross sales</span>
               <strong>{formatKes(data.summary.grossSales)}</strong>
             </article>
-            <article className={`${styles.metric} ${styles.profitMetric}`}>
+            <article className={`${"metric"} ${"profitMetric"}`}>
               <span>Estimated profit</span>
               <strong>{formatKes(data.summary.estimatedGrossProfit)}</strong>
             </article>
-            <article className={`${styles.metric} ${styles.orderMetric}`}>
+            <article className={`${"metric"} ${"orderMetric"}`}>
               <span>Average order</span>
               <strong>{formatKes(data.summary.averageOrderValue)}</strong>
             </article>
-            <article className={`${styles.metric} ${styles.stockMetric}`}>
+            <article className={`${"metric"} ${"stockMetric"}`}>
               <span>Inventory at cost</span>
               <strong>{formatKes(data.summary.inventoryValueAtCost)}</strong>
             </article>
           </div>
 
-          <div className={styles.healthGrid}>
+          <div className="healthGrid">
             {conversionCards.map((card) => (
-              <article className={styles.healthCard} key={card.label}>
+              <article className="healthCard" key={card.label}>
                 <span>{card.label}</span>
                 <strong>{card.value}</strong>
                 <small>{card.meta}</small>
@@ -228,13 +227,13 @@ export default function Analytics({ authToken }) {
             ))}
           </div>
 
-          <div className={styles.chartGrid}>
-            <section className={`${styles.panel} ${styles.widePanel}`}>
-              <div className={styles.panelHeader}>
+          <div className="chartGrid">
+            <section className={`${"panel"} ${"widePanel"}`}>
+              <div className="panelHeader">
                 <h2>Sales trend</h2>
                 <span>{data.range.days} days</span>
               </div>
-              <div className={styles.chartFrame} role="img" aria-label="Sales and gross profit trend chart">
+              <div className="chartFrame" role="img" aria-label="Sales and gross profit trend chart">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.salesTrend}>
                     <defs>
@@ -258,12 +257,12 @@ export default function Analytics({ authToken }) {
               </div>
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Conversion trend</h2>
                 <span>Paid attempts</span>
               </div>
-              <div className={styles.chartFrame} role="img" aria-label="Order conversion trend chart">
+              <div className="chartFrame" role="img" aria-label="Order conversion trend chart">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart data={data.salesTrend}>
                     <CartesianGrid stroke="#e2e8f0" vertical={false} />
@@ -276,14 +275,14 @@ export default function Analytics({ authToken }) {
               </div>
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Payment mix</h2>
                 <span>{data.paymentMixChart.length} methods</span>
               </div>
-              <div className={styles.chartFrame} role="img" aria-label="Payment method mix chart">
+              <div className="chartFrame" role="img" aria-label="Payment method mix chart">
                 {data.paymentMixChart.length === 0 ? (
-                  <p className={styles.empty}>No confirmed payments in this range.</p>
+                  <p className="empty">No confirmed payments in this range.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -305,7 +304,7 @@ export default function Analytics({ authToken }) {
                 )}
               </div>
               {data.paymentMixChart.length > 0 && (
-                <div className={styles.chartLegend}>
+                <div className="chartLegend">
                   {data.paymentMixChart.map((entry, index) => (
                     <div key={entry.method}>
                       <i style={{ background: CHART_COLORS[index % CHART_COLORS.length] }} />
@@ -317,14 +316,14 @@ export default function Analytics({ authToken }) {
               )}
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Category performance</h2>
                 <span>{data.categorySales.length} categories</span>
               </div>
-              <div className={styles.chartFrame} role="img" aria-label="Sales by product category chart">
+              <div className="chartFrame" role="img" aria-label="Sales by product category chart">
                 {data.categorySales.length === 0 ? (
-                  <p className={styles.empty}>No category sales yet.</p>
+                  <p className="empty">No category sales yet.</p>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={data.categorySales.slice(0, 8)} layout="vertical">
@@ -339,21 +338,21 @@ export default function Analytics({ authToken }) {
               </div>
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Stock recommendations</h2>
                 <span>{data.stockRecommendations.length} actions</span>
               </div>
               {data.stockRecommendations.length === 0 ? (
-                <p className={styles.empty}>No urgent restock action in this range.</p>
+                <p className="empty">No urgent restock action in this range.</p>
               ) : (
-                <div className={styles.recommendationList}>
+                <div className="recommendationList">
                   {data.stockRecommendations.map((product) => (
-                    <div className={styles.recommendationRow} key={product.productId}>
+                    <div className="recommendationRow" key={product.productId}>
                       <div>
-                        <div className={styles.rowTitle}>
+                        <div className="rowTitle">
                           <strong>{product.name}</strong>
-                          <span className={`${styles.urgency} ${styles[product.urgency]}`}>
+                          <span className={`${"urgency"} ${styles[product.urgency]}`}>
                             {getUrgencyLabel(product.urgency)}
                           </span>
                         </div>
@@ -371,15 +370,15 @@ export default function Analytics({ authToken }) {
               )}
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Staff performance</h2>
                 <span>{data.staffPerformance.length} staff</span>
               </div>
               {data.staffPerformance.length === 0 ? (
-                <p className={styles.empty}>No staff sales in this range.</p>
+                <p className="empty">No staff sales in this range.</p>
               ) : (
-                <table className={styles.table}>
+                <table className="table">
                   <thead>
                     <tr>
                       <th>Staff</th>
@@ -406,16 +405,16 @@ export default function Analytics({ authToken }) {
             </section>
           </div>
 
-          <div className={styles.grid}>
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+          <div className="grid">
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Best sellers</h2>
                 <span>Top {data.bestSellers.length}</span>
               </div>
               {data.bestSellers.length === 0 ? (
-                <p className={styles.empty}>No paid sales in this range.</p>
+                <p className="empty">No paid sales in this range.</p>
               ) : (
-                <table className={styles.table}>
+                <table className="table">
                   <thead>
                     <tr>
                       <th>Product</th>
@@ -441,17 +440,17 @@ export default function Analytics({ authToken }) {
               )}
             </section>
 
-            <section className={styles.panel}>
-              <div className={styles.panelHeader}>
+            <section className="panel">
+              <div className="panelHeader">
                 <h2>Slow movers</h2>
                 <span>{data.slowMovers.length}</span>
               </div>
               {data.slowMovers.length === 0 ? (
-                <p className={styles.empty}>Every stocked product sold in this range.</p>
+                <p className="empty">Every stocked product sold in this range.</p>
               ) : (
-                <div className={styles.list}>
+                <div className="list">
                   {data.slowMovers.map((product) => (
-                    <div className={styles.listRow} key={product.id}>
+                    <div className="listRow" key={product.id}>
                       <div>
                         <strong>{product.name}</strong>
                         <span>{product.stockQuantity} {product.unit} on hand</span>
@@ -464,7 +463,7 @@ export default function Analytics({ authToken }) {
             </section>
           </div>
 
-          <p className={styles.note}>{data.notes.join(' ')}</p>
+          <p className="note">{data.notes.join(' ')}</p>
         </>
       )}
     </section>

@@ -1,76 +1,104 @@
-:root {
-  /* Modern High-End POS Color System */
-  --pos-bg: #f8fafc;
-  --pos-surface: #ffffff;
-  --pos-panel: #f1f5f9;
-  --pos-panel-strong: #e2e8f0;
-  --pos-line: #e2e8f0;
-  --pos-line-strong: #cbd5e1;
-  --pos-ink: #0f172a;
-  --pos-ink-mid: #334155;
-  --pos-ink-soft: #64748b;
+/* =======================================================
+   Jijenge POS - Base Reset & Global Styles
+   ======================================================= */
 
-  /* Accent Color: Vibrant Emerald / Teal */
-  --pos-accent: #059669;
-  --pos-accent-light: #34d399;
-  --pos-accent-dark: #047857;
-  --pos-accent-mid: #10b981;
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
 
-  /* Sidebar Theme: Deep Navy Slate */
-  --pos-sidebar: #0f172a;
-  --pos-sidebar-soft: #1e293b;
-  --pos-sidebar-active: #059669;
-
-  /* Status Colors */
-  --pos-success: #16a34a;
-  --pos-success-bg: #dcfce7;
-  --pos-danger: #dc2626;
-  --pos-danger-bg: #fee2e2;
-  --pos-warn: #d97706;
-  --pos-warn-bg: #fef3c7;
-
-  color: var(--pos-ink);
-  background: var(--pos-bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-size-adjust: 100%;
+html {
+  background: var(--bg);
+  color-scheme: light;
+  scroll-behavior: smooth;
   -webkit-text-size-adjust: 100%;
 }
 
-* {
-  box-sizing: border-box;
+[data-theme="dark"] html,
+html[data-theme="dark"] {
+  color-scheme: dark;
 }
 
 body {
-  margin: 0;
   min-width: 320px;
   min-height: 100vh;
-  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  color: var(--pos-ink);
-  background: var(--pos-bg);
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-main);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  transition: background var(--duration-slow) var(--ease-out),
+              color var(--duration-slow) var(--ease-out);
   padding-bottom: env(safe-area-inset-bottom);
 }
 
-.skipLink {
-  position: fixed;
-  z-index: 10000;
-  top: 8px;
-  left: 8px;
-  padding: 12px 16px;
-  border-radius: 8px;
-  color: #fff;
-  background: var(--pos-sidebar);
-  transform: translateY(-150%);
+/* -- Typography ------------------------------------------- */
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+  letter-spacing: -0.02em;
 }
 
-.skipLink:focus {
-  transform: translateY(0);
+h1 { font-size: var(--text-4xl); }
+h2 { font-size: var(--text-2xl); }
+h3 { font-size: var(--text-xl); }
+h4 { font-size: var(--text-lg); }
+h5 { font-size: var(--text-md); }
+
+p { color: var(--text-secondary); }
+
+small { font-size: var(--text-sm); color: var(--text-muted); }
+
+a {
+  color: inherit;
+  text-decoration: none;
+  transition: color var(--duration-fast) var(--ease-out);
 }
 
+a:hover { color: var(--brand); }
+
+/* -- Form Elements ---------------------------------------- */
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  border: 0;
+  cursor: pointer;
+  background: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+input, select, textarea {
+  min-width: 0;
+  outline: none;
+}
+
+button,
+[role='button'] {
+  touch-action: manipulation;
+}
+
+/* -- Utility ---------------------------------------------- */
+
+.sr-only,
 .visuallyHidden {
-  position: absolute !important;
+  position: absolute;
   width: 1px;
   height: 1px;
   padding: 0;
@@ -81,27 +109,55 @@ body {
   border: 0;
 }
 
-button,
-input,
-select,
-textarea {
-  font-family: inherit;
+.mono { font-family: var(--font-mono); }
+
+.tabular {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
-button,
-[role='button'] {
-  touch-action: manipulation;
+.truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible {
-  outline: 2px solid var(--pos-accent);
-  outline-offset: 2px;
+.eyebrow {
+  font-size: var(--text-xs);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
 }
 
-/* Scrollbar styling */
+.gradient-text {
+  background: linear-gradient(135deg, var(--brand-dark) 0%, var(--brand) 50%, var(--accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* -- Skip Link -------------------------------------------- */
+
+.skipLink {
+  position: fixed;
+  z-index: 10000;
+  top: 8px;
+  left: 8px;
+  padding: 12px 16px;
+  border-radius: var(--radius);
+  color: #fff;
+  background: var(--sidebar-bg);
+  transform: translateY(-150%);
+  transition: transform var(--duration-fast) var(--ease-out);
+}
+
+.skipLink:focus {
+  transform: translateY(0);
+}
+
+/* -- Scrollbar Styling ------------------------------------ */
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -112,13 +168,89 @@ textarea:focus-visible {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: var(--text-muted);
 }
+
+/* -- Selection -------------------------------------------- */
+
+::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* -- Focus Ring ------------------------------------------- */
+
+:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-xs);
+}
+
+/* -- Image defaults --------------------------------------- */
+
+img, video, svg {
+  display: block;
+  max-width: 100%;
+}
+
+.desktop-nav {
+  display: none !important;
+}
+@media (min-width: 1024px) {
+  .desktop-nav {
+    display: flex !important;
+  }
+}
+
+/* -- Global Buttons --------------------------------------- */
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: var(--radius-full);
+  background: var(--brand);
+  color: white;
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.btn-primary:hover:not(:disabled) {
+  background: var(--brand-dark);
+}
+.btn-primary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  border-radius: var(--radius-full);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  transition: all var(--duration-fast) var(--ease-out);
+}
+.btn-secondary:hover:not(:disabled) {
+  border-color: var(--brand);
+  color: var(--brand);
+}
+.btn-secondary:active:not(:disabled) {
+  transform: scale(0.98);
+}
+/* -- Root mount ------------------------------------------- */
+
+#root {
+  min-height: 100vh;
+}
+
+/* -- Mobile Touch Targets --------------------------------- */
 
 @media (max-width: 600px) {
   input,
@@ -132,6 +264,8 @@ textarea:focus-visible {
     min-height: 44px;
   }
 }
+
+/* -- Reduced Motion --------------------------------------- */
 
 @media (prefers-reduced-motion: reduce) {
   *,

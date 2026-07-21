@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import styles from './Dashboard.module.css';
 
 function formatKes(amount) {
   return `KES ${Number(amount || 0).toFixed(2)}`;
@@ -37,16 +36,16 @@ export default function Dashboard({ authToken }) {
 
   if (error) {
     return (
-      <section className={styles.page}>
-        <div className={styles.errorPanel}>{error}</div>
+      <section className="dashboard-page page-container">
+        <div className="errorPanel">{error}</div>
       </section>
     );
   }
 
   if (!report) {
     return (
-      <section className={styles.page}>
-        <div className={styles.loading}>Loading dashboard...</div>
+      <section className="dashboard-page page-container">
+        <div className="loading">Loading dashboard...</div>
       </section>
     );
   }
@@ -54,48 +53,48 @@ export default function Dashboard({ authToken }) {
   const paymentEntries = Object.entries(report.paymentBreakdown || {});
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
+    <section className="dashboard-page page-container">
+      <header className="header">
         <div>
-          <h1 className={styles.title}>Daily dashboard</h1>
-          <p className={styles.date}>{report.date}</p>
+          <h1 className="title">Daily dashboard</h1>
+          <p className="date">{report.date}</p>
         </div>
-        <button className={styles.refreshBtn} onClick={load} type="button">
+        <button className="refreshBtn" onClick={load} type="button">
           Refresh
         </button>
       </header>
 
-      <div className={styles.metrics}>
-        <article className={styles.metric}>
-          <span className={styles.metricLabel}>Revenue</span>
+      <div className="metrics">
+        <article className="metric">
+          <span className="metricLabel">Revenue</span>
           <strong>{formatKes(report.revenue)}</strong>
         </article>
-        <article className={styles.metric}>
-          <span className={styles.metricLabel}>Orders</span>
+        <article className="metric">
+          <span className="metricLabel">Orders</span>
           <strong>{report.orderCount}</strong>
         </article>
-        <article className={styles.metric}>
-          <span className={styles.metricLabel}>Average order</span>
+        <article className="metric">
+          <span className="metricLabel">Average order</span>
           <strong>{formatKes(report.averageOrderValue)}</strong>
         </article>
-        <article className={styles.metric}>
-          <span className={styles.metricLabel}>Queued eTIMS</span>
+        <article className="metric">
+          <span className="metricLabel">Queued eTIMS</span>
           <strong>{report.pendingEtimsCount}</strong>
         </article>
       </div>
 
-      <div className={styles.grid}>
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
+      <div className="grid">
+        <section className="panel">
+          <div className="panelHeader">
             <h2>Payment mix</h2>
           </div>
           {paymentEntries.length === 0 ? (
-            <p className={styles.empty}>No confirmed payments yet.</p>
+            <p className="empty">No confirmed payments yet.</p>
           ) : (
-            <div className={styles.list}>
+            <div className="list">
               {paymentEntries.map(([method, amount]) => (
-                <div className={styles.listRow} key={method}>
-                  <span className={styles.capitalize}>{method}</span>
+                <div className="listRow" key={method}>
+                  <span className="capitalize">{method}</span>
                   <strong>{formatKes(amount)}</strong>
                 </div>
               ))}
@@ -103,20 +102,20 @@ export default function Dashboard({ authToken }) {
           )}
         </section>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
+        <section className="panel">
+          <div className="panelHeader">
             <h2>Low stock</h2>
             <span>{report.lowStock.length}</span>
           </div>
           {report.lowStock.length === 0 ? (
-            <p className={styles.empty}>All tracked products are above reorder level.</p>
+            <p className="empty">All tracked products are above reorder level.</p>
           ) : (
-            <div className={styles.list}>
+            <div className="list">
               {report.lowStock.map((product) => (
-                <div className={styles.listRow} key={product.id}>
+                <div className="listRow" key={product.id}>
                   <div>
-                    <div className={styles.itemName}>{product.name}</div>
-                    <div className={styles.itemMeta}>{product.sku}</div>
+                    <div className="itemName">{product.name}</div>
+                    <div className="itemMeta">{product.sku}</div>
                   </div>
                   <strong>
                     {product.stockQuantity} {product.unit}
@@ -127,19 +126,19 @@ export default function Dashboard({ authToken }) {
           )}
         </section>
 
-        <section className={styles.panel}>
-          <div className={styles.panelHeader}>
+        <section className="panel">
+          <div className="panelHeader">
             <h2>Recent orders</h2>
           </div>
           {report.recentOrders.length === 0 ? (
-            <p className={styles.empty}>No sales have been posted today.</p>
+            <p className="empty">No sales have been posted today.</p>
           ) : (
-            <div className={styles.list}>
+            <div className="list">
               {report.recentOrders.map((order) => (
-                <div className={styles.listRow} key={order.id}>
+                <div className="listRow" key={order.id}>
                   <div>
-                    <div className={styles.itemName}>{order.orderNumber}</div>
-                    <div className={styles.itemMeta}>
+                    <div className="itemName">{order.orderNumber}</div>
+                    <div className="itemMeta">
                       {formatTime(order.createdAt)} - {order.paymentStatus}
                     </div>
                   </div>

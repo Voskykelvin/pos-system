@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import styles from './StoreAdmin.module.css';
 
 const EMPTY_BRANCH = {
   name: '',
@@ -372,29 +371,29 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
 
   if (loading && !setup) {
     return (
-      <section className={styles.page}>
-        <div className={styles.loading}>Loading store setup...</div>
+      <section className="store-admin-page page-container">
+        <div className="loading">Loading store setup...</div>
       </section>
     );
   }
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
+    <section className="store-admin-page page-container">
+      <header className="header">
         <div>
           <h1>Store setup</h1>
           <p>{setup?.tenant?.name || 'Your store'} is on the {setup?.plan?.name || 'current'} plan.</p>
         </div>
-        <button className={styles.secondaryBtn} type="button" onClick={loadSetup}>
+        <button className="secondaryBtn" type="button" onClick={loadSetup}>
           Refresh
         </button>
       </header>
 
-      <div className={styles.tabs} role="tablist" aria-label="Store setup">
+      <div className="tabs" role="tablist" aria-label="Store setup">
         {TABS.map((tab) => (
           <button
             key={tab.id}
-            className={`${styles.tabBtn} ${activeTab === tab.id ? styles.active : ''}`}
+            className={`${"tabBtn"} ${activeTab === tab.id ? "active" : ''}`}
             onClick={() => setActiveTab(tab.id)}
             type="button"
             role="tab"
@@ -405,51 +404,55 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
         ))}
       </div>
 
-      {message && <div className={styles.successBanner} role="status">{message}</div>}
-      {error && <div className={styles.errorBanner} role="alert">{error}</div>}
+      {message && <div className="successBanner" role="status">{message}</div>}
+      {error && <div className="errorBanner" role="alert">{error}</div>}
 
       {!canEdit && (
-        <div className={styles.infoBanner}>
+        <div className="infoBanner">
           Managers can view setup. Store admins can add staff, branches, and billing details.
         </div>
       )}
 
       {activeTab === 'overview' && (
         <>
-          <div className={styles.metricGrid}>
-            <article className={styles.metric}>
+          <div className="metricGrid">
+            <article className="metric">
               <span>Plan</span>
               <strong>{setup?.plan?.name || '-'}</strong>
               <small>{setup?.plan?.priceUsd ? `$${setup.plan.priceUsd}/mo` : 'Custom'}</small>
             </article>
-            <article className={styles.metric}>
+            <article className="metric">
               <span>Branches</span>
               <strong>{limitText(counts.activeBranches || 0, limits.branchLimit)}</strong>
               <small>Active branch profiles</small>
             </article>
-            <article className={styles.metric}>
+            <article className="metric">
               <span>Staff</span>
               <strong>{limitText(counts.activeStaff || 0, limits.staffLimit)}</strong>
               <small>Active logins</small>
             </article>
-            <article className={styles.metric}>
+            <article className="metric">
               <span>Registers</span>
               <strong>{limits.registerLimit || 'Unlimited'}</strong>
               <small>Subscription allowance</small>
             </article>
           </div>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>Launch checklist</h2>
               <span>{setupItems.filter((item) => item.done).length} / {setupItems.length} ready</span>
             </div>
-            <div className={styles.checklist}>
+            <div className="checklist">
               {setupItems.map((item) => (
-                <div className={styles.checkItem} key={item.key}>
-                  <span className={item.done ? styles.doneDot : styles.todoDot} />
-                  <strong>{item.label}</strong>
-                  <small>{item.done ? 'Ready' : 'Needs setup'}</small>
+                <div className="checkItem" key={item.key}>
+                  <div className="checkItemContent">
+                    <span className={item.done ? "doneDot" : "todoDot"} />
+                    <strong>{item.label}</strong>
+                  </div>
+                  <small className={item.done ? "statusDone" : "statusTodo"}>
+                    {item.done ? 'Ready' : 'Needs setup'}
+                  </small>
                 </div>
               ))}
             </div>
@@ -458,9 +461,9 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
       )}
 
       {activeTab === 'staff' && (
-        <div className={styles.twoColumn}>
-          <form className={styles.panel} onSubmit={handleStaffSubmit}>
-            <div className={styles.panelHeader}>
+        <div className="twoColumn">
+          <form className="panel" onSubmit={handleStaffSubmit}>
+            <div className="panelHeader">
               <h2>Create staff login</h2>
               <span>{limitText(counts.activeStaff || 0, limits.staffLimit)}</span>
             </div>
@@ -483,18 +486,18 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
                 ))}
               </select>
             </label>
-            <button className={styles.primaryBtn} type="submit" disabled={!canEdit || saving}>
+            <button className="primaryBtn" type="submit" disabled={!canEdit || saving}>
               Create staff profile
             </button>
           </form>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>Staff profiles</h2>
               <span>{staff.length} total</span>
             </div>
-            <div className={styles.tableWrap}>
-              <table className={styles.table}>
+            <div className="tableWrap">
+              <table className="table">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -525,13 +528,13 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
                         </select>
                       </td>
                       <td>
-                        <span className={member.isActive ? styles.okBadge : styles.offBadge}>
+                        <span className={member.isActive ? "okBadge" : "offBadge"}>
                           {member.isActive ? 'Active' : 'Inactive'}
                         </span>
                       </td>
                       <td>
                         <button
-                          className={styles.secondaryBtn}
+                          className="secondaryBtn"
                           type="button"
                           disabled={!canEdit || saving || member.id === user?.id}
                           onClick={() => updateStaff(member, { isActive: !member.isActive })}
@@ -549,9 +552,9 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
       )}
 
       {activeTab === 'branches' && (
-        <div className={styles.twoColumn}>
-          <form className={styles.panel} onSubmit={handleBranchSubmit}>
-            <div className={styles.panelHeader}>
+        <div className="twoColumn">
+          <form className="panel" onSubmit={handleBranchSubmit}>
+            <div className="panelHeader">
               <h2>{editingBranchId ? 'Edit branch' : 'Create branch'}</h2>
               <span>{limitText(counts.activeBranches || 0, limits.branchLimit)}</span>
             </div>
@@ -560,37 +563,37 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             <label>Phone<input value={branchForm.phone} onChange={(event) => setBranchForm({ ...branchForm, phone: event.target.value })} disabled={!canEdit} /></label>
             <label>Address<input value={branchForm.address} onChange={(event) => setBranchForm({ ...branchForm, address: event.target.value })} disabled={!canEdit} /></label>
             <label>City<input value={branchForm.city} onChange={(event) => setBranchForm({ ...branchForm, city: event.target.value })} disabled={!canEdit} /></label>
-            <div className={styles.formActions}>
-              <button className={styles.primaryBtn} type="submit" disabled={!canEdit || saving}>
+            <div className="formActions">
+              <button className="primaryBtn" type="submit" disabled={!canEdit || saving}>
                 {editingBranchId ? 'Save branch' : 'Create branch'}
               </button>
               {editingBranchId && (
-                <button className={styles.secondaryBtn} type="button" onClick={() => { setEditingBranchId(null); setBranchForm(EMPTY_BRANCH); }}>
+                <button className="secondaryBtn" type="button" onClick={() => { setEditingBranchId(null); setBranchForm(EMPTY_BRANCH); }}>
                   Cancel edit
                 </button>
               )}
             </div>
           </form>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>Branch profiles</h2>
               <span>{branches.length} total</span>
             </div>
-            <div className={styles.branchList}>
+            <div className="branchList">
               {branches.map((branch) => (
-                <article className={styles.branchRow} key={branch.id}>
+                <article className="branchRow" key={branch.id}>
                   <div>
                     <strong>{branch.name}</strong>
                     <small>{[branch.code, branch.city, branch.phone].filter(Boolean).join(' - ') || 'No extra details'}</small>
                   </div>
-                  <span className={branch.isActive ? styles.okBadge : styles.offBadge}>
+                  <span className={branch.isActive ? "okBadge" : "offBadge"}>
                     {branch.isActive ? 'Active' : 'Inactive'}
                   </span>
-                  <button className={styles.secondaryBtn} type="button" onClick={() => editBranch(branch)} disabled={!canEdit || saving}>
+                  <button className="secondaryBtn" type="button" onClick={() => editBranch(branch)} disabled={!canEdit || saving}>
                     Edit
                   </button>
-                  <button className={styles.secondaryBtn} type="button" onClick={() => toggleBranch(branch)} disabled={!canEdit || saving}>
+                  <button className="secondaryBtn" type="button" onClick={() => toggleBranch(branch)} disabled={!canEdit || saving}>
                     {branch.isActive ? 'Deactivate' : 'Activate'}
                   </button>
                 </article>
@@ -601,19 +604,19 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
       )}
 
       {activeTab === 'billing' && (
-        <form className={styles.panel} onSubmit={saveSettings}>
-          <div className={styles.panelHeader}>
+        <form className="panel" onSubmit={saveSettings}>
+          <div className="panelHeader">
             <h2>Subscription payment</h2>
-            <div className={styles.panelHeaderActions}>
+            <div className="panelHeaderActions">
               <span>{titleCase(billingForm.status)}</span>
               {onOpenBilling && (
-                <button className={styles.secondaryBtn} type="button" onClick={onOpenBilling}>
+                <button className="secondaryBtn" type="button" onClick={onOpenBilling}>
                   Open payment page
                 </button>
               )}
             </div>
           </div>
-          <div className={styles.formGrid}>
+          <div className="formGrid">
             <label>Payment method
               <select value={billingForm.subscriptionPaymentMethod} onChange={(event) => setBillingForm({ ...billingForm, subscriptionPaymentMethod: event.target.value })} disabled={!canEdit}>
                 {BILLING_METHODS.map((method) => (
@@ -634,20 +637,20 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             <label>Billing phone<input value={billingForm.billingPhone} onChange={(event) => setBillingForm({ ...billingForm, billingPhone: event.target.value })} disabled={!canEdit} /></label>
             <label>Payment reference<input value={billingForm.billingReference} onChange={(event) => setBillingForm({ ...billingForm, billingReference: event.target.value })} disabled={!canEdit} /></label>
           </div>
-          <button className={styles.primaryBtn} type="submit" disabled={!canEdit || saving}>
+          <button className="primaryBtn" type="submit" disabled={!canEdit || saving}>
             Save subscription payment
           </button>
         </form>
       )}
 
       {activeTab === 'payments' && (
-        <form className={styles.stackedPanels} onSubmit={saveSettings}>
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+        <form className="stackedPanels" onSubmit={saveSettings}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>Shop details</h2>
               <span>{businessForm.currency || 'KES'}</span>
             </div>
-            <div className={styles.formGrid}>
+            <div className="formGrid">
               <label>Receipt business name<input value={businessForm.name} onChange={(event) => setBusinessForm({ ...businessForm, name: event.target.value })} disabled={!canEdit} /></label>
               <label>KRA PIN<input value={businessForm.kraPin} onChange={(event) => setBusinessForm({ ...businessForm, kraPin: event.target.value.toUpperCase() })} disabled={!canEdit} /></label>
               <label>Time zone<input value={businessForm.timeZone} onChange={(event) => setBusinessForm({ ...businessForm, timeZone: event.target.value })} disabled={!canEdit} /></label>
@@ -658,12 +661,12 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             </div>
           </div>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>M-Pesa collection</h2>
               <span>{MPESA_MODES.find((mode) => mode.value === mpesaForm.mode)?.label || 'Manual'}</span>
             </div>
-            <div className={styles.formGrid}>
+            <div className="formGrid">
               <label>Collection mode
                 <select value={mpesaForm.mode} onChange={(event) => setMpesaForm({ ...mpesaForm, mode: event.target.value })} disabled={!canEdit}>
                   {MPESA_MODES.map((mode) => (
@@ -686,12 +689,12 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             </div>
           </div>
 
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+          <div className="panel">
+            <div className="panelHeader">
               <h2>KRA/eTIMS VAT</h2>
               <span>{ETIMS_STATUSES.find((status) => status.value === etimsForm.status)?.label || 'Not configured'}</span>
             </div>
-            <div className={styles.formGrid}>
+            <div className="formGrid">
               <label>eTIMS status
                 <select value={etimsForm.status} onChange={(event) => setEtimsForm({ ...etimsForm, status: event.target.value })} disabled={!canEdit}>
                   {ETIMS_STATUSES.map((status) => (
@@ -711,8 +714,8 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
             </div>
           </div>
 
-          <div className={styles.saveRow}>
-            <button className={styles.primaryBtn} type="submit" disabled={!canEdit || saving}>
+          <div className="saveRow">
+            <button className="primaryBtn" type="submit" disabled={!canEdit || saving}>
               Save payment and VAT setup
             </button>
           </div>
@@ -720,40 +723,40 @@ export default function StoreAdmin({ authToken, user, onOpenBilling }) {
       )}
 
       {activeTab === 'security' && (
-        <div className={styles.stackedPanels}>
-          <div className={styles.panel}>
-            <div className={styles.panelHeader}>
+        <div className="stackedPanels">
+          <div className="panel">
+            <div className="panelHeader">
               <div><h2>Authenticator MFA</h2><p>Protect privileged sign-in with a six-digit rotating code.</p></div>
-              <span className={mfaEnabled ? styles.okBadge : styles.offBadge}>{mfaEnabled ? 'Enabled' : 'Disabled'}</span>
+              <span className={mfaEnabled ? "okBadge" : "offBadge"}>{mfaEnabled ? 'Enabled' : 'Disabled'}</span>
             </div>
-            {!mfaEnabled && !mfaSetup && <button className={styles.primaryBtn} type="button" onClick={beginMfaSetup}>Set up authenticator</button>}
+            {!mfaEnabled && !mfaSetup && <button className="primaryBtn" type="button" onClick={beginMfaSetup}>Set up authenticator</button>}
             {mfaSetup && (
-              <div className={styles.formGrid}>
+              <div className="formGrid">
                 <label>Manual setup key<input readOnly value={mfaSetup.secret} onFocus={(event) => event.target.select()} /></label>
                 <label>Six-digit code<input value={mfaCode} inputMode="numeric" onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))} /></label>
-                <button className={styles.primaryBtn} type="button" disabled={mfaCode.length !== 6} onClick={enableMfa}>Verify and enable</button>
+                <button className="primaryBtn" type="button" disabled={mfaCode.length !== 6} onClick={enableMfa}>Verify and enable</button>
               </div>
             )}
-            {mfaEnabled && <button className={styles.secondaryBtn} type="button" onClick={disableMfa}>Disable MFA</button>}
+            {mfaEnabled && <button className="secondaryBtn" type="button" onClick={disableMfa}>Disable MFA</button>}
           </div>
-          <div className={styles.panel}>
-          <div className={styles.panelHeader}>
+          <div className="panel">
+          <div className="panelHeader">
             <div>
               <h2>Signed-in devices</h2>
               <p>Review and remotely sign out active browser sessions.</p>
             </div>
-            <button className={styles.secondaryBtn} type="button" onClick={loadSessions}>Refresh</button>
+            <button className="secondaryBtn" type="button" onClick={loadSessions}>Refresh</button>
           </div>
-          <div className={styles.branchList}>
+          <div className="branchList">
             {sessions.map((session) => (
-              <article className={styles.branchRow} key={session.id}>
+              <article className="branchRow" key={session.id}>
                 <div>
                   <strong>{session.current ? 'This device' : 'Other device'}</strong>
                   <small>{session.userAgent || 'Unknown browser'}</small>
                   <small>{session.ipAddress || 'Unknown IP'} · expires {new Date(session.expiresAt).toLocaleString()}</small>
                 </div>
-                <span className={styles.okBadge}>Active</span>
-                <button className={styles.secondaryBtn} type="button" onClick={() => revokeDeviceSession(session)}>Sign out</button>
+                <span className="okBadge">Active</span>
+                <button className="secondaryBtn" type="button" onClick={() => revokeDeviceSession(session)}>Sign out</button>
               </article>
             ))}
             {sessions.length === 0 && <p>No active sessions found.</p>}

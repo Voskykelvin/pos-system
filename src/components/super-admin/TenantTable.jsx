@@ -1,4 +1,3 @@
-import styles from '../SuperAdmin.module.css';
 import { daysText, formatDate, formatKes, formatPercent, labelize } from './formatters';
 
 function isUnusedProfile(tenant) {
@@ -8,13 +7,13 @@ function isUnusedProfile(tenant) {
 
 export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant, onDeleteTenant }) {
   return (
-    <section className={styles.panel}>
-      <div className={styles.panelHeader}>
+    <section className="panel">
+      <div className="panelHeader">
         <h2>Registered business tenants</h2>
         <span>{tenants.length ? `${tenants.length} stores` : 'No stores yet'}</span>
       </div>
-      <div className={styles.tableWrap}>
-        <table className={styles.table}>
+      <div className="tableWrap">
+        <table className="table">
           <thead>
             <tr>
               <th>Business</th>
@@ -31,14 +30,14 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
           <tbody>
             {tenants.map((tenant) => (
               <tr key={tenant.id}>
-                <td className={styles.tenantName}>
+                <td className="tenantName">
                   <strong>{tenant.name}</strong>
                   <span>{tenant.currency} - joined {new Date(tenant.createdAt).toLocaleDateString()}</span>
                 </td>
                 <td>{tenant.owner?.email || '-'}</td>
                 <td>
                   <select
-                    className={styles.planSelect}
+                    className="planSelect"
                     value={tenant.plan}
                     onChange={(event) => onUpdateTenant(tenant, { plan: event.target.value })}
                   >
@@ -55,21 +54,21 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                 <td>
                   <strong>{formatDate(tenant.subscription.endsAt)}</strong>
                   <span>{daysText(tenant.subscription.daysRemaining)}</span>
-                  {tenant.subscription.pendingPayment && <small className={styles.upgradeHint}>Payment review</small>}
+                  {tenant.subscription.pendingPayment && <small className="upgradeHint">Payment review</small>}
                 </td>
                 <td>
-                  <span className={`${styles.healthBadge} ${styles[tenant.activity.health]}`}>
+                  <span className={`${"healthBadge"} ${styles[tenant.activity.health]}`}>
                     {labelize(tenant.activity.health)}
                   </span>
-                  {tenant.activity.upgradeSignal && <small className={styles.upgradeHint}>Upgrade lead</small>}
+                  {tenant.activity.upgradeSignal && <small className="upgradeHint">Upgrade lead</small>}
                 </td>
                 <td>
-                  <span className={`${styles.statusBadge} ${styles[tenant.status]}`}>{labelize(tenant.status)}</span>
+                  <span className={`${"statusBadge"} ${styles[tenant.status]}`}>{labelize(tenant.status)}</span>
                 </td>
                 <td>
-                  <div className={styles.rowActions}>
+                  <div className="rowActions">
                     <button
-                      className={tenant.status === 'active' ? styles.suspendBtn : styles.activateBtn}
+                      className={tenant.status === 'active' ? "suspendBtn" : "activateBtn"}
                       onClick={() => onToggleStatus(tenant)}
                       type="button"
                     >
@@ -77,7 +76,7 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                     </button>
                     {isUnusedProfile(tenant) && (
                       <button
-                        className={styles.deleteProfileBtn}
+                        className="deleteProfileBtn"
                         onClick={() => onDeleteTenant(tenant)}
                         type="button"
                       >
@@ -90,7 +89,7 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
             ))}
             {tenants.length === 0 && (
               <tr>
-                <td colSpan="9" className={styles.emptyCell}>No tenant stores registered yet.</td>
+                <td colSpan="9" className="emptyCell">No tenant stores registered yet.</td>
               </tr>
             )}
           </tbody>

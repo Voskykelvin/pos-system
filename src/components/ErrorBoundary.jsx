@@ -1,6 +1,5 @@
 import React from 'react';
 import PropTypes from 'prop-types';
-import styles from './ErrorBoundary.module.css';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -29,18 +28,18 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className={styles.container}>
-          <div className={styles.icon}>!</div>
-          <h2 className={styles.title}>Something went wrong</h2>
-          <p className={styles.message}>
+        <div className="container">
+          <div className="icon">!</div>
+          <h2 className="title">Something went wrong</h2>
+          <p className="message">
             An unexpected error occurred in this section of the application.
           </p>
-          <div className={styles.actions}>
-            <button className={styles.primaryBtn} onClick={this.handleReset} type="button">
+          <div className="actions">
+            <button className="primaryBtn" onClick={this.handleReset} type="button">
               Try Again
             </button>
             <button
-              className={styles.secondaryBtn}
+              className="secondaryBtn"
               onClick={() => { window.location.href = '/'; }}
               type="button"
             >
@@ -48,9 +47,9 @@ class ErrorBoundary extends React.Component {
             </button>
           </div>
           {this.state.error && (
-            <details className={styles.details}>
-              <summary className={styles.detailsSummary}>Technical Details</summary>
-              <pre className={styles.detailsContent}>
+            <details className="details">
+              <summary className="detailsSummary">Technical Details</summary>
+              <pre className="detailsContent">
                 {this.state.error.stack || this.state.error.message || String(this.state.error)}
               </pre>
             </details>

@@ -12,7 +12,6 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import styles from '../SuperAdmin.module.css';
 import {
   formatKes,
   formatUsd,
@@ -32,7 +31,7 @@ const HEALTH_COLORS = ['#059669', '#2563eb', '#0f766e', '#d97706', '#f97316', '#
 
 function EmptyChartState({ title, text }) {
   return (
-    <div className={styles.emptyChart}>
+    <div className="emptyChart">
       <strong>{title}</strong>
       <span>{text}</span>
     </div>
@@ -41,12 +40,12 @@ function EmptyChartState({ title, text }) {
 
 function ChartPanel({ title, meta, children, hasData = true, emptyTitle, emptyText }) {
   return (
-    <section className={styles.panel}>
-      <div className={styles.panelHeader}>
+    <section className="panel">
+      <div className="panelHeader">
         <h2>{title}</h2>
         <span>{meta}</span>
       </div>
-      <div className={styles.chartFrame}>
+      <div className="chartFrame">
         {hasData ? children : <EmptyChartState title={emptyTitle} text={emptyText} />}
       </div>
     </section>
@@ -62,7 +61,7 @@ export default function PlatformCharts({ charts, metrics, rangeDays }) {
   const hasPlanSignal = hasAnyValue(planRows, ['mrrUsd', 'stores']);
 
   return (
-    <div className={styles.chartGrid}>
+    <div className="chartGrid">
       <ChartPanel
         title="Store signups"
         meta={`${rangeDays} days`}
@@ -148,7 +147,7 @@ export default function PlatformCharts({ charts, metrics, rangeDays }) {
             <Tooltip formatter={(value, name) => [value, labelize(name)]} />
           </PieChart>
         </ResponsiveContainer>
-        <div className={styles.healthLegend}>
+        <div className="healthLegend">
           {healthRows.map((entry, index) => (
             <span key={entry.health}>
               <i style={{ background: HEALTH_COLORS[index % HEALTH_COLORS.length] }} />

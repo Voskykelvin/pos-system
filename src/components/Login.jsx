@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import styles from './Login.module.css';
 import {
   BUILDER_NAME,
   BUILDER_PHONE_DISPLAY,
@@ -40,66 +39,77 @@ export default function Login({ onLogin, onNavigateHome }) {
   }
 
   return (
-    <main className={styles.page}>
-      {onNavigateHome && (
-        <button className={styles.homeLink} type="button" onClick={onNavigateHome}>
-          Back to homepage
-        </button>
-      )}
-      <section className={styles.panel}>
-        <div className={styles.brandMark}>J</div>
-        <h1>Jijenge POS</h1>
-        <p>Log in to run your store.</p>
+    <main className="login-page">
+      {/* Visual panel - desktop only */}
+      <div className="visualPanel">
+        <h2 className="visualTitle">Run your store<br />with confidence.</h2>
+        <p className="visualSubtitle">
+          Checkout, inventory, M-Pesa payments, and eTIMS compliance - all in one place.
+        </p>
+      </div>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          <label>
-            Email or phone
-            <input
-              value={identifier}
-              onChange={(event) => setIdentifier(event.target.value)}
-              autoComplete="username"
-              required
-            />
-          </label>
-          {mfaRequired && (
+      {/* Form panel */}
+      <div className="formContainer">
+        <section className="panel">
+          {onNavigateHome && (
+            <button className="homeLink" type="button" onClick={onNavigateHome}>
+              &larr; Back to homepage
+            </button>
+          )}
+          <div className="brandMark">J</div>
+          <h1>Jijenge POS</h1>
+          <p>Log in to run your store.</p>
+
+          <form className="form" onSubmit={handleSubmit}>
             <label>
-              Authenticator code
+              Email or phone
               <input
-                value={mfaCode}
-                onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                pattern="[0-9]{6}"
+                value={identifier}
+                onChange={(event) => setIdentifier(event.target.value)}
+                autoComplete="username"
                 required
-                autoFocus
               />
             </label>
-          )}
-          <label>
-            Password
-            <input
-              type="password"
-              value={password}
-              onChange={(event) => setPassword(event.target.value)}
-              autoComplete="current-password"
-              required
-            />
-          </label>
-          <button type="submit" disabled={submitting}>
-            {submitting ? 'Signing in...' : 'Sign in'}
-          </button>
-        </form>
+            {mfaRequired && (
+              <label>
+                Authenticator code
+                <input
+                  value={mfaCode}
+                  onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  pattern="[0-9]{6}"
+                  required
+                  autoFocus
+                />
+              </label>
+            )}
+            <label>
+              Password
+              <input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                required
+              />
+            </label>
+            {error && <div className="error">{error}</div>}
+            <button type="submit" disabled={submitting}>
+              {submitting ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
 
-        {error && <div className={styles.error}>{error}</div>}
-
-        <div className={styles.builderCredit}>
-          <span>System built by {BUILDER_NAME}</span>
-          <div>
-            <a href={BUILDER_TEL_URL}>{BUILDER_PHONE_DISPLAY}</a>
-            <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">WhatsApp</a>
+          <div className="builderCredit">
+            <div>
+              <span>System built by {BUILDER_NAME}</span>
+              <a href={BUILDER_WHATSAPP_URL} target="_blank" rel="noreferrer">
+                {BUILDER_PHONE_DISPLAY} WhatsApp
+              </a>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }

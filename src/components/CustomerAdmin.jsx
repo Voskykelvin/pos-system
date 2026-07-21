@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import styles from './CustomerAdmin.module.css';
 
 function formatKes(amount) {
   return `KES ${Number(amount || 0).toFixed(2)}`;
@@ -96,28 +95,28 @@ export default function CustomerAdmin({ authToken }) {
   }, []);
 
   return (
-    <section className={styles.page}>
-      <header className={styles.header}>
+    <section className="customer-admin-page page-container">
+      <header className="header">
         <h1>Customer Management</h1>
         <p>Manage customer profiles, loyalty points, and credit ledgers (Chalking).</p>
       </header>
 
-      <div className={styles.panel}>
-        <form className={styles.searchBar} onSubmit={searchCustomers}>
+      <div className="panel">
+        <form className="searchBar" onSubmit={searchCustomers}>
           <input
-            className={styles.searchInput}
+            className="searchInput"
             type="text"
             placeholder="Search by name or phone..."
             value={query}
             onChange={e => setQuery(e.target.value)}
           />
-          <button className={styles.searchBtn} type="submit">Search</button>
+          <button className="searchBtn" type="submit">Search</button>
         </form>
 
         {error && <p role="alert" style={{ color: '#ef4444' }}>{error}</p>}
         {successMessage && <p style={{ color: '#16a34a' }}>{successMessage}</p>}
 
-        <table className={styles.table}>
+        <table className="table">
           <thead>
             <tr>
               <th>Name</th>
@@ -143,7 +142,7 @@ export default function CustomerAdmin({ authToken }) {
                 <td><strong>{formatKes(c.storeCreditBalance)}</strong></td>
                 <td>{formatKes(c.creditLimit)}</td>
                 <td>
-                  <button className={styles.actionBtn} onClick={() => openLedger(c)}>
+                  <button className="actionBtn" onClick={() => openLedger(c)}>
                     View Ledger
                   </button>
                 </td>
@@ -161,20 +160,20 @@ export default function CustomerAdmin({ authToken }) {
       </div>
 
       {selectedCustomer && (
-        <div className={styles.modalOverlay}>
-          <div className={styles.modal}>
+        <div className="modalOverlay">
+          <div className="modal">
             <h2>{selectedCustomer.name || selectedCustomer.phone}&apos;s Ledger</h2>
 
             {!ledgerData ? (
               <p>Loading ledger...</p>
             ) : (
               <>
-                <div className={styles.modalMeta}>
+                <div className="modalMeta">
                   <strong>Current Debt:</strong> {formatKes(ledgerData.creditBalance)} <br/>
                   <strong>Credit Limit:</strong> {formatKes(ledgerData.creditLimit)}
                 </div>
 
-                <form className={styles.paymentForm} onSubmit={handlePayment}>
+                <form className="paymentForm" onSubmit={handlePayment}>
                   <input
                     type="number"
                     placeholder="Payment Amount"
@@ -190,16 +189,16 @@ export default function CustomerAdmin({ authToken }) {
                     value={paymentNotes}
                     onChange={e => setPaymentNotes(e.target.value)}
                   />
-                  <button className={styles.paymentBtn} type="submit" disabled={isPaying || Number(ledgerData.creditBalance) <= 0}>
+                  <button className="paymentBtn" type="submit" disabled={isPaying || Number(ledgerData.creditBalance) <= 0}>
                     {isPaying ? 'Processing...' : 'Record Payment'}
                   </button>
                 </form>
 
-                <div className={styles.ledgerRow} style={{ background: 'var(--panel)', borderRadius: '4px' }}>
-                  <div className={styles.ledgerHeader}>Date</div>
-                  <div className={styles.ledgerHeader}>Description</div>
-                  <div className={styles.ledgerHeader}>Amount</div>
-                  <div className={styles.ledgerHeader}>Balance</div>
+                <div className="ledgerRow" style={{ background: 'var(--panel)', borderRadius: '4px' }}>
+                  <div className="ledgerHeader">Date</div>
+                  <div className="ledgerHeader">Description</div>
+                  <div className="ledgerHeader">Amount</div>
+                  <div className="ledgerHeader">Balance</div>
                 </div>
 
                 {ledgerData.transactions.length === 0 ? (
@@ -208,14 +207,14 @@ export default function CustomerAdmin({ authToken }) {
                   </div>
                 ) : (
                   ledgerData.transactions.map(t => (
-                    <div className={styles.ledgerRow} key={t.id}>
+                    <div className="ledgerRow" key={t.id}>
                       <div>{formatDate(t.createdAt).split(',')[0]}</div>
                       <div>
                         {t.type === 'charge' ? ' Credit Sale' : ' Repayment'}
                         {t.orderId && ` (Order #${t.orderId})`}
                         {t.notes && <div style={{ fontSize: '11px', color: 'var(--ink-soft)' }}>{t.notes}</div>}
                       </div>
-                      <div className={t.type === 'charge' ? styles.amountCharge : styles.amountPayment}>
+                      <div className={t.type === 'charge' ? "amountCharge" : "amountPayment"}>
                         {t.type === 'charge' ? '+' : '-'}{formatKes(t.amount)}
                       </div>
                       <strong>{formatKes(t.balanceAfter)}</strong>
@@ -225,7 +224,7 @@ export default function CustomerAdmin({ authToken }) {
               </>
             )}
 
-            <button className={styles.closeBtn} onClick={() => setSelectedCustomer(null)}>Close</button>
+            <button className="closeBtn" onClick={() => setSelectedCustomer(null)}>Close</button>
           </div>
         </div>
       )}

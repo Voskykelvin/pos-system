@@ -1,9 +1,8 @@
-import styles from '../SuperAdmin.module.css';
 import { formatKes, formatPercent, formatUsd } from './formatters';
 
 function metricValue(value, quiet = false) {
   return (
-    <div className={`${styles.kpiValue} ${quiet ? styles.kpiTextValue : ''}`}>
+    <div className={`${"kpiValue"} ${quiet ? "kpiTextValue" : ''}`}>
       {value}
     </div>
   );
@@ -59,15 +58,15 @@ export default function MetricOverview({ metrics }) {
   ];
 
   return (
-    <div className={styles.kpiGrid}>
+    <div className="kpiGrid">
       {cards.map((card) => (
         <article
-          className={`${styles.kpiCard} ${card.highlight ? styles.highlightKpi : ''} ${card.quiet ? styles.quietKpi : ''}`}
+          className={`${"kpiCard"} ${card.highlight ? "highlightKpi" : ''} ${card.quiet ? "quietKpi" : ''}`}
           key={card.label}
         >
-          <div className={styles.kpiLabel}>{card.label}</div>
+          <div className="kpiLabel">{card.label}</div>
           {metricValue(card.value, card.quiet)}
-          <div className={styles.kpiSub}>{card.sub}</div>
+          <div className="kpiSub">{card.sub}</div>
         </article>
       ))}
     </div>

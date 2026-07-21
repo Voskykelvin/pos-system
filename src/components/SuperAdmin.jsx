@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import styles from './SuperAdmin.module.css';
 import MetricOverview from './super-admin/MetricOverview.jsx';
 import PlanPackaging from './super-admin/PlanPackaging.jsx';
 import PlatformCharts from './super-admin/PlatformCharts.jsx';
@@ -131,8 +130,8 @@ export default function SuperAdmin({ authToken }) {
     }
   }
 
-  if (loading && !data) return <div className={styles.loading}>Loading platform dashboard...</div>;
-  if (error) return <div className={styles.errorBanner}>{error}</div>;
+  if (loading && !data) return <div className="loading">Loading platform dashboard...</div>;
+  if (error) return <div className="errorBanner">{error}</div>;
 
   const {
     metrics = {},
@@ -146,7 +145,7 @@ export default function SuperAdmin({ authToken }) {
   const pendingReview = subscriptionPayments.pendingReview || [];
 
   return (
-    <section className={styles.container}>
+    <section className="container">
       <PlatformHeader
         days={days}
         loading={loading}
@@ -156,12 +155,12 @@ export default function SuperAdmin({ authToken }) {
         onRefresh={() => loadDashboard(days)}
       />
 
-      <nav className={styles.sectionNav} aria-label="Super admin sections">
+      <nav className="sectionNav" aria-label="Super admin sections">
         {SECTIONS.map((item) => (
           <button
             key={item.id}
             type="button"
-            className={section === item.id ? styles.activeSection : ''}
+            className={section === item.id ? "activeSection" : ''}
             onClick={() => navigateSection(item.id)}
           >
             {item.label}
