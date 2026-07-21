@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        shell: cmd
+        shell: bash
 
     steps:
       - name: Checkout
@@ -24,8 +24,8 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm config set script-shell bash && npm ci
-        shell: bash
+        run: npm ci
+
       - name: Lint source
         run: npm run lint
 
@@ -58,6 +58,9 @@ jobs:
 
   postgres:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
     services:
       postgres:
         image: postgres:16
