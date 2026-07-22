@@ -9,6 +9,7 @@ async function loginAsAdmin(page) {
   if (await menuBtn.isVisible()) {
     await menuBtn.click();
   }
+  await page.getByRole('button', { name: 'Inventory' }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Inventory' }).click();
   await expect(page.getByPlaceholder('Scan barcode here')).toBeVisible();
 }

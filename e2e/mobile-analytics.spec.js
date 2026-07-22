@@ -11,6 +11,7 @@ test('phone admin can review responsive live analytics without page overflow', a
   if (await menuBtn.isVisible()) {
     await menuBtn.click();
   }
+  await page.getByRole('button', { name: 'Analytics' }).waitFor({ state: 'visible' });
   await page.getByRole('button', { name: 'Analytics' }).click();
 
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();

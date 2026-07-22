@@ -3,8 +3,7 @@ const path = require('path');
 
 module.exports = defineConfig({
   testDir: path.join(__dirname, 'e2e'),
-  testMatch: '**/*.spec.js',
-  timeout: 60000,
+  testMatch: '**/*.spec.{js,jsx,ts,tsx}',
   expect: {
     timeout: 10000
   },
@@ -26,7 +25,7 @@ module.exports = defineConfig({
     command: 'node scripts/e2e-server.js',
     url: 'http://127.0.0.1:4173/api/health',
     reuseExistingServer: !process.env.CI,
-    timeout: 120000,
+    timeout: 300000,
     env: {
       ...process.env,
       PORT: '4173',
