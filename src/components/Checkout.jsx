@@ -1735,7 +1735,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               onClick={() => {
                 const next = receiptWidth === '80mm' ? '58mm' : '80mm';
                 setReceiptWidth(next);
-                try { localStorage.setItem('jijenge_receipt_width', next); } catch {}
+                try { localStorage.setItem('jijenge_receipt_width', next); } catch (err) { void err; }
                 showToast(`Receipt format: ${next}`);
               }}
               title="Click to toggle receipt paper format (58mm vs 80mm)"

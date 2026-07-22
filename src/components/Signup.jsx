@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import {
   BUILDER_NAME,
   BUILDER_PHONE_DISPLAY,
-  BUILDER_TEL_URL,
   BUILDER_WHATSAPP_URL
 } from '../utils/builderContact';
 
