@@ -33,9 +33,9 @@
   /* -- Typography Colors ------------------------------- */
   --ink: #0a1f14;
   --text: #1a3328;
-  --text-secondary: #4a6b5c;
-  --text-muted: #7a9a8b;
-  --text-dim: #a3bbb0;
+  --text-secondary: #355345;
+  --text-muted: #476859;
+  --text-dim: #5c7e6e;
   --text-on-brand: #ffffff;
   --text-on-accent: #1a1400;
 
@@ -149,9 +149,9 @@
 
   --ink: #e8f0ec;
   --text: #d4e0d9;
-  --text-secondary: #92ada1;
-  --text-muted: #6b8a7c;
-  --text-dim: #4a6b5c;
+  --text-secondary: #a3c2b4;
+  --text-muted: #8caaa0;
+  --text-dim: #739489;
 
   --border: rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.14);

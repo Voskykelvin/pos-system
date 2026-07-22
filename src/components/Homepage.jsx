@@ -201,6 +201,7 @@ export default function Homepage({
         </div>
       </header>
 
+      <main id="main-content">
       {/* Hero Section */}
       <section style={{
         position: 'relative',
@@ -495,6 +496,7 @@ export default function Homepage({
           </div>
         </div>
       </section>
+      </main>
 
       {/* About + Footer - merged */}
       <footer id="about" style={{ background: 'var(--sidebar-bg)', color: 'white', scrollMarginTop: '80px' }}>

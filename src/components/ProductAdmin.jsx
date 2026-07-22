@@ -110,6 +110,17 @@ export default function ProductAdmin({ authToken, userId, tenant }) {
   const cameraControlsRef = useRef(null);
   const cameraResultHandledRef = useRef(false);
 
+  useEffect(() => {
+    if (!cameraOpen) return undefined;
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        setCameraOpen(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [cameraOpen]);
+
   // Category inline modal
   const [newCatName, setNewCatName] = useState('');
   const [newCatTaxCategory, setNewCatTaxCategory] = useState('standard');

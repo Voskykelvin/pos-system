@@ -1,7 +1,8 @@
 const { defineConfig, devices } = require('@playwright/test');
+const path = require('path');
 
 module.exports = defineConfig({
-  testDir: './e2e',
+  testDir: path.join(__dirname, 'e2e'),
   testMatch: '**/*.spec.js',
   timeout: 60000,
   expect: {
