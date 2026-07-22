@@ -60,9 +60,10 @@ export default function Login({ onLogin, onNavigateHome }) {
           <p>Log in to run your store.</p>
 
           <form className="form" onSubmit={handleSubmit}>
-            <label>
+            <label htmlFor="login-identifier">
               Email or phone
               <input
+                id="login-identifier"
                 value={identifier}
                 onChange={(event) => setIdentifier(event.target.value)}
                 autoComplete="username"
@@ -70,9 +71,10 @@ export default function Login({ onLogin, onNavigateHome }) {
               />
             </label>
             {mfaRequired && (
-              <label>
+              <label htmlFor="login-mfa">
                 Authenticator code
                 <input
+                  id="login-mfa"
                   value={mfaCode}
                   onChange={(event) => setMfaCode(event.target.value.replace(/\D/g, '').slice(0, 6))}
                   inputMode="numeric"
@@ -83,9 +85,10 @@ export default function Login({ onLogin, onNavigateHome }) {
                 />
               </label>
             )}
-            <label>
+            <label htmlFor="login-password">
               Password
               <input
+                id="login-password"
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}

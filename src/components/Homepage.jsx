@@ -154,7 +154,7 @@ export default function Homepage({
         </div>
 
         {/* Center Nav */}
-        <nav style={{ display: 'none' }} className="desktop-nav">
+        <nav aria-label="Main Navigation" style={{ display: 'none' }} className="desktop-nav">
           <ul style={{ display: 'flex', gap: 'var(--space-6)', listStyle: 'none', margin: 0, padding: 0 }}>
             {[['Product', 'product'], ['Who we serve', 'who-we-serve'], ['Pricing', 'pricing'], ['About', 'about']].map(([label, id]) => (
               <li key={id}>
