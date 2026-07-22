@@ -6,6 +6,7 @@ test('phone admin can review responsive live analytics without page overflow', a
   await page.getByLabel('Email or phone').fill('admin@example.local');
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Analytics' }).click();
 
   await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
   await expect(page.getByText('Gross sales')).toBeInViewport();

@@ -5,6 +5,7 @@ async function loginAsAdmin(page) {
   await page.getByLabel('Email or phone').fill('admin@example.local');
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await page.getByRole('button', { name: 'Inventory' }).click();
   await expect(page.getByPlaceholder('Scan barcode here')).toBeVisible();
 }
 
