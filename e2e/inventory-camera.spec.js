@@ -5,6 +5,11 @@ async function loginAsAdmin(page) {
   await page.getByLabel('Email or phone').fill('admin@example.local');
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  const menuBtn = page.getByRole('button', { name: 'Open menu' });
+  if (await menuBtn.isVisible()) {
+    await menuBtn.click();
+  }
+  await page.getByRole('button', { name: 'Inventory' }).click();
   await expect(page.getByPlaceholder('Scan barcode here')).toBeVisible();
 }
 

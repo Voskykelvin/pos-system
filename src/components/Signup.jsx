@@ -78,9 +78,10 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
           )}
 
           <form onSubmit={handleSubmit} className="form">
-            <label>
+            <label htmlFor="signup-business-name">
               Business Name
               <input
+                id="signup-business-name"
                 type="text"
                 placeholder="e.g. Acme Supermarket"
                 value={form.businessName}
@@ -89,9 +90,10 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
               />
             </label>
 
-            <label>
+            <label htmlFor="signup-email">
               Owner Email Address
               <input
+                id="signup-email"
                 type="email"
                 placeholder="owner@store.com"
                 value={form.email}
@@ -100,9 +102,10 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
               />
             </label>
 
-            <label>
+            <label htmlFor="signup-password">
               Owner Password
               <input
+                id="signup-password"
                 type="password"
                 placeholder="At least 6 characters"
                 value={form.password}
