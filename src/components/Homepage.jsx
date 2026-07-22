@@ -336,8 +336,8 @@ export default function Homepage({
                 <span style={{
                   fontSize: 'var(--text-xs)',
                   fontWeight: 700,
-                  color: 'var(--brand)',
-                  background: 'var(--brand-soft)',
+                  color: '#065f46',
+                  background: 'rgba(6, 95, 70, 0.12)',
                   padding: '2px 10px',
                   borderRadius: '999px'
                 }}>
@@ -517,7 +517,7 @@ export default function Homepage({
             <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, marginBottom: 'var(--space-4)', letterSpacing: '-0.02em' }}>
               About Jijenge POS
             </h2>
-            <p style={{ color: 'rgba(255,255,255,0.72)', fontSize: 'var(--text-lg)', lineHeight: 1.65, marginBottom: 'var(--space-10)', maxWidth: '600px', marginInline: 'auto' }}>
+            <p style={{ color: 'rgba(255,255,255,0.92)', fontSize: 'var(--text-lg)', lineHeight: 1.65, marginBottom: 'var(--space-10)', maxWidth: '600px', marginInline: 'auto' }}>
               Jijenge POS is a full retail management system built for Kenyan SME retailers.
               Counter checkout, stock control, M-Pesa payments, eTIMS VAT compliance, and staff management in one workspace.
             </p>
@@ -530,7 +530,7 @@ export default function Homepage({
               ].map(({ label, val }) => (
                 <div key={label} style={{ padding: 'var(--space-4)', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.08)' }}>
                   <div style={{ color: 'var(--brand-light)', fontWeight: 700, fontSize: 'var(--text-sm)', marginBottom: '4px' }}>{val}</div>
-                  <div style={{ color: 'rgba(255,255,255,0.45)', fontSize: 'var(--text-xs)' }}>{label}</div>
+                  <div style={{ color: 'rgba(255,255,255,0.85)', fontSize: 'var(--text-xs)' }}>{label}</div>
                 </div>
               ))}
             </div>

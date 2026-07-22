@@ -13,6 +13,10 @@ async function expectNoSeriousViolations(page) {
       description: violation.description,
       targets: violation.nodes.flatMap((node) => node.target)
     }));
+  if (violations.length > 0) {
+    // eslint-disable-next-line no-console
+    console.log('Accessibility violations found:', JSON.stringify(violations, null, 2));
+  }
   expect(violations).toEqual([]);
 }
 

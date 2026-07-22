@@ -10,6 +10,7 @@ test('phone admin can review responsive live analytics without page overflow', a
   const menuBtn = page.getByRole('button', { name: 'Open menu' });
   if (await menuBtn.isVisible()) {
     await menuBtn.click();
+    await page.getByRole('button', { name: 'Analytics' }).waitFor({ state: 'visible' });
   }
   await page.getByRole('button', { name: 'Analytics' }).click();
 

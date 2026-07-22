@@ -6,14 +6,14 @@
 
 :root {
   /* -- Brand Greens (preserved) ------------------------ */
-  --brand: #059669;
-  --brand-mid: #10b981;
-  --brand-dark: #047857;
-  --brand-deep: #065f46;
+  --brand: #047857;
+  --brand-mid: #059669;
+  --brand-dark: #065f46;
+  --brand-deep: #064e3b;
   --brand-light: #34d399;
-  --brand-text: #059669;
-  --brand-soft: rgba(5, 150, 105, 0.10);
-  --brand-border: rgba(5, 150, 105, 0.22);
+  --brand-text: #047857;
+  --brand-soft: rgba(4, 120, 87, 0.10);
+  --brand-border: rgba(4, 120, 87, 0.22);
 
   /* -- Accent Gold (from iTruck) ----------------------- */
   --accent: #ffce1b;
