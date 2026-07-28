@@ -123,10 +123,17 @@ function landingForUser(user, tenant) {
   }
 
   const enabledFeatures = tenant?.enabledFeatures || [];
-  return NAV_ITEMS.find((item) => (
+  const allowed = NAV_ITEMS.filter((item) => (
     item.roles.includes(user?.role) &&
     (!item.feature || !tenant || enabledFeatures.includes(item.feature))
-  )) || NAV_ITEMS[0];
+  ));
+
+  const intendedPath = window.location.pathname;
+  const intendedView = ROUTES[intendedPath];
+  const intendedItem = allowed.find((item) => item.id === intendedView);
+  if (intendedItem) return intendedItem;
+
+  return allowed[0] || NAV_ITEMS[0];
 }
 
 function getInitialTheme() {

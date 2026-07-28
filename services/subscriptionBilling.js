@@ -12,19 +12,19 @@ function addDays(date, days) {
   return new Date(new Date(date).getTime() + Number(days || 0) * MS_PER_DAY);
 }
 
-function daysUntil(value) {
+function daysUntil(value, now = new Date()) {
   if (!value) return null;
-  return Math.ceil((new Date(value).getTime() - Date.now()) / MS_PER_DAY);
+  return Math.ceil((new Date(value).getTime() - new Date(now).getTime()) / MS_PER_DAY);
 }
 
-function isExpired(tenant) {
+function isExpired(tenant, now = new Date()) {
   if (!tenant?.subscriptionEndsAt) return false;
-  return new Date(tenant.subscriptionEndsAt).getTime() < Date.now();
+  return new Date(tenant.subscriptionEndsAt).getTime() < new Date(now).getTime();
 }
 
-function resolveBillingStatus(tenant) {
+function resolveBillingStatus(tenant, now = new Date()) {
   if (!tenant) return 'unknown';
-  if (tenant.status === 'active' && isExpired(tenant)) return 'past_due';
+  if (tenant.status === 'active' && isExpired(tenant, now)) return 'past_due';
   return tenant.status;
 }
 
@@ -43,11 +43,12 @@ function money(value) {
 function getMidCycleUpgradeQuotes(tenant, now = new Date()) {
   const currentPlan = getPlan(tenant?.plan);
   const end = tenant?.subscriptionEndsAt ? new Date(tenant.subscriptionEndsAt) : null;
-  if (!currentPlan || resolveBillingStatus(tenant) !== 'active' || !end || end <= now) return [];
+  const at = new Date(now);
+  if (!currentPlan || resolveBillingStatus(tenant, at) !== 'active' || !end || end <= at) return [];
 
   const currency = String(tenant.currency || 'KES').toUpperCase();
   const intervalDays = getPlanBillingIntervalDays(currentPlan.id);
-  const remainingMs = Math.max(end.getTime() - now.getTime(), 0);
+  const remainingMs = Math.max(end.getTime() - at.getTime(), 0);
   const remainingFraction = Math.min(remainingMs / (intervalDays * MS_PER_DAY), 1);
   const currentPrice = getPlanAmount(currentPlan.id, currency);
 
@@ -65,7 +66,7 @@ function getMidCycleUpgradeQuotes(tenant, now = new Date()) {
         targetPlanProratedValue: money(targetPrice * remainingFraction),
         amount: money((targetPrice - currentPrice) * remainingFraction),
         remainingDays: Math.max(Math.ceil(remainingMs / MS_PER_DAY), 0),
-        effectiveAt: now,
+        effectiveAt: at,
         subscriptionEndsAt: end,
         enabledFeatures: plan.enabledFeatures,
         featureSummary: plan.featureSummary

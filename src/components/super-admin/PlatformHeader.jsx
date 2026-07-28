@@ -12,7 +12,7 @@ const SECTION_COPY = {
   },
   analytics: {
     title: 'Platform Analytics',
-    text: 'Signup trends, tenant sales signal, plan economics, and store health.'
+    text: 'Colorful barcode scans of signups, POS sales pulse, plan mix, and tenant health.'
   },
   plans: {
     title: 'Plans & Packaging',

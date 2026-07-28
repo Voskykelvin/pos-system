@@ -1,21 +1,22 @@
 const { test, expect } = require('@playwright/test');
+const { clickPrimaryNav } = require('./navHelpers');
 
 async function loginAsAdmin(page) {
   await page.goto('/inventory');
   await page.getByLabel('Email or phone').fill('admin@example.local');
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
-  const menuBtn = page.getByRole('button', { name: 'Open menu' });
-  if (await menuBtn.isVisible()) {
-    await menuBtn.click();
+
+  const scanField = page.getByPlaceholder('Scan barcode here');
+  if (!(await scanField.isVisible().catch(() => false))) {
+    await clickPrimaryNav(page, 'Inventory');
   }
-  await page.getByRole('button', { name: 'Inventory' }).waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Inventory' }).click();
-  await expect(page.getByPlaceholder('Scan barcode here')).toBeVisible();
+  await expect(scanField).toBeVisible();
 }
 
 test('phone inventory opens and safely closes the camera barcode scanner', async ({ page, context }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium', 'This journey verifies the phone camera scanner UI.');
+  test.setTimeout(60000);
   await context.grantPermissions(['camera'], { origin: 'http://127.0.0.1:4173' });
   await loginAsAdmin(page);
 

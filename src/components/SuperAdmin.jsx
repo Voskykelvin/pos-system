@@ -145,7 +145,7 @@ export default function SuperAdmin({ authToken }) {
   const pendingReview = subscriptionPayments.pendingReview || [];
 
   return (
-    <section className="container">
+    <section className="superAdminPage">
       <PlatformHeader
         days={days}
         loading={loading}

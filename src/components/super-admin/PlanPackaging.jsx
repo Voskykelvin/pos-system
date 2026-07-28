@@ -5,18 +5,18 @@ export default function PlanPackaging({ plans }) {
     <section className="panel">
       <div className="panelHeader">
         <h2>Plan packaging</h2>
-        <span>Current tiers</span>
+        <span>{plans.length} tiers</span>
       </div>
       <div className="planGrid">
         {plans.map((plan) => (
-          <article className="planCard" key={plan.id}>
+          <article className={`planCard planCardTone-${plan.id}`} key={plan.id}>
             <div className="planTopline">
               <span className={`planBadge ${plan.id}`}>{plan.name}</span>
-              <strong>{formatUsd(plan.priceUsd)} / mo</strong>
+              <strong>{formatUsd(plan.priceUsd)}<span className="planPeriod">/mo</span></strong>
             </div>
-            <p>{plan.featureSummary}</p>
-            <ul>
-              {plan.features.map((feature) => (
+            <p className="planSummary">{plan.featureSummary}</p>
+            <ul className="planFeatureList">
+              {plan.features.slice(0, 4).map((feature) => (
                 <li key={feature}>{feature}</li>
               ))}
             </ul>

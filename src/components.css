@@ -5465,9 +5465,10 @@ textarea.input-field {
 
 /* --- SuperAdmin Styles --- */
 .super-admin-page,
-.container {
+.superAdminPage {
   min-height: 100vh;
   max-width: 1320px;
+  margin: 0 auto;
   padding: 24px 24px 36px;
   background: var(--pos-bg);
   color: var(--pos-ink);
@@ -5619,6 +5620,66 @@ textarea.input-field {
   margin-bottom: 14px;
 }
 
+.kpiGridCompact {
+  margin-bottom: 10px;
+}
+
+.overviewStack {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.attentionRail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.attentionChip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 48px;
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--pos-line);
+  background: var(--pos-surface);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.attentionChip span {
+  color: var(--pos-ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.attentionChip strong {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 15px;
+  color: var(--pos-ink);
+}
+
+.attentionChip.tone-warn {
+  border-color: #fed7aa;
+  background: #fff7ed;
+}
+
+.attentionChip.tone-warn strong {
+  color: #c2410c;
+}
+
+.attentionChip.tone-ok {
+  border-color: #bbf7d0;
+  background: #f0fdf4;
+}
+
+.attentionChip.tone-quiet {
+  background: #f8fafc;
+}
+
 .kpiCard,
 .panel {
   background: var(--pos-surface);
@@ -5635,7 +5696,6 @@ textarea.input-field {
 }
 
 .highlightKpi {
-  grid-column: span 2;
   border-color: var(--pos-accent-dark);
   background: linear-gradient(135deg, #ecfdf5, #ffffff);
   box-shadow: inset 4px 0 0 var(--pos-accent), 0 14px 36px rgba(5, 150, 105, 0.08);
@@ -5688,6 +5748,272 @@ textarea.input-field {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
   margin-bottom: 14px;
+}
+
+.barcodeChartGrid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.barcodePanelWide {
+  grid-column: 1 / -1;
+}
+
+.barcodeFrame {
+  position: relative;
+  padding: 16px;
+  min-height: 220px;
+  background:
+    radial-gradient(circle at top right, rgba(5, 150, 105, 0.08), transparent 42%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.barcodeStripWrap {
+  display: grid;
+  gap: 12px;
+}
+
+.barcodeStrip {
+  position: relative;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 2px;
+  height: 180px;
+  padding: 16px 12px 12px;
+  overflow: hidden;
+  border-radius: 10px;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(15, 23, 42, 0.03) 0 1px,
+      transparent 1px 8px
+    ),
+    #0b1f17;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06);
+}
+
+.barcodeStripDual {
+  gap: 3px;
+  justify-content: flex-start;
+  overflow-x: auto;
+  padding-bottom: 14px;
+}
+
+.barcodeScanLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, transparent, #34d399, #fbbf24, transparent);
+  box-shadow: 0 0 18px rgba(52, 211, 153, 0.7);
+  animation: barcodeScan 3.6s ease-in-out infinite;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.barcodeScanLineSlow {
+  animation-duration: 5.2s;
+}
+
+@keyframes barcodeScan {
+  0% { left: 4%; opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { left: 96%; opacity: 0; }
+}
+
+.barcodeBar {
+  flex: 0 0 auto;
+  border: 0;
+  padding: 0;
+  border-radius: 1px 1px 0 0;
+  cursor: pointer;
+  transform-origin: bottom center;
+  animation: barcodeRise 520ms ease both;
+  box-shadow: 0 0 0 0 rgba(255, 255, 255, 0);
+  transition: filter 120ms ease, transform 120ms ease;
+}
+
+.barcodeBar:hover,
+.barcodeBar:focus-visible {
+  filter: brightness(1.18);
+  transform: scaleY(1.04);
+  outline: none;
+}
+
+.barcodeBarQuiet {
+  opacity: 0.35;
+}
+
+.barcodePair {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  height: 100%;
+  min-width: 10px;
+}
+
+.barcodeBarPrimary,
+.barcodeBarSecondary {
+  display: block;
+  border-radius: 1px 1px 0 0;
+  animation: barcodeRise 520ms ease both;
+}
+
+@keyframes barcodeRise {
+  from {
+    opacity: 0;
+    transform: scaleY(0.2);
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
+}
+
+.barcodeHud {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid var(--pos-line);
+  color: var(--pos-ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.barcodeHudSwatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.barcodeHudHint {
+  color: var(--pos-ink-soft);
+}
+
+.barcodeLegendRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  color: var(--pos-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.barcodeLegendRow span,
+.barcodeHealthLegend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.barcodeLegendRow i,
+.barcodeHealthLegend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.planBarcodeGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.planBarcodeCard {
+  padding: 12px;
+  border: 1px solid var(--pos-line);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.planBarcodeTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.planBarcodeTop strong {
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 16px;
+}
+
+.planBarcodeVisual {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 56px;
+  padding: 8px;
+  border-radius: 6px;
+  background: #0b1f17;
+}
+
+.planBarcodeBar {
+  display: block;
+  height: 100%;
+  border-radius: 1px;
+  opacity: 0.35;
+  animation: barcodeRise 420ms ease both;
+}
+
+.planBarcodeBar.isOn {
+  opacity: 1;
+}
+
+.planBarcodeMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 8px;
+  color: var(--pos-ink-soft);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.healthBarcodeWrap {
+  display: grid;
+  gap: 12px;
+}
+
+.healthBarcodeTrack {
+  position: relative;
+  display: flex;
+  gap: 4px;
+  height: 84px;
+  padding: 10px;
+  overflow: hidden;
+  border-radius: 10px;
+  background: #0b1f17;
+}
+
+.healthBarcodeSegment {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  justify-content: space-evenly;
+  gap: 2px;
+  min-width: 28px;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.healthBarcodeSegment i {
+  display: block;
+  height: 100%;
+  background: #ffffff;
+}
+
+.barcodeHealthLegend {
+  position: static;
+  background: transparent;
+  padding: 0;
+  justify-content: flex-start;
 }
 
 .panel {
@@ -5790,8 +6116,20 @@ textarea.input-field {
 .planCard {
   border: 1px solid var(--pos-line);
   border-radius: 8px;
-  padding: 14px;
+  padding: 16px;
   background: #ffffff;
+}
+
+.planCardTone-starter {
+  box-shadow: inset 0 3px 0 #0ea5e9;
+}
+
+.planCardTone-growth {
+  box-shadow: inset 0 3px 0 #059669;
+}
+
+.planCardTone-enterprise {
+  box-shadow: inset 0 3px 0 #d97706;
 }
 
 .planTopline {
@@ -5805,22 +6143,48 @@ textarea.input-field {
 .planTopline strong {
   font-family: "IBM Plex Mono", Consolas, monospace;
   white-space: nowrap;
+  font-size: 18px;
 }
 
-.planCard p {
-  margin: 0 0 10px;
-  min-height: 42px;
+.planPeriod {
+  margin-left: 2px;
+  color: var(--pos-ink-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.planSummary {
+  margin: 0 0 12px;
   color: var(--pos-ink-soft);
   font-size: 13px;
   line-height: 1.45;
 }
 
-.planCard ul {
+.planFeatureList {
   margin: 0;
-  padding-left: 18px;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+
+.planFeatureList li {
+  position: relative;
+  padding-left: 14px;
   color: var(--pos-ink-mid);
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.45;
+}
+
+.planFeatureList li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 6px;
+  height: 6px;
+  border-radius: 1px;
+  background: var(--pos-accent);
 }
 
 .tableWrap {
@@ -6060,6 +6424,10 @@ textarea.input-field {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .attentionRail {
+    grid-template-columns: 1fr;
+  }
+
   .planGrid {
     grid-template-columns: 1fr;
   }
@@ -6067,9 +6435,14 @@ textarea.input-field {
 
 @media (max-width: 980px) {
   .chartGrid,
+  .barcodeChartGrid,
   .kpiGrid,
   .opsGrid {
     grid-template-columns: 1fr;
+  }
+
+  .barcodePanelWide {
+    grid-column: auto;
   }
 
   .highlightKpi {
@@ -6078,7 +6451,7 @@ textarea.input-field {
 }
 
 @media (max-width: 720px) {
-  .container {
+  .superAdminPage {
     padding: 16px;
   }
 
@@ -6092,9 +6465,14 @@ textarea.input-field {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .chartFrame {
-    height: 250px;
+  .chartFrame,
+  .barcodeFrame {
+    min-height: 200px;
     padding: 10px;
+  }
+
+  .barcodeStrip {
+    height: 150px;
   }
 
   .kpiCard {
@@ -6115,7 +6493,7 @@ textarea.input-field {
 }
 
 @media (max-width: 520px) {
-  .container {
+  .superAdminPage {
     padding: 12px;
   }
 
@@ -6143,7 +6521,7 @@ textarea.input-field {
 }
 
 /* --- ErrorBoundary Styles --- */
-.container {
+.errorBoundary {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -6158,7 +6536,7 @@ textarea.input-field {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
 }
 
-.icon {
+.errorBoundary .icon {
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -6171,7 +6549,7 @@ textarea.input-field {
   margin-bottom: 20px;
 }
 
-.title {
+.errorBoundary .title {
   font-family: 'Space Grotesk', sans-serif;
   font-size: 24px;
   font-weight: 700;
@@ -6179,7 +6557,7 @@ textarea.input-field {
   margin: 0 0 12px 0;
 }
 
-.message {
+.errorBoundary .message {
   font-size: 16px;
   color: var(--pos-ink-soft);
   max-width: 480px;
@@ -6187,12 +6565,12 @@ textarea.input-field {
   line-height: 1.5;
 }
 
-.actions {
+.errorBoundary .actions {
   display: flex;
   gap: 12px;
 }
 
-.primaryBtn {
+.errorBoundary .primaryBtn {
   background: var(--pos-accent);
   color: #ffffff;
   border: 0;
@@ -6203,11 +6581,11 @@ textarea.input-field {
   transition: background 0.2s ease;
 }
 
-.primaryBtn:hover {
+.errorBoundary .primaryBtn:hover {
   background: var(--pos-accent-dark);
 }
 
-.secondaryBtn {
+.errorBoundary .secondaryBtn {
   background: var(--pos-panel);
   color: var(--pos-ink-mid);
   border: 1px solid var(--pos-line-strong);
@@ -6218,7 +6596,7 @@ textarea.input-field {
   transition: background 0.2s ease;
 }
 
-.secondaryBtn:hover {
+.errorBoundary .secondaryBtn:hover {
   background: var(--pos-panel-strong);
 }
 

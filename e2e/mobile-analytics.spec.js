@@ -1,4 +1,5 @@
 const { test, expect } = require('@playwright/test');
+const { clickPrimaryNav } = require('./navHelpers');
 
 test('phone admin can review responsive live analytics without page overflow', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium', 'This journey verifies the phone analytics layout.');
@@ -7,14 +8,13 @@ test('phone admin can review responsive live analytics without page overflow', a
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
 
-  const menuBtn = page.getByRole('button', { name: 'Open menu' });
-  if (await menuBtn.isVisible()) {
-    await menuBtn.click();
+  // Deep-link should land on Analytics; fall back to nav if landing changed.
+  const heading = page.getByRole('heading', { name: 'Analytics', level: 1 });
+  if (!(await heading.isVisible().catch(() => false))) {
+    await clickPrimaryNav(page, 'Analytics');
   }
-  await page.getByRole('button', { name: 'Analytics' }).waitFor({ state: 'visible' });
-  await page.getByRole('button', { name: 'Analytics' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Analytics', level: 1 })).toBeVisible();
+  await expect(heading).toBeVisible();
   await expect(page.getByText('Gross sales')).toBeInViewport();
   await expect(page.getByRole('img', { name: 'Sales and gross profit trend chart' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Refresh' })).toBeInViewport();

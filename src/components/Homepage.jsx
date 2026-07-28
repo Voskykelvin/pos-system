@@ -516,7 +516,7 @@ export default function Homepage({
               fontSize: '1.5rem',
               margin: '0 auto var(--space-6)'
             }}>J</div>
-            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, marginBottom: 'var(--space-4)', letterSpacing: '-0.02em' }}>
+            <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.75rem, 3.5vw, 2.25rem)', fontWeight: 800, marginBottom: 'var(--space-4)', letterSpacing: '-0.02em', color: '#ffffff' }}>
               About Jijenge POS
             </h2>
             <p style={{ color: 'rgba(255,255,255,0.92)', fontSize: 'var(--text-lg)', lineHeight: 1.65, marginBottom: 'var(--space-10)', maxWidth: '600px', marginInline: 'auto' }}>

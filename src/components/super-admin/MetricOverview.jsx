@@ -1,74 +1,73 @@
 import { formatKes, formatPercent, formatUsd } from './formatters';
 
-function metricValue(value, quiet = false) {
-  return (
-    <div className={`${"kpiValue"} ${quiet ? "kpiTextValue" : ''}`}>
-      {value}
-    </div>
-  );
-}
-
 export default function MetricOverview({ metrics }) {
-  const cards = [
-    {
-      label: 'MRR',
-      value: metrics.mrrUsd > 0 ? formatUsd(metrics.mrrUsd) : 'No MRR yet',
-      sub: metrics.mrrKes > 0 ? `${formatKes(metrics.mrrKes)} / mo` : 'Awaiting first active subscription',
-      highlight: true,
-      quiet: metrics.mrrUsd <= 0
-    },
-    {
-      label: 'Active stores',
-      value: metrics.activeTenants > 0 ? metrics.activeTenants : 'None active',
-      sub: `${metrics.totalTenants || 0} total registered`,
-      quiet: metrics.activeTenants <= 0
-    },
-    {
-      label: 'Signup to active',
-      value: metrics.totalTenants > 0 ? formatPercent(metrics.signupToActiveConversionRate) : 'No signups yet',
-      sub: `${metrics.newTenants || 0} new in this range`,
-      quiet: metrics.totalTenants <= 0
-    },
-    {
-      label: 'Store activity',
-      value: metrics.activeTenants > 0
-        ? (metrics.activeStoresWithSales > 0 ? formatPercent(metrics.storeActivityRate) : 'No POS sales yet')
-        : 'No active stores',
-      sub: metrics.activeStoresWithSales > 0 ? `${metrics.activeStoresWithSales} stores sold` : 'Waiting for first sale signal',
-      quiet: metrics.activeStoresWithSales <= 0
-    },
-    {
-      label: 'ARPA',
-      value: metrics.activeTenants > 0 ? formatUsd(metrics.arpaUsd) : 'No ARPA yet',
-      sub: 'Average revenue per account',
-      quiet: metrics.activeTenants <= 0
-    },
+  const attention = [
     {
       label: 'Payment review',
       value: metrics.pendingSubscriptionPayments > 0 ? metrics.pendingSubscriptionPayments : 'Clear',
-      sub: metrics.pendingPaymentTenants > 0 ? `${metrics.pendingPaymentTenants} unpaid tenants` : 'No pending references',
-      quiet: metrics.pendingSubscriptionPayments <= 0
+      tone: metrics.pendingSubscriptionPayments > 0 ? 'warn' : 'ok'
     },
     {
       label: 'Ending soon',
       value: metrics.expiringSoonTenants > 0 ? metrics.expiringSoonTenants : 'None',
-      sub: 'Subscriptions within 7 days',
-      quiet: metrics.expiringSoonTenants <= 0
+      tone: metrics.expiringSoonTenants > 0 ? 'warn' : 'ok'
+    },
+    {
+      label: 'Store activity',
+      value: metrics.activeStoresWithSales > 0
+        ? formatPercent(metrics.storeActivityRate)
+        : 'Waiting',
+      tone: metrics.activeStoresWithSales > 0 ? 'ok' : 'quiet'
+    }
+  ];
+
+  const hero = [
+    {
+      label: 'MRR',
+      value: metrics.mrrUsd > 0 ? formatUsd(metrics.mrrUsd) : '—',
+      sub: metrics.mrrKes > 0 ? `${formatKes(metrics.mrrKes)} / mo` : 'No active subscriptions',
+      accent: true
+    },
+    {
+      label: 'Active stores',
+      value: metrics.activeTenants || 0,
+      sub: `${metrics.totalTenants || 0} registered`
+    },
+    {
+      label: 'Conversion',
+      value: metrics.totalTenants > 0 ? formatPercent(metrics.signupToActiveConversionRate) : '—',
+      sub: `${metrics.newTenants || 0} new this range`
+    },
+    {
+      label: 'ARPA',
+      value: metrics.activeTenants > 0 ? formatUsd(metrics.arpaUsd) : '—',
+      sub: 'Avg revenue / account'
     }
   ];
 
   return (
-    <div className="kpiGrid">
-      {cards.map((card) => (
-        <article
-          className={`${"kpiCard"} ${card.highlight ? "highlightKpi" : ''} ${card.quiet ? "quietKpi" : ''}`}
-          key={card.label}
-        >
-          <div className="kpiLabel">{card.label}</div>
-          {metricValue(card.value, card.quiet)}
-          <div className="kpiSub">{card.sub}</div>
-        </article>
-      ))}
+    <div className="overviewStack">
+      <div className="kpiGrid kpiGridCompact">
+        {hero.map((card) => (
+          <article
+            className={`kpiCard ${card.accent ? 'highlightKpi' : ''}`}
+            key={card.label}
+          >
+            <div className="kpiLabel">{card.label}</div>
+            <div className="kpiValue">{card.value}</div>
+            <div className="kpiSub">{card.sub}</div>
+          </article>
+        ))}
+      </div>
+
+      <div className="attentionRail" aria-label="Attention items">
+        {attention.map((item) => (
+          <div className={`attentionChip tone-${item.tone}`} key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

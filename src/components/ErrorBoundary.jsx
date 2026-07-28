@@ -28,7 +28,7 @@ class ErrorBoundary extends React.Component {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="container">
+        <div className="errorBoundary">
           <div className="icon">!</div>
           <h2 className="title">Something went wrong</h2>
           <p className="message">
