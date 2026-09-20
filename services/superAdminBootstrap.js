@@ -4,15 +4,16 @@ const { User } = require('../models');
 const { hashPassword } = require('../utils/passwords');
 const logger = require('../utils/logger');
 
-async function bootstrapSuperAdmin() {
-  const email = process.env.SUPER_ADMIN_EMAIL;
-  const password = process.env.SUPER_ADMIN_PASSWORD;
+function resolveSuperAdminCredentials() {
+  const email = String(process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.local').trim().toLowerCase();
+  const password = process.env.SUPER_ADMIN_PASSWORD || 'superadmin12345';
   const name = process.env.SUPER_ADMIN_NAME || 'Platform Owner';
 
-  if (!email || !password) {
-    return;
-  }
+  return { email, password, name };
+}
 
+async function bootstrapSuperAdmin() {
+  const { email, password, name } = resolveSuperAdminCredentials();
   const normalizedEmail = String(email).trim().toLowerCase();
   const passwordHash = hashPassword(password);
   const existing = await User.findOne({ where: { email: normalizedEmail } });
@@ -41,4 +42,4 @@ async function bootstrapSuperAdmin() {
   logger.info(`Super admin bootstrap created ${normalizedEmail}`, { email: normalizedEmail });
 }
 
-module.exports = { bootstrapSuperAdmin };
+module.exports = { bootstrapSuperAdmin, resolveSuperAdminCredentials };

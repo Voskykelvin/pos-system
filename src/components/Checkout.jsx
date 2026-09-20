@@ -23,6 +23,7 @@ import {
 } from '../utils/heldSaleState.mjs';
 import { productTaxCategory, taxLabel, taxRateForCategory } from '../utils/taxCategories';
 import { playScanSuccessBeep, playErrorBeep } from '../utils/audioEffects';
+import { getCheckoutQuickStatus } from '../utils/checkoutUi';
 
 function Toast({ message, tone, onClose }) {
   useEffect(() => {
@@ -502,14 +503,19 @@ function HeldSalesPanel({ heldSales, onResume, onRemove }) {
       <div className="heldSalesList">
         {heldSales.map((heldSale) => (
           <div className="heldSaleRow" key={heldSale.id}>
-            <button className="heldSaleMain" type="button" onClick={() => onResume(heldSale)}>
+            <div className="heldSaleMain" aria-label={`Held sale for ${heldSale.label}`}>
               <strong>{heldSale.label}</strong>
-              <span>{formatKes(heldSale.total)} - {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} - {formatHeldSaleAge(heldSale)}</span>
-              <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' - ') || 'No note'}</small>
-            </button>
-            <button className="heldSaleRemove" type="button" onClick={() => onRemove(heldSale.id)}>
-              x
-            </button>
+              <span>{formatKes(heldSale.total)} · {heldSale.itemCount} item{heldSale.itemCount === 1 ? '' : 's'} · {formatHeldSaleAge(heldSale)}</span>
+              <small>{[heldSale.note, heldSale.cashierName].filter(Boolean).join(' • ') || 'No note'}</small>
+            </div>
+            <div className="heldSaleActions">
+              <button className="heldSaleRecall" type="button" onClick={() => onResume(heldSale)}>
+                Recall
+              </button>
+              <button className="heldSaleRemove" type="button" onClick={() => onRemove(heldSale.id)} aria-label={`Remove held sale for ${heldSale.label}`}>
+                x
+              </button>
+            </div>
           </div>
         ))}
       </div>
@@ -1308,6 +1314,36 @@ export default function Checkout({ authToken, cashierId, user }) {
   const mpesaRows = payments.filter((p) => p.method === 'mpesa');
   const mpesaComplete = mpesaRows.every((p) => p.mpesaPhone?.trim().length >= 9);
   const paymentsBalanced = paymentSummary.isSatisfied;
+  const saleReadinessText = cart.length === 0
+    ? 'Add items to begin'
+    : paymentSummary.shortAmount > 0
+      ? `Need ${formatKes(paymentSummary.shortAmount)} more`
+      : !mpesaComplete
+        ? 'Complete M-Pesa details'
+        : discountNeedsApproval && !(managerIdentifier.trim() && managerPassword.trim())
+          ? 'Manager approval required'
+          : 'Ready to confirm';
+  const saleReadinessTone = cart.length === 0 || paymentSummary.shortAmount > 0 || !mpesaComplete || (discountNeedsApproval && !(managerIdentifier.trim() && managerPassword.trim())) ? 'needsAction' : 'ready';
+  const paymentStateText = paymentSummary.shortAmount > 0
+    ? `Payment short by ${formatKes(paymentSummary.shortAmount)}`
+    : paymentSummary.changeDue > 0
+      ? `Change due ${formatKes(paymentSummary.changeDue)}`
+      : 'Payment ready';
+  const paymentStateTone = paymentSummary.shortAmount > 0 ? 'warning' : paymentSummary.changeDue > 0 ? 'info' : 'ok';
+  const cartStatusLabel = orderStatus === 'waiting'
+    ? 'M-Pesa waiting'
+    : orderStatus === 'paid'
+      ? 'Paid'
+      : orderStatus === 'failed'
+        ? 'Payment issue'
+        : canConfirm
+          ? 'Ready'
+          : cart.length === 0
+            ? 'Empty'
+            : paymentSummary.shortAmount > 0
+              ? 'Needs payment'
+              : 'Open sale';
+  const cartStatusTone = orderStatus === 'waiting' ? 'waiting' : orderStatus === 'paid' ? 'paid' : orderStatus === 'failed' ? 'failed' : canConfirm ? 'ready' : cart.length === 0 ? 'idle' : 'open';
 
   const canConfirm =
     cart.length > 0 &&
@@ -1655,6 +1691,15 @@ export default function Checkout({ authToken, cashierId, user }) {
             autoFocus
           />
         </div>
+
+        <div className="quickStatusBar" aria-live="polite">
+          {getCheckoutQuickStatus(query, results.length, cart.length)}
+        </div>
+
+        <div className="shortcutHint" aria-live="polite">
+          F4 search · F2 hold sale · Ctrl + Enter confirm
+        </div>
+
         <div className="priceToggleRow">
           <label className="toggleLabel">
             <input
@@ -1662,7 +1707,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               checked={isWholesale}
               onChange={(e) => setIsWholesale(e.target.checked)}
             />
-            Wholesale Pricing Mode
+            Wholesale pricing
           </label>
           <label className="toggleLabel" style={{ marginLeft: '20px' }}>
             <input
@@ -1670,7 +1715,7 @@ export default function Checkout({ authToken, cashierId, user }) {
               checked={autoPrint}
               onChange={(e) => setAutoPrint(e.target.checked)}
             />
-            Auto-print Receipts
+            Auto-print receipts
           </label>
         </div>
 
@@ -1727,6 +1772,9 @@ export default function Checkout({ authToken, cashierId, user }) {
             {cart.length > 0 && (
               <div className="orderNumber">{cart.length} item{cart.length !== 1 ? 's' : ''}</div>
             )}
+          </div>
+          <div className={`cartStatusBadge ${cartStatusTone}`} aria-live="polite">
+            {cartStatusLabel}
           </div>
           <div className="headerActions">
             <button
@@ -1801,6 +1849,11 @@ export default function Checkout({ authToken, cashierId, user }) {
         </div>
 
         <div className="totalsBlock">
+          <div className={`saleReadiness ${saleReadinessTone}`}>
+            <span>{saleReadinessText}</span>
+            <strong>{formatKes(total)}</strong>
+          </div>
+
           <div className="totalsRow"><span>Items total</span><span>{formatKes(itemsTotal)}</span></div>
           <div className="totalsRow"><span>Before VAT</span><span>{formatKes(netSubtotal)}</span></div>
           {(taxSummary.length ? taxSummary : [{ rate: 0, tax: 0 }]).map((group) => (
@@ -1853,6 +1906,11 @@ export default function Checkout({ authToken, cashierId, user }) {
 
         {/* Split-tender payments */}
         <PaymentsPanel total={total} payments={payments} onChange={setPayments} customer={customer} />
+
+        <div className={`paymentStateBox ${paymentStateTone}`} aria-live="polite">
+          <span>{paymentStateText}</span>
+          <strong>{paymentSummary.shortAmount > 0 ? formatKes(paymentSummary.shortAmount) : paymentSummary.changeDue > 0 ? formatKes(paymentSummary.changeDue) : formatKes(total)}</strong>
+        </div>
 
         {/* Manager approval for discounts */}
         {discountNeedsApproval && (

@@ -249,6 +249,100 @@ async function plans(req, res) {
  * Self-serve onboarding for store owners.
  * Body: { businessName, email, password, currency, country, plan }
  */
+function serializePlatformUser(user) {
+  return {
+    id: user.id,
+    name: user.name,
+    email: user.email || null,
+    phone: user.phone || null,
+    role: user.role,
+    tenantId: user.tenantId || null,
+    tenantName: user.Tenant?.name || null,
+    isActive: Boolean(user.isActive),
+    createdAt: user.createdAt
+  };
+}
+
+async function listPlatformUsers(req, res) {
+  try {
+    const users = await User.findAll({
+      include: [{ model: Tenant, attributes: ['id', 'name'] }],
+      order: [['createdAt', 'DESC']]
+    });
+
+    return res.json({
+      users: users
+        .filter((user) => ['super_admin', 'admin', 'manager', 'cashier'].includes(user.role))
+        .map(serializePlatformUser)
+    });
+  } catch (err) {
+    return res.status(500).json({ error: err.message });
+  }
+}
+
+async function createPlatformUser(req, res) {
+  try {
+    const name = String(req.body.name || '').trim();
+    const email = req.body.email ? String(req.body.email).trim().toLowerCase() : null;
+    const phone = req.body.phone ? String(req.body.phone).trim() : null;
+    const role = String(req.body.role || 'admin').trim();
+    const tenantId = req.body.tenantId ? String(req.body.tenantId).trim() : null;
+    const branchId = req.body.branchId ? String(req.body.branchId).trim() : null;
+    const password = String(req.body.password || '');
+
+    if (!name) return res.status(400).json({ error: 'User name is required' });
+    if (!email && !phone) return res.status(400).json({ error: 'Provide either an email or a phone number' });
+    if (!['super_admin', 'admin', 'manager', 'cashier'].includes(role)) {
+      return res.status(400).json({ error: 'Unknown user role' });
+    }
+    if (!password || password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    if (tenantId) {
+      const tenant = await Tenant.findByPk(tenantId);
+      if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+    }
+
+    if (branchId) {
+      const branch = await Branch.findOne({ where: { id: branchId, tenantId: tenantId || null } });
+      if (!branch) return res.status(404).json({ error: 'Branch not found for that tenant' });
+    }
+
+    const existing = await User.findOne({
+      where: {
+        [Op.or]: [
+          ...(email ? [{ email }] : []),
+          ...(phone ? [{ phone }] : [])
+        ]
+      }
+    });
+
+    if (existing) {
+      return res.status(409).json({ error: 'That email or phone is already in use' });
+    }
+
+    const user = await User.create({
+      name,
+      email,
+      phone,
+      role,
+      tenantId,
+      branchId,
+      passwordHash: hashPassword(password),
+      isActive: true
+    });
+
+    const fullUser = await User.findByPk(user.id, {
+      include: [{ model: Tenant, attributes: ['id', 'name'] }]
+    });
+
+    return res.status(201).json({ user: serializePlatformUser(fullUser) });
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+}
+
 async function signup(req, res) {
   const { businessName, email, password, currency = 'KES', country = 'KE', plan = 'starter' } = req.body;
 
@@ -699,4 +793,12 @@ async function deleteTenant(req, res) {
   }
 }
 
-module.exports = { plans, signup, superAdminDashboard, updateTenant, deleteTenant };
+module.exports = {
+  plans,
+  signup,
+  superAdminDashboard,
+  updateTenant,
+  deleteTenant,
+  listPlatformUsers,
+  createPlatformUser
+};

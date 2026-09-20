@@ -298,6 +298,16 @@ const schemas = {
     branchId: { type: 'string', required: false, maxLength: 255 }
   },
 
+  createPlatformUser: {
+    name:     { type: 'string', minLength: 1, maxLength: 255 },
+    email:    { type: 'string', required: false, maxLength: 255 },
+    phone:    { type: 'string', required: false, maxLength: 50 },
+    role:     { type: 'string', required: false, enumValues: ['super_admin', 'admin', 'manager', 'cashier'] },
+    password: { type: 'string', minLength: 8, maxLength: 1024 },
+    tenantId: { type: 'string', required: false, maxLength: 255 },
+    branchId: { type: 'string', required: false, maxLength: 255 }
+  },
+
   updateStaff: {
     name:     { type: 'string', required: false, minLength: 1, maxLength: 255 },
     email:    { type: 'string', required: false, maxLength: 255 },

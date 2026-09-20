@@ -1,4 +1,10 @@
 import { useEffect, useState } from 'react';
+import {
+  buildDashboardActions,
+  buildDashboardSummary,
+  buildOperationalAlerts,
+  formatCurrency
+} from '../utils/dashboardUi';
 
 function formatKes(amount) {
   return `KES ${Number(amount || 0).toFixed(2)}`;
@@ -51,6 +57,9 @@ export default function Dashboard({ authToken }) {
   }
 
   const paymentEntries = Object.entries(report.paymentBreakdown || {});
+  const summary = buildDashboardSummary(report);
+  const actions = buildDashboardActions(report);
+  const operationalAlerts = buildOperationalAlerts(report);
 
   return (
     <section className="dashboard-page page-container">
@@ -64,24 +73,71 @@ export default function Dashboard({ authToken }) {
         </button>
       </header>
 
+      <div className="statusSummary">
+        <div className="statusSummaryMain">
+          <span className="statusSummaryLabel">Operations status</span>
+          <strong>{summary.status}</strong>
+        </div>
+        <div className="statusSummaryMeta">
+          <span>{summary.focus}</span>
+          <strong>{summary.highlight}</strong>
+        </div>
+      </div>
+
       <div className="metrics">
-        <article className="metric">
+        <article className="metric metricRevenue">
           <span className="metricLabel">Revenue</span>
-          <strong>{formatKes(report.revenue)}</strong>
+          <strong>{formatCurrency(summary.revenue)}</strong>
         </article>
         <article className="metric">
           <span className="metricLabel">Orders</span>
-          <strong>{report.orderCount}</strong>
+          <strong>{summary.orderCount}</strong>
         </article>
         <article className="metric">
           <span className="metricLabel">Average order</span>
-          <strong>{formatKes(report.averageOrderValue)}</strong>
+          <strong>{summary.highlight === 'Average order pending' ? 'Pending' : formatCurrency(report.averageOrderValue)}</strong>
         </article>
-        <article className="metric">
+        <article className="metric metricAttention">
           <span className="metricLabel">Queued eTIMS</span>
-          <strong>{report.pendingEtimsCount}</strong>
+          <strong>{summary.pendingEtimsCount}</strong>
         </article>
       </div>
+
+      <div className="actionPanel">
+        <div className="panelHeader">
+          <h2>Priority actions</h2>
+        </div>
+        <div className="actionList">
+          {actions.map((action) => (
+            <div className={`actionRow actionRow${action.priority}`} key={action.id}>
+              <div>
+                <strong>{action.label}</strong>
+                <small>{action.detail}</small>
+              </div>
+              <span className="actionPriority">{action.priority}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {operationalAlerts.length > 0 && (
+        <div className="actionPanel">
+          <div className="panelHeader">
+            <h2>Reorder alerts</h2>
+          </div>
+          <div className="actionList">
+            {operationalAlerts.map((alert) => (
+              <div className={`actionRow actionRow${alert.severity}`} key={alert.id}>
+                <div>
+                  <strong>{alert.label}</strong>
+                  <small>{alert.message}</small>
+                </div>
+                <span className="actionPriority">{alert.severity}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="grid">
         <section className="panel">
@@ -126,7 +182,7 @@ export default function Dashboard({ authToken }) {
           )}
         </section>
 
-        <section className="panel">
+        <section className="panel fullWidthPanel">
           <div className="panelHeader">
             <h2>Recent orders</h2>
           </div>

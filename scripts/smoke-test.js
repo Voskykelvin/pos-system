@@ -74,6 +74,35 @@ async function main() {
       throw new Error('Super admin dashboard did not return platform metrics');
     }
 
+    const platformUsers = await request(baseUrl, '/api/super-admin/users', {
+      headers: superAdminHeaders
+    });
+    if (!Array.isArray(platformUsers.users)) {
+      throw new Error('Super admin user list did not return users');
+    }
+    const platformUserEmail = `platform-smoke-${Date.now()}@example.local`;
+    const createdPlatformUser = await request(baseUrl, '/api/super-admin/users', {
+      method: 'POST',
+      headers: { ...superAdminHeaders, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'Platform Smoke Admin',
+        email: platformUserEmail,
+        role: 'admin',
+        password: 'platform-smoke-password'
+      })
+    });
+    if (createdPlatformUser.user?.email !== platformUserEmail) {
+      throw new Error('Super admin user creation returned the wrong user');
+    }
+    const platformUserLogin = await request(baseUrl, '/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ identifier: platformUserEmail, password: 'platform-smoke-password' })
+    });
+    if (platformUserLogin.user?.role !== 'admin') {
+      throw new Error('Created platform user could not authenticate with the assigned role');
+    }
+
     const unusedSignup = await request(baseUrl, '/api/signup', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
