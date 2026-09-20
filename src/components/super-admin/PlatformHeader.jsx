@@ -6,16 +6,20 @@ const RANGE_OPTIONS = [
 ];
 
 const SECTION_COPY = {
-  overview: {
+  dashboard: {
     title: 'Good morning, platform owner',
     text: 'See store health, revenue signals, and the work that needs your attention.'
+  },
+  analytics: {
+    title: 'Platform analytics',
+    text: 'Read acquisition, activation, revenue, and store activity trends in one place.'
   },
   plans: {
     title: 'Plans that scale with every store',
     text: 'Review the value, pricing, and included capabilities for each subscription tier.'
   },
-  subscriptions: {
-    title: 'Billing review queue',
+  approvals: {
+    title: 'Approvals queue',
     text: 'Verify submitted references, resolve account risk, and keep subscriptions current.'
   },
   users: {
@@ -29,7 +33,7 @@ const SECTION_COPY = {
 };
 
 export default function PlatformHeader({ days, loading, metrics, section, onDaysChange, onRefresh }) {
-  const copy = SECTION_COPY[section] || SECTION_COPY.overview;
+  const copy = SECTION_COPY[section] || SECTION_COPY.dashboard;
 
   return (
     <header className="header">

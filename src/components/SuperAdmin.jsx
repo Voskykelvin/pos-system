@@ -10,16 +10,19 @@ import SubscriptionPanels from './super-admin/SubscriptionPanels.jsx';
 import TenantTable from './super-admin/TenantTable.jsx';
 
 const SECTIONS = [
-  { id: 'overview', label: 'Command centre', detail: 'Platform health at a glance', path: '/super-admin/overview' },
-  { id: 'subscriptions', label: 'Billing review', detail: 'Verify payments and renewals', path: '/super-admin/subscriptions' },
+  { id: 'dashboard', label: 'Dashboard', detail: 'Platform health at a glance', path: '/super-admin' },
+  { id: 'analytics', label: 'Analytics', detail: 'Revenue and signup trends', path: '/super-admin/analytics' },
+  { id: 'approvals', label: 'Approvals', detail: 'Verify payments and renewals', path: '/super-admin/approvals' },
   { id: 'plans', label: 'Plans', detail: 'Subscription packaging', path: '/super-admin/plans' },
   { id: 'users', label: 'People', detail: 'Platform access and roles', path: '/super-admin/users' },
   { id: 'tenants', label: 'Stores', detail: 'Accounts and plan status', path: '/super-admin/tenants' }
 ];
 
 function sectionFromPath(pathname = window.location.pathname) {
+  const legacySections = { '/super-admin/overview': 'dashboard', '/super-admin/subscriptions': 'approvals' };
+  if (legacySections[pathname]) return legacySections[pathname];
   const match = SECTIONS.find((section) => pathname === section.path);
-  return match?.id || 'overview';
+  return match?.id || 'dashboard';
 }
 
 export default function SuperAdmin({ authToken }) {
@@ -212,7 +215,7 @@ export default function SuperAdmin({ authToken }) {
           <span className="platformRailMark">J</span>
           <div><strong>Jijenge Platform</strong><span>Owner workspace</span></div>
         </div>
-        <p className="platformRailLabel">Workspace</p>
+        <p className="platformRailLabel">Workspace pages</p>
         <nav className="platformNav">
           {SECTIONS.map((item, index) => (
             <button
@@ -242,14 +245,11 @@ export default function SuperAdmin({ authToken }) {
           onRefresh={() => loadDashboard(days)}
         />
 
-        {section === 'overview' && (
-          <>
-            <MetricOverview metrics={metrics} />
-            <PlatformCharts charts={charts} metrics={metrics} rangeDays={days} />
-          </>
-        )}
+        {section === 'dashboard' && <MetricOverview metrics={metrics} />}
 
-        {section === 'subscriptions' && (
+        {section === 'analytics' && <PlatformCharts charts={charts} metrics={metrics} rangeDays={days} />}
+
+        {section === 'approvals' && (
           <SubscriptionPanels
             alerts={subscriptionAlerts}
             pendingReview={pendingReview}

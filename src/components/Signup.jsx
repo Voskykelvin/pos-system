@@ -5,6 +5,12 @@ import {
   BUILDER_WHATSAPP_URL
 } from '../utils/builderContact';
 
+const PLAN_OPTIONS = [
+  { id: 'starter', name: 'Starter', detail: 'One shop, checkout and inventory' },
+  { id: 'growth', name: 'Growth', detail: 'More staff, purchasing and insights' },
+  { id: 'enterprise', name: 'Enterprise', detail: 'Multi-branch operations at scale' }
+];
+
 export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNavigateLogin, onNavigateHome }) {
   const [form, setForm] = useState({
     businessName: '',
@@ -115,6 +121,19 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
                 required
               />
             </label>
+
+            <fieldset className="signupPlanPicker">
+              <legend>Choose your plan</legend>
+              <p>Your workspace will be created on this plan. You can submit its payment reference on the next screen.</p>
+              <div className="signupPlanOptions">
+                {PLAN_OPTIONS.map((plan) => (
+                  <label className={form.plan === plan.id ? 'selectedSignupPlan' : ''} key={plan.id}>
+                    <input type="radio" name="plan" value={plan.id} checked={form.plan === plan.id} onChange={(event) => setForm({ ...form, plan: event.target.value })} />
+                    <span><strong>{plan.name}</strong><small>{plan.detail}</small></span>
+                  </label>
+                ))}
+              </div>
+            </fieldset>
 
             <button type="submit" className="btn-primary" style={{ height: 48, fontSize: 'var(--text-base)', marginTop: 'var(--space-2)' }} disabled={loading}>
               {loading ? 'Creating store...' : 'Create my Jijenge store'}

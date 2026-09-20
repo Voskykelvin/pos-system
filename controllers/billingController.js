@@ -178,7 +178,7 @@ async function submitPayment(req, res) {
     const payload = await loadTenantBilling(req.tenantId);
     return res.status(201).json({
       message: submission.targetPlan
-        ? `Upgrade payment submitted. ${paymentPlan} features activate after verification.`
+        ? `Upgrade payment submitted. ${paymentPlan} features activate automatically when the payment is verified.`
         : 'Payment reference submitted for admin verification.',
       paymentId: payment.id,
       billing: payload.billing,
@@ -286,7 +286,9 @@ async function confirmSubscriptionPayment(req, res) {
     }).catch(() => {});
 
     return res.json({
-      message: isUpgrade ? `Upgrade to ${payment.plan} confirmed.` : 'Subscription payment confirmed.',
+      message: isUpgrade
+        ? `Upgrade to ${payment.plan} confirmed and applied to the store account.`
+        : 'Subscription payment confirmed.',
       paymentId: payment.id,
       tenantId: tenant.id,
       periodStart,

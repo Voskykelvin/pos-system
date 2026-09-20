@@ -59,7 +59,7 @@ export default function SubscriptionPanels({ alerts, pendingReview, onReviewPaym
                     <td>
                       <div className="rowActions">
                         <button className="activateBtn" type="button" onClick={() => onReviewPayment(payment, 'confirm')}>
-                          Confirm
+                          {payment.upgrade ? 'Confirm & upgrade' : 'Confirm payment'}
                         </button>
                         <button className="suspendBtn" type="button" onClick={() => onReviewPayment(payment, 'reject')}>
                           Reject
