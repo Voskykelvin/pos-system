@@ -53,15 +53,6 @@ export default function SuperAdmin({ authToken }) {
     loadPlatformUsers();
   }, [authToken, days]);
 
-  function navigateSection(nextSection) {
-    const item = SECTIONS.find((entry) => entry.id === nextSection);
-    if (!item) return;
-    setSection(item.id);
-    if (window.location.pathname !== item.path) {
-      window.history.pushState({}, '', item.path);
-    }
-  }
-
   async function loadDashboard(nextDays = days) {
     try {
       setLoading(true);
@@ -209,32 +200,7 @@ export default function SuperAdmin({ authToken }) {
   const pendingReview = subscriptionPayments.pendingReview || [];
 
   return (
-    <section className="superAdminPage platformWorkspace">
-      <aside className="platformRail" aria-label="Platform workspace navigation">
-        <div className="platformRailBrand">
-          <span className="platformRailMark">J</span>
-          <div><strong>Jijenge Platform</strong><span>Owner workspace</span></div>
-        </div>
-        <p className="platformRailLabel">Workspace pages</p>
-        <nav className="platformNav">
-          {SECTIONS.map((item, index) => (
-            <button
-              key={item.id}
-              type="button"
-              className={section === item.id ? 'activeSection' : ''}
-              onClick={() => navigateSection(item.id)}
-            >
-              <span className="platformNavIndex">0{index + 1}</span>
-              <span><strong>{item.label}</strong><small>{item.detail}</small></span>
-            </button>
-          ))}
-        </nav>
-        <div className="platformRailFoot">
-          <strong>{metrics.pendingSubscriptionPayments || 0}</strong>
-          <span>payments need review</span>
-        </div>
-      </aside>
-
+    <section className="superAdminPage">
       <main className="platformMain">
         <PlatformHeader
           days={days}

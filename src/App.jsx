@@ -106,6 +106,15 @@ const NAV_ITEMS = [
   { id: 'saas_owner', label: 'Platform SaaS', path: '/super-admin', roles: ['super_admin'] }
 ];
 
+const PLATFORM_NAV_ITEMS = [
+  { id: 'dashboard', label: 'Platform dashboard', path: '/super-admin' },
+  { id: 'analytics', label: 'Analytics', path: '/super-admin/analytics' },
+  { id: 'approvals', label: 'Approvals', path: '/super-admin/approvals' },
+  { id: 'plans', label: 'Plans', path: '/super-admin/plans' },
+  { id: 'users', label: 'People', path: '/super-admin/users' },
+  { id: 'tenants', label: 'Stores', path: '/super-admin/tenants' }
+];
+
 function getInitialView() {
   return ROUTES[window.location.pathname] || 'dashboard';
 }
@@ -161,7 +170,6 @@ export default function App() {
     user: null,
     tenant: null
   });
-  const [installPrompt, setInstallPrompt] = useState(null);
   const [syncStatus, setSyncStatus] = useState({ type: 'idle', message: '' });
   const syncTimeoutRef = useRef(null);
   const refreshAttemptedRef = useRef(false);
@@ -188,15 +196,6 @@ export default function App() {
       window.removeEventListener('keydown', handleKey);
     };
   }, [mobileSidebarOpen]);
-
-  useEffect(() => {
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setInstallPrompt(e);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-  }, []);
 
   useEffect(() => {
     async function loadBootstrap() {
@@ -572,7 +571,7 @@ export default function App() {
         <div className="navSection">
           <div className="navLabel">Menu</div>
           <nav className="nav" aria-label="Primary">
-            {visibleNavItems.map((item) => {
+            {visibleNavItems.filter((item) => !(bootstrap.user?.role === 'super_admin' && item.id === 'saas_owner')).map((item) => {
               const Icon = NAV_ICONS[item.id];
               return (
                 <button
@@ -586,25 +585,26 @@ export default function App() {
                 </button>
               );
             })}
+            {bootstrap.user?.role === 'super_admin' && PLATFORM_NAV_ITEMS.map((item) => (
+              <button
+                key={item.id}
+                className={`navButton ${window.location.pathname === item.path ? 'active' : ''}`}
+                onClick={() => {
+                  setAuthMode(null);
+                  setView('saas_owner');
+                  if (window.location.pathname !== item.path) {
+                    window.history.pushState({}, '', item.path);
+                    window.dispatchEvent(new PopStateEvent('popstate'));
+                  }
+                  if (isMobile()) setMobileSidebarOpen(false);
+                }}
+                type="button"
+              >
+                {item.label}
+              </button>
+            ))}
           </nav>
         </div>
-
-        {installPrompt && (
-          <button
-            type="button"
-            className="installBtn"
-            onClick={async () => {
-              if (!installPrompt) return;
-              installPrompt.prompt();
-              const { outcome } = await installPrompt.userChoice;
-              if (outcome === 'accepted') {
-                setInstallPrompt(null);
-              }
-            }}
-          >
-            Install Desktop App
-          </button>
-        )}
 
         <div className="statusBox">
           <div className="userCard">
