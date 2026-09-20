@@ -7,24 +7,24 @@ const RANGE_OPTIONS = [
 
 const SECTION_COPY = {
   overview: {
-    title: 'Platform Overview',
-    text: 'A quick read of subscriptions, active stores, and work waiting for review.'
-  },
-  analytics: {
-    title: 'Platform Analytics',
-    text: 'Colorful barcode scans of signups, POS sales pulse, plan mix, and tenant health.'
+    title: 'Good morning, platform owner',
+    text: 'See store health, revenue signals, and the work that needs your attention.'
   },
   plans: {
-    title: 'Plans & Packaging',
-    text: 'Review the tiers customers see during signup and billing.'
+    title: 'Plans that scale with every store',
+    text: 'Review the value, pricing, and included capabilities for each subscription tier.'
   },
   subscriptions: {
-    title: 'Subscriptions & Payments',
-    text: 'Follow renewals, pending references, rejected payments, and expiring accounts.'
+    title: 'Billing review queue',
+    text: 'Verify submitted references, resolve account risk, and keep subscriptions current.'
+  },
+  users: {
+    title: 'People with platform access',
+    text: 'Create and manage owner, administrator, manager, and cashier accounts across your stores.'
   },
   tenants: {
-    title: 'Users & Stores',
-    text: 'Manage registered tenant profiles, owners, status, plans, and unused accounts.'
+    title: 'Store directory',
+    text: 'Review every store account, its subscription state, and the people responsible for it.'
   }
 };
 
@@ -38,8 +38,8 @@ export default function PlatformHeader({ days, loading, metrics, section, onDays
         <h1 className="title">{copy.title}</h1>
         <p>{copy.text}</p>
         <div className="headerMeta">
-          <span>{metrics.totalTenants || 'No'} registered stores</span>
-          <span>{days}-day view</span>
+          <span>{metrics.totalTenants || 0} stores on platform</span>
+          <span>Last {days} days</span>
         </div>
       </div>
       <div className="actions">
@@ -56,7 +56,7 @@ export default function PlatformHeader({ days, loading, metrics, section, onDays
           ))}
         </div>
         <button className="refreshBtn" onClick={onRefresh} type="button">
-          {loading ? 'Refreshing...' : 'Refresh'}
+          {loading ? 'Refreshing…' : 'Refresh data'}
         </button>
       </div>
     </header>

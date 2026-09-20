@@ -25,7 +25,9 @@ export default function Signup({ initialPlan = 'starter', onSignupSuccess, onNav
     setError(null);
 
     try {
-      const res = await fetch('/api/auth/register', {
+      // Store provisioning is a public tenant route. Authentication routes only
+      // handle sessions, so posting there returns the API's "Route not found".
+      const res = await fetch('/api/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form)

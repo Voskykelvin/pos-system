@@ -3,17 +3,17 @@ import { formatKes, formatPercent, formatUsd } from './formatters';
 export default function MetricOverview({ metrics }) {
   const attention = [
     {
-      label: 'Payment review',
+      label: 'Payment queue',
       value: metrics.pendingSubscriptionPayments > 0 ? metrics.pendingSubscriptionPayments : 'Clear',
       tone: metrics.pendingSubscriptionPayments > 0 ? 'warn' : 'ok'
     },
     {
-      label: 'Ending soon',
+      label: 'Renewals due soon',
       value: metrics.expiringSoonTenants > 0 ? metrics.expiringSoonTenants : 'None',
       tone: metrics.expiringSoonTenants > 0 ? 'warn' : 'ok'
     },
     {
-      label: 'Store activity',
+      label: 'Stores trading',
       value: metrics.activeStoresWithSales > 0
         ? formatPercent(metrics.storeActivityRate)
         : 'Waiting',
@@ -23,25 +23,25 @@ export default function MetricOverview({ metrics }) {
 
   const hero = [
     {
-      label: 'MRR',
+      label: 'Monthly recurring revenue',
       value: metrics.mrrUsd > 0 ? formatUsd(metrics.mrrUsd) : '—',
-      sub: metrics.mrrKes > 0 ? `${formatKes(metrics.mrrKes)} / mo` : 'No active subscriptions',
+      sub: metrics.mrrKes > 0 ? `${formatKes(metrics.mrrKes)} each month` : 'No verified subscriptions yet',
       accent: true
     },
     {
-      label: 'Active stores',
+      label: 'Verified stores',
       value: metrics.activeTenants || 0,
-      sub: `${metrics.totalTenants || 0} registered`
+      sub: `${metrics.totalTenants || 0} total store accounts`
     },
     {
-      label: 'Conversion',
+      label: 'Activation rate',
       value: metrics.totalTenants > 0 ? formatPercent(metrics.signupToActiveConversionRate) : '—',
-      sub: `${metrics.newTenants || 0} new this range`
+      sub: `${metrics.newTenants || 0} stores joined in this period`
     },
     {
-      label: 'ARPA',
+      label: 'Revenue per store',
       value: metrics.activeTenants > 0 ? formatUsd(metrics.arpaUsd) : '—',
-      sub: 'Avg revenue / account'
+      sub: 'Average recurring revenue'
     }
   ];
 

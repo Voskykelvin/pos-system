@@ -4,8 +4,8 @@ export default function PlanPackaging({ plans }) {
   return (
     <section className="panel">
       <div className="panelHeader">
-        <h2>Plan packaging</h2>
-        <span>{plans.length} tiers</span>
+        <h2>Subscription plans</h2>
+        <span>{plans.length} ways to grow</span>
       </div>
       <div className="planGrid">
         {plans.map((plan) => (

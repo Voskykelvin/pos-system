@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
 
 const require = createRequire(import.meta.url);
-const { getMidCycleUpgradeQuotes } = require('./subscriptionBilling');
+const { getMidCycleUpgradeQuotes, resolveUpgradeConfirmation } = require('./subscriptionBilling');
 
 describe('mid-cycle subscription upgrades', () => {
   const now = new Date('2026-07-13T00:00:00.000Z');
@@ -43,5 +43,21 @@ describe('mid-cycle subscription upgrades', () => {
       status: 'active',
       subscriptionEndsAt: new Date('2026-07-12T00:00:00.000Z')
     }, now)).toEqual([]);
+  });
+
+  it('permits a paid target plan that was selected during review but rejects unrelated plan changes', () => {
+    const payment = {
+      plan: 'growth',
+      metadata: { billingType: 'mid_cycle_upgrade', fromPlan: 'starter', targetPlan: 'growth' }
+    };
+    expect(resolveUpgradeConfirmation({ tenantPlan: 'growth', payment })).toMatchObject({
+      canConfirm: true,
+      planWasPreselected: true
+    });
+    expect(resolveUpgradeConfirmation({ tenantPlan: 'enterprise', payment })).toMatchObject({
+      canConfirm: false,
+      fromPlan: 'starter',
+      targetPlan: 'growth'
+    });
   });
 });

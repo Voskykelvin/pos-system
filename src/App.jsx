@@ -85,6 +85,7 @@ const ROUTES = {
   '/super-admin/analytics': 'saas_owner',
   '/super-admin/plans': 'saas_owner',
   '/super-admin/subscriptions': 'saas_owner',
+  '/super-admin/users': 'saas_owner',
   '/super-admin/tenants': 'saas_owner'
 };
 

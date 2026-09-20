@@ -74,6 +74,23 @@ function getMidCycleUpgradeQuotes(tenant, now = new Date()) {
     });
 }
 
+function resolveUpgradeConfirmation({ tenantPlan, payment }) {
+  const metadata = payment?.metadata || {};
+  if (metadata.billingType !== 'mid_cycle_upgrade') {
+    return { canConfirm: true, isUpgrade: false, planWasPreselected: false };
+  }
+
+  const fromPlan = metadata.fromPlan;
+  const targetPlan = metadata.targetPlan || payment.plan;
+  if (tenantPlan === fromPlan) {
+    return { canConfirm: true, isUpgrade: true, planWasPreselected: false, fromPlan, targetPlan };
+  }
+  if (tenantPlan === targetPlan) {
+    return { canConfirm: true, isUpgrade: true, planWasPreselected: true, fromPlan, targetPlan };
+  }
+  return { canConfirm: false, isUpgrade: true, planWasPreselected: false, fromPlan, targetPlan };
+}
+
 function buildBillingInstructions(tenant) {
   const platformName = process.env.PLATFORM_BILLING_NAME || process.env.BUSINESS_NAME || 'Jijenge POS';
   const mpesaPhone = process.env.PLATFORM_MPESA_PHONE || process.env.ADMIN_PHONE || '';
@@ -182,6 +199,7 @@ module.exports = {
   isExpired,
   nextPeriodForTenant,
   publicPayment,
+  resolveUpgradeConfirmation,
   resolveBillingStatus,
   sanitizePaymentSubmission
 };

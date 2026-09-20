@@ -703,15 +703,20 @@ async function superAdminDashboard(req, res) {
  * Toggle tenant plan or status (activate/suspend).
  */
 async function updateTenant(req, res) {
+  const t = await sequelize.transaction();
   try {
-    const tenant = await Tenant.findByPk(req.params.id);
-    if (!tenant) return res.status(404).json({ error: 'Tenant not found' });
+    const tenant = await Tenant.findByPk(req.params.id, { transaction: t, lock: t.LOCK.UPDATE });
+    if (!tenant) {
+      await t.rollback();
+      return res.status(404).json({ error: 'Tenant not found' });
+    }
 
     const { status, plan, currency, settings } = req.body;
     const updates = {};
 
     if (status !== undefined) {
       if (!['pending_payment', 'active', 'past_due', 'suspended'].includes(status)) {
+        await t.rollback();
         return res.status(400).json({ error: 'Unknown tenant status' });
       }
       updates.status = status;
@@ -719,7 +724,27 @@ async function updateTenant(req, res) {
 
     if (plan !== undefined) {
       if (!isKnownPlan(plan)) {
+        await t.rollback();
         return res.status(400).json({ error: 'Unknown subscription plan' });
+      }
+      if (plan !== tenant.plan) {
+        const pendingPayments = await SubscriptionPayment.findAll({
+          where: { tenantId: tenant.id, status: 'pending' },
+          transaction: t,
+          lock: t.LOCK.UPDATE
+        });
+        const pendingUpgrade = pendingPayments.find(
+          (payment) => payment.metadata?.billingType === 'mid_cycle_upgrade'
+        );
+        if (pendingUpgrade) {
+          await t.rollback();
+          return res.status(409).json({
+            error: 'This store has a pending upgrade payment. Confirm or reject that payment before changing its plan.',
+            paymentId: pendingUpgrade.id,
+            fromPlan: pendingUpgrade.metadata?.fromPlan,
+            targetPlan: pendingUpgrade.metadata?.targetPlan || pendingUpgrade.plan
+          });
+        }
       }
       updates.plan = plan;
     }
@@ -730,15 +755,18 @@ async function updateTenant(req, res) {
 
     if (settings !== undefined) {
       if (!settings || typeof settings !== 'object' || Array.isArray(settings)) {
+        await t.rollback();
         return res.status(400).json({ error: 'settings must be an object' });
       }
       updates.settings = settings;
     }
 
-    await tenant.update(updates);
+    await tenant.update(updates, { transaction: t });
+    await t.commit();
 
     return res.json(sanitizeTenant(tenant));
   } catch (err) {
+    if (!t.finished) await t.rollback();
     return res.status(400).json({ error: err.message });
   }
 }

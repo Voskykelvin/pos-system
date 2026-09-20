@@ -9,6 +9,7 @@ const {
   getMidCycleUpgradeQuotes,
   nextPeriodForTenant,
   publicPayment,
+  resolveUpgradeConfirmation,
   sanitizePaymentSubmission
 } = require('../services/subscriptionBilling');
 const { logAudit } = require('../services/auditLogger');
@@ -220,11 +221,17 @@ async function confirmSubscriptionPayment(req, res) {
       return res.status(404).json({ error: 'Tenant not found for this subscription payment' });
     }
 
-    const isUpgrade = payment.metadata?.billingType === 'mid_cycle_upgrade';
-    if (isUpgrade && tenant.plan !== payment.metadata.fromPlan) {
+    const confirmation = resolveUpgradeConfirmation({ tenantPlan: tenant.plan, payment });
+    if (!confirmation.canConfirm) {
       await t.rollback();
-      return res.status(409).json({ error: 'The store plan changed after this upgrade was submitted. Review the payment manually.' });
+      return res.status(409).json({
+        error: 'This payment was calculated for a different store plan. Reject it and request a new payment reference.',
+        currentPlan: tenant.plan,
+        fromPlan: confirmation.fromPlan,
+        targetPlan: confirmation.targetPlan
+      });
     }
+    const isUpgrade = confirmation.isUpgrade;
     const renewalPeriod = nextPeriodForTenant(tenant);
     const periodStart = isUpgrade ? new Date() : renewalPeriod.periodStart;
     const periodEnd = isUpgrade
@@ -272,6 +279,7 @@ async function confirmSubscriptionPayment(req, res) {
         tenantName: tenant.name,
         plan: payment.plan,
         amount: Number(payment.amount),
+        planWasPreselected: confirmation.planWasPreselected,
         periodStart,
         periodEnd
       }

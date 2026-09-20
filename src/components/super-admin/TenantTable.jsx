@@ -9,17 +9,17 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
   return (
     <section className="panel">
       <div className="panelHeader">
-        <h2>Registered business tenants</h2>
-        <span>{tenants.length ? `${tenants.length} stores` : 'No stores yet'}</span>
+        <h2>All stores</h2>
+        <span>{tenants.length ? `${tenants.length} store accounts` : 'No stores yet'}</span>
       </div>
       <div className="tableWrap">
         <table className="table">
           <thead>
             <tr>
-              <th>Business</th>
-              <th>Owner</th>
+              <th>Store</th>
+              <th>Account owner</th>
               <th>Plan</th>
-              <th>Activity</th>
+              <th>Checkout activity</th>
               <th>Sales</th>
               <th>Subscription</th>
               <th>Health</th>
@@ -34,12 +34,16 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                   <strong>{tenant.name}</strong>
                   <span>{tenant.currency} - joined {new Date(tenant.createdAt).toLocaleDateString()}</span>
                 </td>
-                <td>{tenant.owner?.email || '-'}</td>
+                <td>{tenant.owner?.email || 'No owner email'}</td>
                 <td>
                   <select
                     className="planSelect"
                     value={tenant.plan}
                     onChange={(event) => onUpdateTenant(tenant, { plan: event.target.value })}
+                    disabled={Boolean(tenant.subscription.pendingPayment?.upgrade)}
+                    title={tenant.subscription.pendingPayment?.upgrade
+                      ? 'A paid upgrade is awaiting verification. Review it in Billing before changing the plan.'
+                      : 'Change subscription plan'}
                   >
                     {plans.map((plan) => (
                       <option key={plan.id} value={plan.id}>{plan.name}</option>
@@ -54,7 +58,8 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                 <td>
                   <strong>{formatDate(tenant.subscription.endsAt)}</strong>
                   <span>{daysText(tenant.subscription.daysRemaining)}</span>
-                  {tenant.subscription.pendingPayment && <small className="upgradeHint">Payment review</small>}
+                  {tenant.subscription.pendingPayment?.upgrade && <small className="upgradeHint">Upgrade awaiting verification</small>}
+                  {tenant.subscription.pendingPayment && !tenant.subscription.pendingPayment?.upgrade && <small className="upgradeHint">Payment awaiting verification</small>}
                 </td>
                 <td>
                   <span className={`healthBadge ${tenant.activity.health}`}>
