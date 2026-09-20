@@ -136,6 +136,30 @@
   --topbar-height: 56px;
   --mobile-nav-height: 64px;
   --content-max: 1280px;
+
+  /* -- Admin compatibility tokens ---------------------------------
+     Several established admin screens share these names. Keep their values
+     concrete (rather than aliases to --bg/--surface) because some screens
+     locally remap the base tokens and would otherwise create circular custom
+     property references. */
+  --pos-bg: #f7f7f2;
+  --pos-surface: #ffffff;
+  --pos-panel: #f0ede2;
+  --pos-panel-strong: #e6e2d4;
+  --pos-ink: #0a1f14;
+  --pos-ink-mid: #1a3328;
+  --pos-ink-soft: #476859;
+  --pos-line: rgba(5, 150, 105, 0.09);
+  --pos-line-strong: rgba(5, 150, 105, 0.18);
+  --pos-accent: #059669;
+  --pos-accent-dark: #065f46;
+  --pos-sidebar: #071a12;
+  --pos-success: #16a34a;
+  --pos-success-bg: #dcfce7;
+  --pos-warn: #b45309;
+  --pos-warn-bg: #fef3c7;
+  --pos-danger: #dc2626;
+  --pos-danger-bg: #fee2e2;
 }
 
 /* -- Dark Mode ------------------------------------------- */
@@ -169,4 +193,23 @@
   --shadow-md: 0 8px 24px rgba(0, 0, 0, 0.30);
   --shadow-lg: 0 16px 48px rgba(0, 0, 0, 0.40);
   --shadow-glow: 0 0 24px rgba(255, 206, 27, 0.14);
+
+  --pos-bg: #080d0b;
+  --pos-surface: #111a15;
+  --pos-panel: #182420;
+  --pos-panel-strong: #1f2e28;
+  --pos-ink: #e8f0ec;
+  --pos-ink-mid: #d4e0d9;
+  --pos-ink-soft: #8caaa0;
+  --pos-line: rgba(255, 255, 255, 0.07);
+  --pos-line-strong: rgba(255, 255, 255, 0.14);
+  --pos-accent: #34d399;
+  --pos-accent-dark: #10b981;
+  --pos-sidebar: #060e0a;
+  --pos-success: #4ade80;
+  --pos-success-bg: rgba(22, 163, 74, 0.16);
+  --pos-warn: #fbbf24;
+  --pos-warn-bg: rgba(217, 119, 6, 0.18);
+  --pos-danger: #f87171;
+  --pos-danger-bg: rgba(220, 38, 38, 0.18);
 }

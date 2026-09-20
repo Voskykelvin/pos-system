@@ -7646,3 +7646,97 @@ textarea.input-field {
     transform: translateY(0);
   }
 }
+
+/* --- Responsive resilience -------------------------------------------------
+   Shared fallbacks for legacy admin modules. They keep overlays opaque and
+   constrain rich content to the viewport instead of clipping it. */
+.drawerOverlay {
+  z-index: var(--z-modal);
+  padding: clamp(12px, 3vw, 32px);
+  overflow: auto;
+  background: rgba(3, 20, 14, 0.58);
+}
+
+.drawer,
+.catModal,
+.barcodeModal,
+.modal {
+  background: var(--pos-surface, #ffffff);
+  color: var(--pos-ink, #0a1f14);
+  border-color: var(--pos-line-strong, rgba(5, 150, 105, 0.18));
+  box-shadow: 0 24px 70px rgba(3, 20, 14, 0.28);
+}
+
+.drawer {
+  height: auto;
+  max-height: calc(100dvh - clamp(24px, 6vw, 64px));
+}
+
+.tableWrap,
+.data-table-desktop,
+.product-admin-page > .table {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 1280px) {
+  .operations-page .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .operations-page .panel,
+  .operations-page .receiptPanel,
+  .operations-page .auditPanel {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 760px) {
+  .page-container,
+  .operations-page,
+  .product-admin-page,
+  .store-admin-page,
+  .analytics-page,
+  .customer-admin-page,
+  .billing-page {
+    padding: 16px 12px;
+  }
+
+  .drawerOverlay {
+    align-items: flex-end;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .drawer,
+  .catModal,
+  .barcodeModal,
+  .modal {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+    border-radius: 14px;
+  }
+
+  .drawer {
+    padding: 18px 14px;
+  }
+
+  .panelHeader,
+  .tabHeaderAction,
+  .row,
+  .receiptLine,
+  .totals div {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .panelHeader h2,
+  .panelHeader span,
+  .alertRow strong,
+  .auditRow strong {
+    overflow-wrap: anywhere;
+  }
+}
