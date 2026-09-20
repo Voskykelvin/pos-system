@@ -31,6 +31,7 @@ module.exports = defineConfig({
       PORT: '4173',
       HOST: '127.0.0.1',
       ENABLE_ETIMS_SCHEDULER: 'false',
+      E2E_TEST_MODE: 'true',
       AUTH_TOKEN_SECRET: 'playwright-local-test-secret'
     }
   }

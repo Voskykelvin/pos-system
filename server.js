@@ -76,7 +76,11 @@ app.use(helmet({
 // Auth brute-force protection: 10 attempts per 15 minutes per IP
 const authLimiter = rateLimit({
   windowMs:         15 * 60 * 1000,
-  max:              10,
+  // Browser tests deliberately create a fresh authenticated session per
+  // scenario and retry failed scenarios. Keep production brute-force
+  // protection strict while preventing the isolated Playwright server from
+  // rate-limiting its own test suite.
+  max:              process.env.E2E_TEST_MODE === 'true' ? 1000 : 10,
   standardHeaders: 'draft-7',
   legacyHeaders:    false,
   message:          { error: 'Too many login attempts. Try again in 15 minutes.' }
@@ -85,7 +89,7 @@ const authLimiter = rateLimit({
 // General API limit: 120 requests per minute per IP (generous, prevents runaway loops)
 const apiLimiter = rateLimit({
   windowMs:         60 * 1000,
-  max:              120,
+  max:              process.env.E2E_TEST_MODE === 'true' ? 2000 : 120,
   standardHeaders: 'draft-7',
   legacyHeaders:    false,
   message:          { error: 'Too many requests. Slow down.' }

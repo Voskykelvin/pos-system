@@ -5,6 +5,7 @@ async function loginAsCashier(page) {
   await page.getByLabel('Email or phone').fill('cashier@example.local');
   await page.getByLabel('Password').fill('cashier12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
   await expect(page.getByPlaceholder('Scan barcode or search a product...')).toBeVisible();
 }
 
