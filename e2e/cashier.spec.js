@@ -21,12 +21,12 @@ test('cashier completes a cash sale and receives a receipt', async ({ page }, te
   await expect(page.getByText('KES 65.00').first()).toBeVisible();
   await page.getByLabel('Cash received').fill('100');
   await page.getByLabel('Cash received').blur();
-  await expect(page.getByText('KES 35.00')).toBeVisible();
+  await expect(page.getByText('Change due KES 35.00', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Confirm sale - KES 65.00/ }).click();
 
   await expect(page.getByText('Sale completed successfully.').first()).toBeVisible();
   await expect(page.getByText('Receipt', { exact: true })).toBeVisible();
-  await expect(page.getByText('KES 35.00')).toBeVisible();
+  await expect(page.locator('.receiptChangeRow').getByText('KES 35.00', { exact: true })).toBeVisible();
 });
 
 test('phone layout keeps sign out and checkout navigation accessible', async ({ page }, testInfo) => {
@@ -80,7 +80,7 @@ test('phone cashier switches from products to cart and completes a cash sale', a
   await expect(page.getByRole('heading', { name: 'Current sale' })).toBeVisible();
   await page.getByLabel('Cash received').fill('100');
   await page.getByLabel('Cash received').blur();
-  await expect(page.getByText('KES 30.00')).toBeVisible();
+  await expect(page.getByText('Change due KES 30.00', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: /Confirm sale - KES 70.00/ }).click();
 
   await expect(page.getByText('Sale completed successfully.').first()).toBeVisible();
