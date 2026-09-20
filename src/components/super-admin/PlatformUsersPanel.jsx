@@ -4,7 +4,7 @@ export default function PlatformUsersPanel({ users, tenants, form, onChange, onC
   return (
     <section className="panel">
       <div className="panelHeader">
-        <h2>Platform users</h2>
+        <h2>Account access</h2>
         <span>{users.length} accounts</span>
       </div>
 
@@ -72,7 +72,7 @@ export default function PlatformUsersPanel({ users, tenants, form, onChange, onC
 
         <div className="listStack">
           {users.length === 0 ? (
-            <div className="emptyStateCompact">No platform users yet.</div>
+            <div className="emptyStateCompact">No user accounts yet.</div>
           ) : users.slice(0, 6).map((user) => (
             <article key={user.id} className="miniRow">
               <div>

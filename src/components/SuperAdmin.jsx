@@ -14,7 +14,7 @@ const SECTIONS = [
   { id: 'analytics', label: 'Analytics', detail: 'Revenue and signup trends', path: '/super-admin/analytics' },
   { id: 'approvals', label: 'Approvals', detail: 'Verify payments and renewals', path: '/super-admin/approvals' },
   { id: 'plans', label: 'Plans', detail: 'Subscription packaging', path: '/super-admin/plans' },
-  { id: 'users', label: 'People', detail: 'Platform access and roles', path: '/super-admin/users' },
+  { id: 'users', label: 'Access & roles', detail: 'Platform access and roles', path: '/super-admin/users' },
   { id: 'tenants', label: 'Stores', detail: 'Accounts and plan status', path: '/super-admin/tenants' }
 ];
 
@@ -134,6 +134,12 @@ export default function SuperAdmin({ authToken }) {
     await updateTenant(tenant, { status });
   }
 
+  function openApprovals() {
+    const path = '/super-admin/approvals';
+    if (window.location.pathname !== path) window.history.pushState({}, '', path);
+    setSection('approvals');
+  }
+
   async function reviewPayment(payment, action) {
     if (action === 'confirm' && payment.upgrade && payment.tenant?.plan === payment.upgrade.targetPlan) {
       const proceed = window.confirm(
@@ -243,6 +249,7 @@ export default function SuperAdmin({ authToken }) {
             onToggleStatus={handleToggleStatus}
             onUpdateTenant={updateTenant}
             onDeleteTenant={deleteTenantProfile}
+            onOpenApprovals={openApprovals}
           />
         )}
       </main>

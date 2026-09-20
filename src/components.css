@@ -4592,6 +4592,35 @@ textarea.input-field {
   padding: 14px;
 }
 
+.bestSellerChart {
+  height: 300px;
+  padding: 14px 16px 16px 8px;
+}
+
+.analyticsEmptyState {
+  height: 100%;
+  display: grid;
+  place-content: center;
+  gap: 8px;
+  padding: 24px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  background: linear-gradient(135deg, #f0fdf4, #f8fafc);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.analyticsEmptyState strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.analyticsEmptyState span {
+  max-width: 440px;
+  line-height: 1.5;
+  font-size: 13px;
+}
+
 .chartLegend {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4714,6 +4743,25 @@ textarea.input-field {
   color: var(--ink-soft);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.stockCover {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin-top: 8px;
+}
+
+.stockCover span,
+.stockCover small {
+  margin: 0;
+}
+
+.stockCover strong {
+  color: var(--ink);
+  font-family: "IBM Plex Mono", Consolas, monospace;
+  font-size: 12px;
 }
 
 .rowTitle {

@@ -5,7 +5,14 @@ function isUnusedProfile(tenant) {
     tenant.subscription?.latestPayment?.status !== 'confirmed';
 }
 
-export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant, onDeleteTenant }) {
+function canToggleAccess(tenant) {
+  if (tenant.status === 'active') return true;
+  return tenant.status === 'suspended' && (
+    !tenant.subscription?.endsAt || Number(tenant.subscription.daysRemaining) >= 0
+  );
+}
+
+export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTenant, onDeleteTenant, onOpenApprovals }) {
   return (
     <section className="panel">
       <div className="panelHeader">
@@ -72,13 +79,21 @@ export default function TenantTable({ tenants, plans, onToggleStatus, onUpdateTe
                 </td>
                 <td>
                   <div className="rowActions">
-                    <button
-                      className={tenant.status === 'active' ? "suspendBtn" : "activateBtn"}
-                      onClick={() => onToggleStatus(tenant)}
-                      type="button"
-                    >
-                      {tenant.status === 'active' ? 'Suspend' : 'Activate'}
-                    </button>
+                    {canToggleAccess(tenant) ? (
+                      <button
+                        className={tenant.status === 'active' ? "suspendBtn" : "activateBtn"}
+                        onClick={() => onToggleStatus(tenant)}
+                        type="button"
+                      >
+                        {tenant.status === 'active' ? 'Suspend' : 'Reactivate access'}
+                      </button>
+                    ) : tenant.subscription.pendingPayment ? (
+                      <button className="activateBtn" onClick={onOpenApprovals} type="button">
+                        Review payment
+                      </button>
+                    ) : (
+                      <span className="paymentRequiredHint">Awaiting renewal payment</span>
+                    )}
                     {isUnusedProfile(tenant) && (
                       <button
                         className="deleteProfileBtn"

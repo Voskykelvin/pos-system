@@ -111,7 +111,7 @@ const PLATFORM_NAV_ITEMS = [
   { id: 'analytics', label: 'Analytics', path: '/super-admin/analytics' },
   { id: 'approvals', label: 'Approvals', path: '/super-admin/approvals' },
   { id: 'plans', label: 'Plans', path: '/super-admin/plans' },
-  { id: 'users', label: 'People', path: '/super-admin/users' },
+  { id: 'users', label: 'Access & roles', path: '/super-admin/users' },
   { id: 'tenants', label: 'Stores', path: '/super-admin/tenants' }
 ];
 

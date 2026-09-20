@@ -23,8 +23,8 @@ const SECTION_COPY = {
     text: 'Verify submitted references, resolve account risk, and keep subscriptions current.'
   },
   users: {
-    title: 'People with platform access',
-    text: 'Create and manage owner, administrator, manager, and cashier accounts across your stores.'
+    title: 'Access & roles',
+    text: 'Create and review platform and store account access. Existing account changes remain in Store Setup.'
   },
   tenants: {
     title: 'Store directory',

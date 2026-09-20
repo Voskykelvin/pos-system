@@ -719,6 +719,12 @@ async function updateTenant(req, res) {
         await t.rollback();
         return res.status(400).json({ error: 'Unknown tenant status' });
       }
+      if (status === 'active' && tenant.subscriptionEndsAt && new Date(tenant.subscriptionEndsAt).getTime() <= Date.now()) {
+        await t.rollback();
+        return res.status(409).json({
+          error: 'An expired subscription cannot be activated manually. Confirm a renewal payment to restore access.'
+        });
+      }
       updates.status = status;
     }
 

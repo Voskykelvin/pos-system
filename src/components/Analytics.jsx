@@ -114,6 +114,12 @@ export default function Analytics({ authToken }) {
     ];
   }, [data]);
 
+  const hasPaidSales = Number(data?.summary?.orderCount || 0) > 0;
+  const bestSellerBars = useMemo(
+    () => (data?.bestSellers || []).slice(0, 7).reverse(),
+    [data]
+  );
+
   async function downloadCsv(e) {
     e.preventDefault();
     const res = await fetch(`/api/reports/export?days=${days}`, {
@@ -234,26 +240,33 @@ export default function Analytics({ authToken }) {
                 <span>{data.range.days} days</span>
               </div>
               <div className="chartFrame" role="img" aria-label="Sales and gross profit trend chart">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.salesTrend}>
-                    <defs>
-                      <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#10b981" stopOpacity={0.42} />
-                        <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-                      </linearGradient>
-                      <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
-                        <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid stroke="#e2e8f0" vertical={false} />
-                    <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={24} />
-                    <YAxis tickFormatter={compactKes} tick={{ fontSize: 11 }} width={72} />
-                    <Tooltip formatter={(value, name) => [formatKes(value), name]} />
-                    <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="url(#salesGradient)" strokeWidth={3} activeDot={{ r: 5 }} />
-                    <Area type="monotone" dataKey="grossProfit" name="Profit" stroke="#2563eb" fill="url(#profitGradient)" strokeWidth={2} activeDot={{ r: 4 }} />
-                  </AreaChart>
-                </ResponsiveContainer>
+                {hasPaidSales ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <AreaChart data={data.salesTrend}>
+                      <defs>
+                        <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.42} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
+                        </linearGradient>
+                        <linearGradient id="profitGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.01} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid stroke="#e2e8f0" vertical={false} />
+                      <XAxis dataKey="date" tick={{ fontSize: 11 }} minTickGap={24} />
+                      <YAxis tickFormatter={compactKes} tick={{ fontSize: 11 }} width={72} />
+                      <Tooltip formatter={(value, name) => [formatKes(value), name]} />
+                      <Area type="monotone" dataKey="sales" name="Sales" stroke="#059669" fill="url(#salesGradient)" strokeWidth={3} activeDot={{ r: 5 }} />
+                      <Area type="monotone" dataKey="grossProfit" name="Profit" stroke="#2563eb" fill="url(#profitGradient)" strokeWidth={2} activeDot={{ r: 4 }} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                ) : (
+                  <div className="analyticsEmptyState">
+                    <strong>No paid sales in this period</strong>
+                    <span>Complete a checkout to start seeing sales, product, payment, and reorder insights.</span>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -283,6 +296,16 @@ export default function Analytics({ authToken }) {
               <div className="chartFrame" role="img" aria-label="Payment method mix chart">
                 {data.paymentMixChart.length === 0 ? (
                   <p className="empty">No confirmed payments in this range.</p>
+                ) : data.paymentMixChart.length > 4 ? (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.paymentMixChart} layout="vertical">
+                      <CartesianGrid stroke="#e2e8f0" horizontal={false} />
+                      <XAxis type="number" tickFormatter={compactKes} tick={{ fontSize: 11 }} />
+                      <YAxis dataKey="method" type="category" tick={{ fontSize: 11 }} width={84} />
+                      <Tooltip formatter={(value) => [formatKes(value), 'Payments']} />
+                      <Bar dataKey="amount" fill="#059669" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
@@ -359,6 +382,11 @@ export default function Analytics({ authToken }) {
                         <span>
                           {formatNumber(product.currentStock)} {product.unit} on hand, sells {formatNumber(product.dailyVelocity)} {product.unit}/day
                         </span>
+                        <div className="stockCover">
+                          <span>Stock cover</span>
+                          <strong>{product.daysOfStockRemaining === null ? 'No recent demand' : `${formatNumber(product.daysOfStockRemaining)} days`}</strong>
+                          <small>Lead time: {product.leadTimeDays} days</small>
+                        </div>
                         <small>{product.recommendation}</small>
                       </div>
                       <b>
@@ -411,32 +439,23 @@ export default function Analytics({ authToken }) {
                 <h2>Best sellers</h2>
                 <span>Top {data.bestSellers.length}</span>
               </div>
-              {data.bestSellers.length === 0 ? (
+              {bestSellerBars.length === 0 ? (
                 <p className="empty">No paid sales in this range.</p>
               ) : (
-                <table className="table">
-                  <thead>
-                    <tr>
-                      <th>Product</th>
-                      <th>Units</th>
-                      <th>Sales</th>
-                      <th>Sell-through</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.bestSellers.map((product) => (
-                      <tr key={product.id}>
-                        <td>
-                          <strong>{product.name}</strong>
-                          <span>{product.sku || product.category}</span>
-                        </td>
-                        <td>{formatNumber(product.unitsSold)}</td>
-                        <td>{formatKes(product.revenue)}</td>
-                        <td>{formatPercent(product.sellThroughRate)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div className="bestSellerChart" role="img" aria-label="Top-selling products ranked by sales revenue">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={bestSellerBars} layout="vertical" margin={{ left: 8, right: 20 }}>
+                      <CartesianGrid stroke="#e2e8f0" horizontal={false} />
+                      <XAxis type="number" tickFormatter={compactKes} tick={{ fontSize: 11 }} />
+                      <YAxis dataKey="name" type="category" tick={{ fontSize: 11 }} width={112} />
+                      <Tooltip
+                        formatter={(value, name) => [name === 'Sales' ? formatKes(value) : formatNumber(value), name]}
+                        labelFormatter={(label) => `Product: ${label}`}
+                      />
+                      <Bar dataKey="revenue" name="Sales" fill="#059669" radius={[0, 4, 4, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </section>
 
