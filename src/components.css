@@ -7439,7 +7439,7 @@ textarea.input-field {
   background: var(--surface);
 }
 
-.panel {
+.login-page .loginPanel {
   width: 100%;
   max-width: 380px;
 }
@@ -7618,7 +7618,7 @@ textarea.input-field {
     background: transparent;
   }
 
-  .panel {
+  .login-page .loginPanel {
     max-width: 420px;
   }
 }

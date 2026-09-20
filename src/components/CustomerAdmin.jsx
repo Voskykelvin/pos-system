@@ -116,47 +116,49 @@ export default function CustomerAdmin({ authToken }) {
         {error && <p role="alert" style={{ color: '#ef4444' }}>{error}</p>}
         {successMessage && <p style={{ color: '#16a34a' }}>{successMessage}</p>}
 
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Phone</th>
-              <th>Loyalty Pts</th>
-              <th>Credit Balance</th>
-              <th>Store Credit</th>
-              <th>Credit Limit</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {customers.map(c => (
-              <tr key={c.id}>
-                <td>{c.name || '-'}</td>
-                <td>{c.phone}</td>
-                <td>{c.loyaltyPoints}</td>
-                <td>
-                  <strong style={{ color: Number(c.creditBalance) > 0 ? '#ef4444' : 'inherit' }}>
-                    {formatKes(c.creditBalance)}
-                  </strong>
-                </td>
-                <td><strong>{formatKes(c.storeCreditBalance)}</strong></td>
-                <td>{formatKes(c.creditLimit)}</td>
-                <td>
-                  <button className="actionBtn" onClick={() => openLedger(c)}>
-                    View Ledger
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {customers.length === 0 && (
+        <div className="tableWrap" tabIndex="0" aria-label="Customer results. Scroll horizontally to view all columns.">
+          <table className="table">
+            <thead>
               <tr>
-                <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-soft)' }}>
-                  No customers found
-                </td>
+                <th scope="col">Name</th>
+                <th scope="col">Phone</th>
+                <th scope="col">Loyalty Pts</th>
+                <th scope="col">Credit Balance</th>
+                <th scope="col">Store Credit</th>
+                <th scope="col">Credit Limit</th>
+                <th scope="col">Actions</th>
               </tr>
-            )}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {customers.map(c => (
+                <tr key={c.id}>
+                  <td>{c.name || '-'}</td>
+                  <td>{c.phone}</td>
+                  <td>{c.loyaltyPoints}</td>
+                  <td>
+                    <strong style={{ color: Number(c.creditBalance) > 0 ? '#ef4444' : 'inherit' }}>
+                      {formatKes(c.creditBalance)}
+                    </strong>
+                  </td>
+                  <td><strong>{formatKes(c.storeCreditBalance)}</strong></td>
+                  <td>{formatKes(c.creditLimit)}</td>
+                  <td>
+                    <button className="actionBtn" onClick={() => openLedger(c)}>
+                      View Ledger
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {customers.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', padding: '20px', color: 'var(--ink-soft)' }}>
+                    No customers found
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       {selectedCustomer && (

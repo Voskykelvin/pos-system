@@ -49,7 +49,7 @@ export default function Login({ onLogin, onNavigateHome }) {
 
       {/* Form panel */}
       <div className="formContainer">
-        <section className="panel">
+        <section className="panel loginPanel">
           {onNavigateHome && (
             <button className="homeLink" type="button" onClick={onNavigateHome}>
               &larr; Back to homepage
