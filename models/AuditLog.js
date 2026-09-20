@@ -9,6 +9,10 @@ module.exports = (sequelize, DataTypes) => {
       type: DataTypes.UUID,
       allowNull: true
     },
+    tenantId: {
+      type: DataTypes.UUID,
+      allowNull: true
+    },
     approvedByUserId: {
       type: DataTypes.UUID,
       allowNull: true
@@ -38,6 +42,7 @@ module.exports = (sequelize, DataTypes) => {
     timestamps: true,
     updatedAt: false,
     indexes: [
+      { fields: ['tenantId', 'createdAt'] },
       { fields: ['action'] },
       { fields: ['entityType', 'entityId'] },
       { fields: ['createdAt'] }

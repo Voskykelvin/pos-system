@@ -12,6 +12,7 @@ async function logAudit({
 }) {
   return AuditLog.create({
     userId: userId || req?.user?.id || null,
+    tenantId: req?.tenantId || null,
     approvedByUserId: approvedByUserId || null,
     action,
     entityType,

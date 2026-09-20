@@ -1,4 +1,5 @@
 const { AuditLog, User } = require('../models');
+const { tenantWhere } = require('../utils/tenantScope');
 
 function mapAuditLog(row) {
   return {
@@ -30,6 +31,7 @@ async function list(req, res) {
 
   try {
     const rows = await AuditLog.findAll({
+      where: tenantWhere(req),
       include: [
         { model: User, as: 'actor', attributes: ['id', 'name', 'role'] },
         { model: User, as: 'approver', attributes: ['id', 'name', 'role'] }

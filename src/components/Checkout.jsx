@@ -1330,6 +1330,15 @@ export default function Checkout({ authToken, cashierId, user }) {
       ? `Change due ${formatKes(paymentSummary.changeDue)}`
       : 'Payment ready';
   const paymentStateTone = paymentSummary.shortAmount > 0 ? 'warning' : paymentSummary.changeDue > 0 ? 'info' : 'ok';
+  const canConfirm =
+    cart.length > 0 &&
+    cashierId &&
+    !submitting &&
+    orderStatus !== 'waiting' &&
+    total > 0 &&
+    paymentsBalanced &&
+    mpesaComplete &&
+    (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim()));
   const cartStatusLabel = orderStatus === 'waiting'
     ? 'M-Pesa waiting'
     : orderStatus === 'paid'
@@ -1345,15 +1354,6 @@ export default function Checkout({ authToken, cashierId, user }) {
               : 'Open sale';
   const cartStatusTone = orderStatus === 'waiting' ? 'waiting' : orderStatus === 'paid' ? 'paid' : orderStatus === 'failed' ? 'failed' : canConfirm ? 'ready' : cart.length === 0 ? 'idle' : 'open';
 
-  const canConfirm =
-    cart.length > 0 &&
-    cashierId &&
-    !submitting &&
-    orderStatus !== 'waiting' &&
-    total > 0 &&
-    paymentsBalanced &&
-    mpesaComplete &&
-    (!discountNeedsApproval || (managerIdentifier.trim() && managerPassword.trim()));
   const canHoldSale = cart.length > 0 && !submitting && orderStatus !== 'waiting';
 
   useEffect(() => {

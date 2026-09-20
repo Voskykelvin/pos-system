@@ -7740,3 +7740,102 @@ textarea.input-field {
     overflow-wrap: anywhere;
   }
 }
+
+/* Store pages use the platform dashboard's roomy card rhythm, but retain only
+   operational measures: sales, tender mix, staff performance and stock. */
+.analytics-page .chartGrid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  gap: 18px;
+}
+
+.analytics-page .chartGrid .widePanel {
+  grid-column: 1 / -1;
+}
+
+.analytics-page .panel {
+  min-width: 0;
+  border-color: #dce9e3;
+  border-radius: 16px;
+  box-shadow: 0 14px 36px rgba(15, 42, 33, 0.07);
+}
+
+.analytics-page .panelHeader {
+  padding: 18px 20px;
+  background: var(--pos-surface);
+}
+
+.analytics-page .chartFrame {
+  min-width: 0;
+  height: 300px;
+}
+
+.operations-page .grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr));
+  align-items: start;
+}
+
+.operations-page .summaryPanel,
+.operations-page .etimsPanel,
+.operations-page .receiptPanel,
+.operations-page .auditPanel {
+  grid-column: 1 / -1;
+}
+
+.operations-page .panel,
+.operations-page .etimsBody,
+.operations-page .auditRow,
+.operations-page .receiptLine,
+.operations-page .row,
+.operations-page .etimsRow,
+.operations-page .orderList button,
+.analytics-page .recommendationRow,
+.analytics-page .listRow,
+.analytics-page .chartLegend div {
+  min-width: 0;
+}
+
+.operations-page .auditRow > span,
+.operations-page .etimsRow > div,
+.operations-page .orderList button > span,
+.analytics-page .recommendationRow > div,
+.analytics-page .listRow > div,
+.analytics-page .chartLegend span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.operations-page .etimsReadiness {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+
+.operations-page .readyPill,
+.operations-page .pendingPill,
+.operations-page .blockedPill {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .analytics-page .chartGrid,
+  .operations-page .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .analytics-page .chartGrid .widePanel,
+  .operations-page .summaryPanel,
+  .operations-page .etimsPanel,
+  .operations-page .receiptPanel,
+  .operations-page .auditPanel {
+    grid-column: 1;
+  }
+
+  .operations-page .etimsStats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .operations-page .auditRow time {
+    white-space: normal;
+  }
+}
