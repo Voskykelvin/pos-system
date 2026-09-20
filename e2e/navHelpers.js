@@ -12,17 +12,15 @@ async function openMobileNav(page) {
 
 async function clickPrimaryNav(page, name) {
   await openMobileNav(page);
-  const clicked = await page.evaluate((label) => {
-    const buttons = Array.from(document.querySelectorAll('.sidebar .navButton'));
-    const target = buttons.find((button) => button.textContent.replace(/\s+/g, ' ').trim() === label);
-    if (!target) return false;
-    target.click();
-    return true;
-  }, name);
+  const target = page
+    .getByRole('navigation', { name: 'Primary' })
+    .getByRole('button', { name, exact: true });
+  if ((await target.count()) < 1) throw new Error(`Primary nav button "${name}" was not found`);
 
-  if (!clicked) {
-    throw new Error(`Primary nav button "${name}" was not found`);
-  }
+  // Use Playwright's interaction rather than dispatching a DOM click inside
+  // page.evaluate. The latter can race the mobile sidebar transition and skip
+  // React's navigation handler in Chromium emulation.
+  await target.first().click();
 }
 
 module.exports = {

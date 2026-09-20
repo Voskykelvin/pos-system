@@ -7,6 +7,7 @@ test('phone admin can review responsive live analytics without page overflow', a
   await page.getByLabel('Email or phone').fill('admin@example.local');
   await page.getByLabel('Password').fill('admin12345');
   await page.getByRole('button', { name: 'Sign in' }).click();
+  await expect(page.getByRole('button', { name: 'Sign out' })).toBeVisible();
 
   // Deep-link should land on Analytics; fall back to nav if landing changed.
   const heading = page.getByRole('heading', { name: 'Analytics', level: 1 });
